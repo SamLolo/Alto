@@ -1,2 +1,5 @@
-# discord-music
-A discord bot being made for an A-Level Project in school
+# A-Level Project
+Discord Music Bot
+
+Ideas Page:
+https://trello.com/b/GtDWpbqe/music-bot
