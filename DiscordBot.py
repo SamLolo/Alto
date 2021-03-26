@@ -298,14 +298,28 @@ class Youtube():
     def Search(self, Query):
         
         Data = {'part': 'snippet', 'q': Query, 'key': self.Key}
-        Results = requests.get('https://youtube.googleapis.com/youtube/v3/search', Data).json()
+        Results = requests.get('https://youtube.googleapis.com/youtube/v3/search', Data, headers = self.Header).json()
 
+        SearchDict = {}
         for Result in Results['items']:
-            print(Result['snippet']['title'])
-            print(Result['snippet']['channelTitle'])
-            print(Result['id']['videoId'])
-            print(Result['snippet']['thumbnails']['default']['url'])
-            print("\n")
+            if Result['id']['kind'] == 'youtube#video':
+                
+                SearchDict.update({Result['id']['videoId']: {'Tittle': Result['snippet']['title'],
+                                                             'Description': Result['snippet']['description'],
+                                                             'Channel': Result['snippet']['channelTitle'], 
+                                                             'ChannelID': Result['snippet']['channelId'],
+                                                             'Thumbnail': Result['snippet']['thumbnails']['default']['url'],
+                                                             'PublishDate': Result['snippet']['publishedAt']}})
+                    
+        return SearchDict
+    
+    
+    def GetVideoInfo(self, VideoID):
+        
+        Data = {'part': 'player,contentDetails,topicDetails', 'id': 'gvUuAQsDrU0', 'key': self.Key}
+        Info = requests.get('https://youtube.googleapis.com/youtube/v3/videos', Data, headers = self.Header).json()
+        
+        print(Info)
             
 
 #!--------------------------------HISTORY-----------------------------------#
@@ -983,8 +997,10 @@ async def search(ctx, *args):
     
     Query = " ".join(args[:])
     Tube = Youtube()
-    Tube.Search(Query)
+    Results = Tube.Search(Query)
     
+    
+    Tube.GetVideoInfo(list(Results.keys())[0])
 
 #!--------------------------------DISCORD LOOP-----------------------------------# 
 
