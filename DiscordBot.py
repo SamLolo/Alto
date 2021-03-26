@@ -284,6 +284,30 @@ class Spotify():
         print(Result.json())
 
 
+#!-------------------------------YOUTUBE-------------------------------------#
+
+
+class Youtube():
+    def __init__(self):
+        
+        #** Create Class Objects For Requests **
+        self.Key = 'AIzaSyCzNECwDbkWMNGyHC1fRF08vNldmI8_5iE'
+        self.Header = {'Accept': 'application/json'}
+        
+    
+    def Search(self, Query):
+        
+        Data = {'part': 'snippet', 'q': Query, 'key': self.Key}
+        Results = requests.get('https://youtube.googleapis.com/youtube/v3/search', Data).json()
+
+        for Result in Results['items']:
+            print(Result['snippet']['title'])
+            print(Result['snippet']['channelTitle'])
+            print(Result['id']['videoId'])
+            print(Result['snippet']['thumbnails']['default']['url'])
+            print("\n")
+            
+
 #!--------------------------------HISTORY-----------------------------------#
 
 
@@ -956,12 +980,11 @@ async def recommendations(ctx):
 
 @client.command()
 async def search(ctx, *args):
-    Arguments = " ".join(args[:])
-    Arguments = Arguments.split(", ")
-    print(Arguments)
-    SongData.Search(Arguments[0], Arguments[1])
     
-
+    Query = " ".join(args[:])
+    Tube = Youtube()
+    Tube.Search(Query)
+    
 
 #!--------------------------------DISCORD LOOP-----------------------------------# 
 
