@@ -27,7 +27,6 @@ from Classes.Youtube import YoutubeAPI
 #** Startup Sequence **
 print("-----------------------LOADING EXTENTION----------------------")
 print("Name: Cogs.Utility")
-print("Startup Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
 print("Modules Imported: ✓")
 
 #** Get Connection Details **

@@ -31,7 +31,7 @@ class Music(Spotify):
         PredictionData = []
         GenreData = []
         for Genre in self.Genres:
-            with open('TestData - Copy.json') as TestFile:
+            with open('SongData.json') as TestFile:
                 TestData = json.load(TestFile)
                 TestFile.close()
             for Data in TestData[Genre]:
