@@ -120,6 +120,18 @@ async def on_command_error(ctx, error):
         await ctx.message.delete()
         await Temp.delete()
         return
+    elif isinstance(error, commands.CheckFailure):
+        print(error)
+        if str(error) == "UserVoice":
+            Temp = await ctx.message.channel.send("To use this command, please join a Voice Channel!")
+        elif str(error) == "BotVoice":
+            Temp = await ctx.message.channel.send("You must be in my Voice Channel to use this!")
+        else:
+            raise error
+        await asyncio.sleep(5)
+        await ctx.message.delete()
+        await Temp.delete()
+        return
     else:
         raise error
 

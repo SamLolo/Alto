@@ -3,6 +3,9 @@
         "Playing": "Beta V1.03",
         "Watching": "!help"
     },
+    "StatusTime":
+        "5"
+    ,
     "Prefix": [
         "!"
     ],
