@@ -15,9 +15,10 @@
             "Cross": "<a:cross:738865828648189972>",
             "NextIcon": "<Next:817548034732064799>",
             "BackIcon": "<Back:817548165217386566>",
-            "SpotifyIcon": "<SpotifyIcon:738865749824897077>",
+            "Spotify": "<SpotifyIcon:738865749824897077>",
             "AlbumIcon": "<AlbumIcon:809904275739639849>",
-            "PreviewIcon": "<Preview:810242525247045692>"
+            "PreviewIcon": "<Preview:810242525247045692>",
+            "Youtube": "<Youtube:839450990482948158>"
         }
     },
     "Active_Extensions": [

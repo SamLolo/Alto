@@ -3,6 +3,7 @@
 
 
 import os
+import json
 import discord
 import random
 import string
@@ -81,6 +82,12 @@ class MusicCog(commands.Cog):
         #** Add Event Hook **
         lavalink.add_event_hook(self.track_hook)
         print("Lavalink Started: ✓\n")
+        
+        #** Load Config File **
+        with open('Config.json') as ConfigFile:
+            Config = json.load(ConfigFile)
+            ConfigFile.close()
+        self.Emojis = Config['Variables']['Emojis']
 
 
     def cog_unload(self):
@@ -149,41 +156,96 @@ class MusicCog(commands.Cog):
         Player = self.client.lavalink.player_manager.get(ctx.guild.id)
         Query = query.strip('<>')
 
-        #** Check If User Input is URL and Get Tracks **
-        if not(Query.startswith("https://") or Query.startswith("http://")):
-            Query = "ytsearch:"+Query
-        Results = await Player.node.get_tracks(Query)
-
-        #** Check If Request Successful and Tracks Found **
-        if not(Results):
-            await ctx.send("**Unexpected Error!**\nIf this error persists, please contact Lolo#6699")
-        elif Results['tracks'] == []:
-            await ctx.send("**No Songs Found!**\nPlease Check Your Query & Try Again")
-        else:
-
-            #** If Result = Playlist, Add All Tracks To Queue **
-            if Results['loadType'] == 'PLAYLIST_LOADED':
-                for Track in Results['tracks']:
-                    Player.add(requester=ctx.author.id, track=Track)
-                PlaylistQueued = discord.Embed(
-                    title = "Playlist Added To Queue!",
-                    description = Results["playlistInfo"]["name"]+" - "+str(len(Results['tracks']))+" Tracks")
-                await ctx.send(PlaylistQueued)
+        #** Check if Input Is A Playlist / Album **
+        if not(Query.startswith("https://open.spotify.com/playlist/") or Query.startswith("https://open.spotify.com/album/") or (Query.startswith("https://www.youtube.com/watch?") and "&list=" in Query)):
             
-            #** If Result = Track, Add Track To Queue **
+            #? ---------- LOAD TRACK ---------- ?#
+            
+            #** Check If User Input is URL and If Not Specify YT Search **
+            if not(Query.startswith("https://") or Query.startswith("http://")):
+                Query = "ytsearch:"+Query
+
+            #** Check If User Input Is A Correct Spotify Track URL & Get Song Data **
+            elif Query.startswith("https://open.spotify.com/track/"):
+                SpotifyID = (Query.split("/"))[4].split("?")[0]
+                if len(SpotifyID) != 22:
+                    raise commands.UserInputError(message="Bad URL")
+                Song = SongData.GetSongInfo(SpotifyID)
+
+                #** Raise Error if No Song Found Otherwise Reformat Query With New Data **
+                if Song == "SongNotFound":
+                    raise commands.UserInputError(message="Bad URL")
+                Song = Song[SpotifyID]          
+                Query = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
+
+            #** Get Track From Lavalink Player **
+            Results = await Player.node.get_tracks(Query)
+
+            #** Check If Request Successful and Tracks Found **
+            if not(Results):
+                await ctx.send("**Unexpected Error!**\nIf this error persists, please contact Lolo#6699")
+            elif Results['tracks'] == []:
+                await ctx.send("**No Songs Found!**\nPlease Check Your Query & Try Again")
             else:
-                print(Results['tracks'][0])
+                
+                #** Add Track To Queue & Confirm Track Added If Track Currently Playing **
                 TrackQueued = discord.Embed(
                     title = "Track Added To Queue!",
                     description = "["+Results['tracks'][0]["info"]["title"]+"]("+Results['tracks'][0]["info"]["uri"]+")")
                 Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True)
                 Player.add(requester=ctx.author.id, track=Track)
-                if not(Player.is_playing):
-                    await ctx.send(TrackQueued)
+                if Player.is_playing:
+                    await ctx.send(embed=TrackQueued)
 
-            #** Send Embed To Discord, And Play if Player Not Concurrently Playing **
+                #** Play if Player Not Concurrently Playing **
+                if not(Player.is_playing):
+                    await Player.play()
+        
+        else:
+            
+            #? ---------- lOAD PLAYLIST / ALBUM ---------- ?#
+            
+            #** Check If User Input Is A Correct Spotify Playlist URL & Get Playlist Data **
+            if Query.startswith("https://open.spotify.com/playlist/"):
+                PlaylistID = (Query.split("/"))[4].split("?")[0]
+                if len(PlaylistID) != 22:
+                    raise commands.UserInputError(message="Bad URL")
+                Playlist = SongData.GetPlaylistSongs(PlaylistID)
+
+                #** Reformat Query & Get Youtube Result For Song **
+                if Playlist == "PlaylistNotFound":
+                    raise commands.UserInputError(message="Bad URL")
+                ID, Song = Playlist['Tracks'].items()[0]
+                Query = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
+                Results = await Player.node.get_tracks(Query)
+                
+                #** Set Playlist Info **
+                Type = "Spotify"
+                PlaylistName = Playlist['PlaylistInfo']['Name']
+                Length = Playlist['PlaylistInfo']['Length']
+                
+            #** If Youtube Playlist, Get Youtube Result**
+            elif Query.startswith("https://www.youtube.com/watch?"):
+                Results = await Player.node.get_tracks(Query)
+                
+                #** Set Playlist Info **
+                Type = "Youtube"
+                PlaylistName = Results['playlistInfo']['name']
+                Length = len(Results['tracks'])
+                
+            #** Add First Song To Queue & Play if Not Already Playing **
+            Player.add(requester=ctx.author.id, track=Results['tracks'][0])
+            PlaylistQueued = discord.Embed(
+                title = self.Emojis[Type]+" Playlist Added To Queue!",
+                description = PlaylistName+" - "+str(Length)+" Tracks")
+            await ctx.send(embed=PlaylistQueued)
             if not(Player.is_playing):
                 await Player.play()
+
+#!           if Type == "Spotify":
+#!               for i in range(len(Query)-1):
+#!                    Results = await Player.node.get_tracks(Query[i+1])
+#!                    Player.add(requester=ctx.author.id, track=Results['tracks'][0])
 
 
     @commands.guild_only()
@@ -216,23 +278,99 @@ class MusicCog(commands.Cog):
     @commands.command(aliases=['v'])
     async def volume(self, ctx, Volume):
 
-        #** Check Volume is Integer & Ensure Voice To Make Sure Client Is Good To Run **
+        #** Check Volume is Integer Between 0 -> 100 & Ensure Voice To Make Sure Client Is Good To Run **
         if Volume.isdecimal():
-            if int(Volume) > 100 or int(Volume) < 0:
+            if int(Volume) < 100 and int(Volume) > 0:
                 await self.ensure_voice(ctx)
         
                 #** Get Guild Player & Check If Connected **
-                player = self.client.lavalink.player_manager.get(ctx.guild.id)
-                if not(player.is_connected):
+                Player = self.client.lavalink.player_manager.get(ctx.guild.id)
+                if not(Player.is_connected):
                     await ctx.send("I'm not currently connected!")
 
+                #** If Connected Set Volume & Confirm Volume Change **
                 else:
-                    player.set_volume(int(Volume))
+                    await Player.set_volume(int(Volume))
                     await ctx.send("Volume Set To "+str(Volume))
+
+            #** If Issue With Input, Let User Know About The Issue **
             else:
                 await ctx.send("Volume must be between 0 & 100!")
         else:
             await ctx.send("Volume must be an integer!")
+
+
+    @commands.guild_only()
+    @commands.command()
+    async def skip(self, ctx):
+        
+        #** Ensure Voice Before Allowing Command To Run **
+        await self.ensure_voice(ctx)
+        
+        #** Get Guild Player & Check If Connected **
+        Player = self.client.lavalink.player_manager.get(ctx.guild.id)
+        if not(Player.is_connected):
+            await ctx.send("I'm not currently connected!")
+        
+        #** Check If Player Is Actually Playing A Song **
+        elif not(Player.is_playing):
+            await ctx.send("I'm not currently playing anything!")
+
+        #** If Connected & Playing Skip Song & Confirm Track Skipped **
+        else:
+            await Player.skip()
+            await ctx.send("Track Skipped!")
+
+    
+    @commands.guild_only()
+    @commands.command(aliases=['unpause'])
+    async def pause(self, ctx):
+        
+        #** Ensure Voice Before Allowing Command To Run **
+        await self.ensure_voice(ctx)
+        
+        #** Get Guild Player & Check If Connected **
+        Player = self.client.lavalink.player_manager.get(ctx.guild.id)
+        if not(Player.is_connected):
+            await ctx.send("I'm not currently connected!")
+        
+        #** Check If Player Is Actually Playing A Song **
+        elif not(Player.is_playing) and not(Player.paused):
+            await ctx.send("I'm not currently playing anything!")
+
+        #** If Connected & Playing Skip Song & Confirm Track Skipped **
+        else:
+            if Player.paused:
+                await Player.set_pause(False)
+                await ctx.send("Player Unpaused!")
+            else:
+                await Player.set_pause(True)
+                await ctx.send("Player Paused!")
+
+    
+    @commands.guild_only()
+    @commands.command(aliases=['q'])
+    async def queue(self, ctx):
+        
+        #** Ensure Voice Before Allowing Command To Run **
+        await self.ensure_voice(ctx)
+        
+        #** Get Guild Player & Check If Connected **
+        Player = self.client.lavalink.player_manager.get(ctx.guild.id)
+        if not(Player.is_connected):
+            await ctx.send("I'm not currently connected!")
+
+        #** Format Queue List Into String **
+        else:
+            Queue = ""
+            for i in range(len(Player.queue)):
+                Queue += str(i+1)+") ["+Player.queue[i]["title"]+"]("+Player.queue[i]["uri"]+")\n"
+
+            #** Format Queue Into Embed & Send Into Discord **
+            UpNext = discord.Embed(
+                title="Up Next:",
+                description = Queue)
+            await ctx.send(embed=UpNext)
 
 
 #!-------------------SETUP FUNCTION-------------------#

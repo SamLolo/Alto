@@ -55,7 +55,8 @@ class Spotify():
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == SongData.status_code:
-                print("----------------------RATE LIMIT REACHED--------------------")
+                print("\n----------------------RATE LIMIT REACHED--------------------")
+                print("Location: Spotify -> GetPlaylistSongs")
                 print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
                 Time = SongData.headers['Retry-After']
                 sleep(Time)
@@ -67,7 +68,7 @@ class Spotify():
             
             #** If Other Error Occurs, Raise Error **
             else:
-                print("----------------------UNEXPECTED ERROR--------------------")
+                print("\n----------------------UNEXPECTED ERROR--------------------")
                 print("Location: Spotify -> GetPlaylistSongs")
                 print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
                 print("Error: Spotify Request Code "+str(SongData.status_code))
@@ -84,6 +85,7 @@ class Spotify():
                     Songs.update(self.FormatSongData(Song['track']))
             
             #** Return Filled Dictionary Of Songs **
+            Songs = {'PlaylistInfo': {'Name': SongData['name'], 'Length': SongData['tracks']['total']}, 'Tracks': Songs}
             return Songs
         
         #** Return "PlaylistNotFound" if Request Body Is Empty (Shouldn't Happen) **
@@ -106,7 +108,8 @@ class Spotify():
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Song.status_code:
-                print("----------------------RATE LIMIT REACHED--------------------")
+                print("\n----------------------RATE LIMIT REACHED--------------------")
+                print("Location: Spotify -> GetSongInfo")
                 print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
                 Time = Song.headers['Retry-After']
                 sleep(Time)
@@ -118,7 +121,7 @@ class Spotify():
             
             #** If Other Error Occurs, Raise Error **
             else:
-                print("----------------------UNEXPECTED ERROR--------------------")
+                print("\n----------------------UNEXPECTED ERROR--------------------")
                 print("Location: Spotify -> GetSongInfo")
                 print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
                 print("Error: Spotify Request Code "+str(Song.status_code))
@@ -155,7 +158,8 @@ class Spotify():
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Features.status_code:
-                print("----------------------RATE LIMIT REACHED--------------------")
+                print("\n----------------------RATE LIMIT REACHED--------------------")
+                print("Location: Spotify -> GetAudioFeatures")
                 print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
                 Time = Features.headers['Retry-After']
                 sleep(Time)
@@ -167,7 +171,7 @@ class Spotify():
             
             #** If Other Error Occurs, Raise Error **
             else:
-                print("----------------------UNEXPECTED ERROR--------------------")
+                print("\n----------------------UNEXPECTED ERROR--------------------")
                 print("Location: Spotify -> GetAudioFeatures")
                 print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
                 print("Error: Spotify Request Code "+str(Features.status_code))
@@ -232,13 +236,43 @@ class Spotify():
 
     def SearchSpotify(self, Name, Artist):
         
+        #** Format Name & Artist To Fill Spaces With %20 **
         Name = "%20".join(Name.split(" "))
-        print(Name)
         Artist = "%20".join(Artist.split(" "))
-        print(Artist)
         
+        #** Fetch Top Search Result From Spotify **
         Data = {'type': 'track', 'limit': '1', 'include_external': 'audio'}
         Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.BotHead)
 
+        #** Check If Request Was A Success **
+        while Result.status_code != 200:
+            
+            #** Check if Bot Credentials Have Expired **
+            if 401 == Result.status_code:
+                self.RefreshBotToken()
+                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.BotHead)
+                
+            #** Check If Rate Limit Has Been Applied **
+            elif 429 == Result.status_code:
+                print("\n----------------------RATE LIMIT REACHED--------------------")
+                print("Location: Spotify -> SearchSpotify")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                Time = Result.headers['Retry-After']
+                sleep(Time)
+                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.BotHead)
+                
+            #** Check If Song Not Found, and Return "SongNotFound" **
+            elif 404 == Result.status_code:
+                return "SongNotFound"
+            
+            #** If Other Error Occurs, Raise Error **
+            else:
+                print("\n----------------------UNEXPECTED ERROR--------------------")
+                print("Location: Spotify -> SearchSpotify")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                print("Error: Spotify Request Code "+str(Result.status_code))
+                return "UnexpectedError"
+        
+        Result = Result.json()
         print(Result.json())
 

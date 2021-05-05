@@ -237,14 +237,6 @@ async def info(ctx, SpotifyID):
         await Temp.delete()
 
 
-@client.command()
-async def user(ctx, discordID):
-    User = Database.GetUser(discordID, cursor, connection)
-    if User == None:
-        User = Database.AddUser(discordID)
-    await ctx.send(User)
-
-
 @client.command(aliases=['r', 'recommend', 'suggest', 'songideas'])
 async def recommendations(ctx):
 
@@ -258,7 +250,7 @@ async def recommendations(ctx):
         print("Got Playlists")
         Songs = {}
         for PlaylistID in Playlists.keys():
-            Songs.update(SongData.GetPlaylistSongs(PlaylistID))
+            Songs.update(SongData.GetPlaylistSongs(PlaylistID)['Tracks'])
         print("Got Songs")
         
         #** Get Recommendations From Returned Songs **
@@ -358,17 +350,8 @@ async def recommendations(ctx):
 
 
 @client.command()
-async def search(ctx, *args):
-    
-    Query = " ".join(args[:])
-    print(Query)
-
-    Results = Youtube.Search(Query)
-    VideoID = list(Results.keys())[0]
-    Info = Youtube.GetVideoInfo(VideoID)
-
-    Info[VideoID].update(Results[VideoID])
-    await ctx.send("`"+str(Info)+"`")
+async def reload(ctx, CogName):
+    client.reload_extension("Cogs."+CogName)
 
 
 #!-------------------------------ADD COGS-------------------------------#
