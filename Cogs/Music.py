@@ -147,14 +147,14 @@ class MusicCog(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=['p'])
-    async def play(self, ctx, *, query: str):
+    async def play(self, ctx, *, Query):
         
         #** Ensure Voice To Make Sure Client Is Good To Run **
         await self.ensure_voice(ctx)
     
         #** Get Guild Player from Cache & Remove "<>" Embed Characters from Query **
         Player = self.client.lavalink.player_manager.get(ctx.guild.id)
-        Query = query.strip('<>')
+        Query = Query.strip('<>')
 
         #** Check if Input Is A Playlist / Album **
         if not(Query.startswith("https://open.spotify.com/playlist/") or Query.startswith("https://open.spotify.com/album/") or (Query.startswith("https://www.youtube.com/watch?") and "&list=" in Query)):
@@ -215,9 +215,10 @@ class MusicCog(commands.Cog):
                 #** Reformat Query & Get Youtube Result For Song **
                 if Playlist == "PlaylistNotFound":
                     raise commands.UserInputError(message="Bad URL")
-                ID, Song = Playlist['Tracks'].items()[0]
-                Query = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
-                Results = await Player.node.get_tracks(Query)
+                Tracks = iter(Playlist['Tracks'].items())
+                ID, Song = next(Tracks)
+                Search = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
+                Results = await Player.node.get_tracks(Search)
                 
                 #** Set Playlist Info **
                 Type = "Spotify"
@@ -237,7 +238,7 @@ class MusicCog(commands.Cog):
             Player.add(requester=ctx.author.id, track=Results['tracks'][0])
             PlaylistQueued = discord.Embed(
                 title = self.Emojis[Type]+" Playlist Added To Queue!",
-                description = PlaylistName+" - "+str(Length)+" Tracks")
+                description = "["+PlaylistName+"]("+Query+") - "+str(Length)+" Tracks")
             await ctx.send(embed=PlaylistQueued)
             if not(Player.is_playing):
                 await Player.play()
@@ -362,15 +363,20 @@ class MusicCog(commands.Cog):
 
         #** Format Queue List Into String **
         else:
-            Queue = ""
-            for i in range(len(Player.queue)):
-                Queue += str(i+1)+") ["+Player.queue[i]["title"]+"]("+Player.queue[i]["uri"]+")\n"
+            if Player.queue != []:
+                Queue = ""
+                for i in range(len(Player.queue)):
+                    Queue += str(i+1)+") ["+Player.queue[i]["title"]+"]("+Player.queue[i]["uri"]+")\n"
 
-            #** Format Queue Into Embed & Send Into Discord **
-            UpNext = discord.Embed(
-                title="Up Next:",
-                description = Queue)
-            await ctx.send(embed=UpNext)
+                #** Format Queue Into Embed & Send Into Discord **
+                UpNext = discord.Embed(
+                    title="Up Next:",
+                    description = Queue)
+                await ctx.send(embed=UpNext)
+            
+            #** If Queue Empty, Just Send Plain Text **
+            else:
+                await ctx.send("Queue Is Currently Empty!")
 
 
 #!-------------------SETUP FUNCTION-------------------#
