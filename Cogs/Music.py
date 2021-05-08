@@ -136,13 +136,41 @@ class MusicCog(commands.Cog):
             
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
-            #** Print Out Now Playing Information When New Track Starts **
+            #** Get Channel & Print Out Now Playing Information When New Track Starts **
             Channel = self.client.get_channel(int(event.player.fetch("Channel")))
             print(event.track["title"], event.track["uri"])
-            NowPlaying = discord.Embed(
-                title = "Now Playing:",
-                description = "["+event.track["title"]+"]("+event.track["uri"]+")")
-            await Channel.send(embed=NowPlaying)
+            
+            #** If Track Has Spotify Info, Configure List of Artists **
+            if event.track.extra['spotify'] != {}:
+                Artists = ""
+                for i in range(len(event.track.extra['spotify']['artists'])):
+                    if i == 0:
+                        Artists += "["+event.track.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+event.track.extra['spotify']['artistID'][i]+")"
+                    elif i != len(event.track.extra['spotify']['artists'])-1:
+                        Artists += ", ["+event.track.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+event.track.extra['spotify']['artistID'][i]+")"
+                    else:
+                        Artists += " & ["+event.track.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+event.track.extra['spotify']['artistID'][i]+")"
+                
+                #** Create Now Playing Embed **
+                NowPlaying = discord.Embed(
+                    title = "Now Playing:",
+                    description = self.Emojis['Youtube']+" ["+event.track["title"]+"]("+event.track["uri"]+")\n"
+                                +self.Emojis['Spotify']+" ["+event.track.extra['spotify']['name']+"]("+event.track.extra['spotify']['URI']+")")
+                NowPlaying.set_thumbnail(url=event.track.extra['spotify']['thumbnail'])
+                NowPlaying.add_field(name="By:", value=Artists)
+
+            #** If No Spotify Info, Create Basic Now Playing Embed **
+            else:
+                NowPlaying = discord.Embed(
+                    title = "Now Playing:",
+                    description = self.Emojis['Youtube']+" ["+event.track["title"]+"]("+event.track["uri"]+")")
+
+            #** Send Embed To Channel Where First Play Cmd Was Ran & Add Reactions**
+            Message = await Channel.send(embed=NowPlaying)
+            await Message.add_reaction(self.Emojis['SkipBack'])
+            await Message.add_reaction(self.Emojis['Play'])
+            await Message.add_reaction(self.Emojis['Pause'])
+            await Message.add_reaction(self.Emojis['SkipForwards'])
 
 
     @commands.guild_only()
@@ -165,6 +193,10 @@ class MusicCog(commands.Cog):
             if not(Query.startswith("https://") or Query.startswith("http://")):
                 Query = "ytsearch:"+Query
 
+                #** Get Track From Lavalink Player & Assign Song Data**
+                Results = await Player.node.get_tracks(Query)
+                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True, spotify={})
+
             #** Check If User Input Is A Correct Spotify Track URL & Get Song Data **
             elif Query.startswith("https://open.spotify.com/track/"):
                 SpotifyID = (Query.split("/"))[4].split("?")[0]
@@ -176,10 +208,22 @@ class MusicCog(commands.Cog):
                 if Song == "SongNotFound":
                     raise commands.UserInputError(message="Bad URL")
                 Song = Song[SpotifyID]          
-                Query = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
+                Search = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
 
-            #** Get Track From Lavalink Player **
-            Results = await Player.node.get_tracks(Query)
+                #** Get Track From Lavalink Player & Assign Track Data **
+                Results = await Player.node.get_tracks(Search)
+                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True, spotify={
+                    'name': Song['Name'],
+                    'artists': Song['Artists'],
+                    'artistID': Song['ArtistID'],
+                    'URI': Query,
+                    'thumbnail': Song['Art']})
+
+            #** If Query is Youtube or Soundcloud URL, Get Track From Lavalink Player & Assign Song Data **
+            else:
+                Results = await Player.node.get_tracks(Query)
+                print(Results)
+                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True, spotify={})
 
             #** Check If Request Successful and Tracks Found **
             if not(Results):
@@ -189,11 +233,10 @@ class MusicCog(commands.Cog):
             else:
                 
                 #** Add Track To Queue & Confirm Track Added If Track Currently Playing **
+                Player.add(requester=ctx.author.id, track=Track)
                 TrackQueued = discord.Embed(
                     title = "Track Added To Queue!",
                     description = "["+Results['tracks'][0]["info"]["title"]+"]("+Results['tracks'][0]["info"]["uri"]+")")
-                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True)
-                Player.add(requester=ctx.author.id, track=Track)
                 if Player.is_playing:
                     await ctx.send(embed=TrackQueued)
 
@@ -215,15 +258,14 @@ class MusicCog(commands.Cog):
                 #** Reformat Query & Get Youtube Result For Song **
                 if Playlist == "PlaylistNotFound":
                     raise commands.UserInputError(message="Bad URL")
-                Tracks = iter(Playlist['Tracks'].items())
-                ID, Song = next(Tracks)
-                Search = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
-                Results = await Player.node.get_tracks(Search)
                 
                 #** Set Playlist Info **
                 Type = "Spotify"
                 PlaylistName = Playlist['PlaylistInfo']['Name']
                 Length = Playlist['PlaylistInfo']['Length']
+                
+                #**Create Track Iter Object **
+                Tracks = iter(Playlist['Tracks'].items())
                 
             #** If Youtube Playlist, Get Youtube Result**
             elif Query.startswith("https://www.youtube.com/watch?"):
@@ -234,20 +276,61 @@ class MusicCog(commands.Cog):
                 PlaylistName = Results['playlistInfo']['name']
                 Length = len(Results['tracks'])
                 
-            #** Add First Song To Queue & Play if Not Already Playing **
-            Player.add(requester=ctx.author.id, track=Results['tracks'][0])
-            PlaylistQueued = discord.Embed(
-                title = self.Emojis[Type]+" Playlist Added To Queue!",
-                description = "["+PlaylistName+"]("+Query+") - "+str(Length)+" Tracks")
-            await ctx.send(embed=PlaylistQueued)
-            if not(Player.is_playing):
-                await Player.play()
+                #**Create Track Iter Object **
+                Tracks = iter(Results['tracks'])
+            
+            #** For Length Of Playlist, Loop Through Adding Songs **
+            Message = True
+            MusicVid = 0  # { For Test Purposes }
+            while True:
+                
+                #** If Spotify Playlist, Get Youtube Track For Song **
+                if Query.startswith("https://open.spotify.com/playlist/"):
+                    ID, Song = next(Tracks, '-1')
+                    if str(ID)+str(Song) == '-1':
+                        print("Playlist Queued!")
+                        break
+                    Search = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
+                    Results = await Player.node.get_tracks(Search)
+                    
+                    #** Assign Track Data **
+                    Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True, spotify={
+                        'name': Song['Name'],
+                        'artists': Song['Artists'],
+                        'artistID': Song['ArtistID'],
+                        'URI': "https://open.spotify.com/track/"+ID,
+                        'thumbnail': Song['Art']})
+                    
+                #** If Youtube Playlist, Get Spotify Info For First Song**
+                elif Query.startswith("https://www.youtube.com/watch?"):
+                    
+                    #** Get Track & Check If All Tracked Queued **
+                    Track = next(Tracks, '-1')
+                    if str(Track) == '-1':
+                        print("Playlist Queued!")
+                        break
+                    
+                    if ("Official Video" in Track['info']['title'] or 'Official Music Video' in Track['info']['title'] or 'Official Lyric Video' in Track['info']['title'] or (Track['info']['author']+" - ").lower() in Track['info']['title'].lower()) and Track['info']['length'] <= 600000:
+                        MusicVid += 1 # { For Test Purposes }
+                        Title = (Track['info']['title'].lower()).replace('official video', '').replace('official music video', '').replace('official lyric video', '').replace('[]', '').replace('()', '').replace(Track['info']['author'].lower()+' - ', '')
+                        print(Title.title())
 
-#!           if Type == "Spotify":
-#!               for i in range(len(Query)-1):
-#!                    Results = await Player.node.get_tracks(Query[i+1])
-#!                    Player.add(requester=ctx.author.id, track=Results['tracks'][0])
+                    #** Assign Track Data **
+                    Track = lavalink.models.AudioTrack(Track, ctx.author.id, recommended=True, spotify={})
+                    
+                #** Add Song To Queue & Play if Not Already Playing **
+                Player.add(requester=ctx.author.id, track=Track)
+                if not(Player.is_playing):
+                    await Player.play()
+                    
+                #** Send Embed On First Song Queued **
+                if Message == True:
+                    PlaylistQueued = discord.Embed(
+                        title = self.Emojis[Type]+" Playlist Added To Queue!",
+                        description = "["+PlaylistName+"]("+Query+") - "+str(Length)+" Tracks")
+                    Message = await ctx.send(embed=PlaylistQueued)
 
+            print(MusicVid) # { For Test Purposes }
 
     @commands.guild_only()
     @commands.command(aliases=['s', 'disconnect', 'dc'])
@@ -319,8 +402,8 @@ class MusicCog(commands.Cog):
 
         #** If Connected & Playing Skip Song & Confirm Track Skipped **
         else:
-            await Player.skip()
             await ctx.send("Track Skipped!")
+            await Player.skip()
 
     
     @commands.guild_only()
