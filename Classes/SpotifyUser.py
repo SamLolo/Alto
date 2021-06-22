@@ -15,6 +15,7 @@ from datetime import datetime
 
 
 class SpotifyUser():
+    
     def __init__(self, DiscordID, Cursor, Connection):
 
         #** Set Database Connection Details **

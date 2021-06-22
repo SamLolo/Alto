@@ -11,6 +11,7 @@ import requests
 
 
 class UserData():
+    
     def __init__(self, cursor, connection):
 
         #** Assign Class Objects **

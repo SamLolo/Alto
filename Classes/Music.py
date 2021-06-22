@@ -16,6 +16,7 @@ from Classes.Spotify import Spotify
 
 
 class Music(Spotify):
+    
     def __init__(self):
 
         #** Initialise Youtube & Spotify Classes **

@@ -266,6 +266,25 @@ class MusicCog(commands.Cog):
                 
                 #**Create Track Iter Object **
                 Tracks = iter(Playlist['Tracks'].items())
+
+            #** Check If User Input Is A Correct Spotify Album URL & Get Album Data **
+            elif Query.startswith("https://open.spotify.com/album/"):
+                AlbumID = (Query.split("/"))[4].split("?")[0]
+                if len(AlbumID) != 22:
+                    raise commands.UserInputError(message="Bad URL")
+                Album = SongData.GetAlbumInfo(AlbumID)
+
+                #** Reformat Query & Get Youtube Result For Song **
+                if Album == "PlaylistNotFound":
+                    raise commands.UserInputError(message="Bad URL")
+                
+                #** Set Playlist Info **
+                Type = "Spotify"
+                PlaylistName = Album['PlaylistInfo']['Name']
+                Length = Album['PlaylistInfo']['Length']
+                
+                #**Create Track Iter Object **
+                Tracks = iter(Album['Tracks'].items())
                 
             #** If Youtube Playlist, Get Youtube Result**
             elif Query.startswith("https://www.youtube.com/watch?"):
@@ -284,11 +303,11 @@ class MusicCog(commands.Cog):
             MusicVid = 0  # { For Test Purposes }
             while True:
                 
-                #** If Spotify Playlist, Get Youtube Track For Song **
-                if Query.startswith("https://open.spotify.com/playlist/"):
+                #** If Spotify URL, Get Youtube Track For Song **
+                if Query.startswith("https://open.spotify.com/"):
                     ID, Song = next(Tracks, '-1')
                     if str(ID)+str(Song) == '-1':
-                        print("Playlist Queued!")
+                        print("Playlist/Album Queued!")
                         break
                     Search = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
                     Results = await Player.node.get_tracks(Search)
@@ -332,8 +351,9 @@ class MusicCog(commands.Cog):
 
             print(MusicVid) # { For Test Purposes }
 
+
     @commands.guild_only()
-    @commands.command(aliases=['s', 'disconnect', 'dc'])
+    @commands.command(aliases=['disconnect', 'dc'])
     async def stop(self, ctx):
 
         #** Ensure Voice To Make Sure Client Is Good To Run **
@@ -359,51 +379,61 @@ class MusicCog(commands.Cog):
 
     
     @commands.guild_only()
-    @commands.command(aliases=['v'])
-    async def volume(self, ctx, Volume):
+    @commands.command(aliases=['v', 'loudness'])
+    async def volume(self, ctx, *args):
 
-        #** Check Volume is Integer Between 0 -> 100 & Ensure Voice To Make Sure Client Is Good To Run **
-        if Volume.isdecimal():
-            if int(Volume) < 100 and int(Volume) > 0:
-                await self.ensure_voice(ctx)
-        
-                #** Get Guild Player & Check If Connected **
-                Player = self.client.lavalink.player_manager.get(ctx.guild.id)
-                if not(Player.is_connected):
-                    await ctx.send("I'm not currently connected!")
-
-                #** If Connected Set Volume & Confirm Volume Change **
-                else:
-                    await Player.set_volume(int(Volume))
-                    await ctx.send("Volume Set To "+str(Volume))
-
-            #** If Issue With Input, Let User Know About The Issue **
-            else:
-                await ctx.send("Volume must be between 0 & 100!")
-        else:
-            await ctx.send("Volume must be an integer!")
-
-
-    @commands.guild_only()
-    @commands.command()
-    async def skip(self, ctx):
-        
-        #** Ensure Voice Before Allowing Command To Run **
+        #** Ensure Voice To Make Sure Client Is Good To Run & Get Player **
         await self.ensure_voice(ctx)
-        
-        #** Get Guild Player & Check If Connected **
         Player = self.client.lavalink.player_manager.get(ctx.guild.id)
-        if not(Player.is_connected):
-            await ctx.send("I'm not currently connected!")
-        
-        #** Check If Player Is Actually Playing A Song **
-        elif not(Player.is_playing):
-            await ctx.send("I'm not currently playing anything!")
 
-        #** If Connected & Playing Skip Song & Confirm Track Skipped **
+        #** If No Volume Change, Return Current Volume **
+        if not(args):
+            await ctx.send("**Current Volume:** "+Player.volume+"%")
+
+        #** Get New Volume From Args **
         else:
-            await ctx.send("Track Skipped!")
-            await Player.skip()
+            Volume = args[0]
+            
+            #** Check Volume is Integer Between 0 -> 100 **
+            if Volume.isdecimal():
+                if int(Volume) <= 100 and int(Volume) > 0:
+            
+                    #**  & Check If Connected **
+                    if not(Player.is_connected):
+                        await ctx.send("I'm not currently connected!")
+
+                    #** If Connected Set Volume & Confirm Volume Change **
+                    else:
+                        await Player.set_volume(int(Volume))
+                        await ctx.send("Volume Set To "+str(Volume)+"%")
+
+                #** If Issue With Input, Let User Know About The Issue **
+                else:
+                    await ctx.send("Volume must be between 1 & 100!")
+            else:
+                await ctx.send("Volume must be an integer!")
+
+
+        @commands.guild_only()
+        @commands.command(aliases=['s' ,'forceskip', 'fs', 'next'])
+        async def skip(self, ctx):
+            
+            #** Ensure Voice Before Allowing Command To Run **
+            await self.ensure_voice(ctx)
+            
+            #** Get Guild Player & Check If Connected **
+            Player = self.client.lavalink.player_manager.get(ctx.guild.id)
+            if not(Player.is_connected):
+                await ctx.send("I'm not currently connected!")
+            
+            #** Check If Player Is Actually Playing A Song **
+            elif not(Player.is_playing):
+                await ctx.send("I'm not currently playing anything!")
+
+            #** If Connected & Playing Skip Song & Confirm Track Skipped **
+            else:
+                await ctx.send("Skipped Track: "+Player.current["title"])
+                await Player.skip()
 
     
     @commands.guild_only()
@@ -453,13 +483,142 @@ class MusicCog(commands.Cog):
 
                 #** Format Queue Into Embed & Send Into Discord **
                 UpNext = discord.Embed(
-                    title="Up Next:",
+                    title=self.Emojis['Play']+" Up Next:",
                     description = Queue)
+                if Player.shuffle:
+                    Shuffle = "✅"
+                else:
+                    Shuffle = "❌"
+                if Player.repeat:
+                    Loop = "✅"
+                else:
+                    Loop = "❌"
+                UpNext.set_footer(text="Shuffle: "+Shuffle+"  Loop: "+Loop)
                 await ctx.send(embed=UpNext)
             
             #** If Queue Empty, Just Send Plain Text **
             else:
                 await ctx.send("Queue Is Currently Empty!")
+
+
+    @commands.guild_only()
+    @commands.command(aliases=['m', 'mix', 'mixup'])
+    async def shuffle(self, ctx):
+        
+        #** Ensure Voice Before Allowing Command To Run **
+        await self.ensure_voice(ctx)
+        
+        #** Get Guild Player & Check If Connected **
+        Player = self.client.lavalink.player_manager.get(ctx.guild.id)
+        if not(Player.is_connected):
+            await ctx.send("I'm not currently connected!")
+
+        #** If Connected & Playing Skip Song & Confirm Track Skipped **
+        else:
+            if Player.shuffle:
+                Player.shuffle = False
+                await ctx.send("Player No Longer Shuffled!")
+            else:
+                Player.shuffle = True
+                await ctx.send("Player Shuffled!")
+
+
+    @commands.command(aliases=['song', 'i', 'songinfo'])
+    async def info(self, ctx, SpotifyID):
+
+        #** Format Input Data and Check To Make Sure It's A Valid ID **
+        print(ctx.author.name)
+        print(SpotifyID)
+        Error = False
+        if SpotifyID.startswith("https://open.spotify.com/track/"):
+            SpotifyID = (SpotifyID.split("/"))[4].split("?")[0]
+        if len(SpotifyID) == 22:
+
+            #** Get Song Details And Check If Song Is Found **
+            SongInfo = SongData.GetSongDetails(SpotifyID)
+            if SongInfo != "SongNotFound":
+
+                #** Format Returned Data Ready To Be Put Into The Embeds **
+                SongInfo = SongInfo[SpotifyID]
+                Description = "**By: **"
+                for i in range(len(SongInfo['Artists'])):
+                    if i == 0:
+                        Description += "["+SongInfo['Artists'][i]+"](https://open.spotify.com/artist/"+SongInfo['ArtistID'][i]+")"
+                    elif i != len(SongInfo['Artists'])-1:
+                        Description += ", ["+SongInfo['Artists'][i]+"](https://open.spotify.com/artist/"+SongInfo['ArtistID'][i]+")"
+                    else:
+                        Description += " & ["+SongInfo['Artists'][i]+"](https://open.spotify.com/artist/"+SongInfo['ArtistID'][i]+")"
+                Links = self.Emojis['Spotify']+" Song: [Spotify](https://open.spotify.com/track/"+SpotifyID+")\n"
+                if SongInfo['Preview'] != None:
+                    Links += self.Emojis['Preview']+" Song: [Preview]("+SongInfo['Preview']+")\n"
+                if SongInfo['AlbumID'] != None:
+                    Links += self.Emojis['Album']+" Album: ["+SongInfo['Album']+"](https://open.spotify.com/album/"+SongInfo['AlbumID']+")"
+                else:
+                    Links += self.Emojis['Album']+" Album: "+SongInfo['Album']
+                
+                #** Setup Embed With Basic Song Information **
+                Basic = discord.Embed(
+                    title=SongInfo['Name'], 
+                    description=Description)
+                if SongInfo['Art'] != None:
+                    Basic.set_thumbnail(url=SongInfo['Art'])
+                Basic.set_footer(text="(1/2) React To See Advanced Song Information!")
+                Basic.add_field(name="Length:", value=SongInfo['Duration'], inline=False)
+                Basic.add_field(name="Released:", value=SongInfo['Release'], inline=True)
+                Basic.add_field(name="Genre:", value=SongInfo['Genre'].title(), inline=True)
+                Basic.add_field(name="Links:", value=Links, inline=False)
+                
+                #** Setup Embed With Advanced Song Information **
+                Advanced = discord.Embed(
+                    title=SongInfo['Name'], 
+                    description=Description)
+                if SongInfo['Art'] != None:
+                    Advanced.set_thumbnail(url=SongInfo['Art'])
+                Advanced.set_footer(text="(2/2) React To See Basic Song Information!")
+                Advanced.add_field(name="Popularity:", value=SongInfo['Popularity'], inline=True)
+                Advanced.add_field(name="Explicit:", value=SongInfo['Explicit'], inline=True)
+                Advanced.add_field(name="Tempo:", value=SongInfo['Tempo'], inline=True)
+                Advanced.add_field(name="Key:", value=SongInfo['Key'], inline=True)
+                Advanced.add_field(name="Beats Per Bar:", value=SongInfo['BeatsPerBar'], inline=True)
+                Advanced.add_field(name="Mode:", value=SongInfo['Mode'], inline=True)
+
+                #** Send First Embed To Discord And Add Reactions **
+                Page = await ctx.send(embed=Basic)
+                await Page.add_reaction(self.Emojis['Back'])
+                await Page.add_reaction(self.Emojis['Next'])
+                CurrentPage = 1
+
+                #** Check Function To Be Called When Checking If Correct Reaction Has Taken Place **
+                def ReactionAdd(Reaction):
+                    return (Reaction.message_id == Page.id) and (Reaction.user_id != 803939964092940308)
+
+                #** Watches For Reactions, Checks Them And Then Acts Accordingly **
+                while True:
+                    Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
+                    if Reaction.event_type == 'REACTION_ADD':
+                        if str(Reaction.emoji) == self.Emojis['Next'] or str(Reaction.emoji) == self.Emojis['Back']:
+                            await Page.remove_reaction(Reaction.emoji, Reaction.member)
+                            if CurrentPage == 1:
+                                await Page.edit(embed=Advanced)
+                                CurrentPage = 2
+                            else:
+                                await Page.edit(embed=Basic)
+                                CurrentPage = 1
+                        else:
+                            await Page.remove_reaction(Reaction.emoji, Reaction.member)
+        
+            #** Output Song Not Found If Music.GetSongDetails() Returns Song Not Found **
+            else:
+                Error = True
+        else:
+            Error = True
+
+        #** Output Error To User **
+        if Error == True:
+            Temp = await ctx.send("**Invalid SongID!**\nFor help with this command, run `!help info`")
+            await asyncio.sleep(5)
+            await ctx.message.delete()
+            await Temp.delete()
 
 
 #!-------------------SETUP FUNCTION-------------------#

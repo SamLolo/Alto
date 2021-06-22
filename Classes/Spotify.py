@@ -14,6 +14,7 @@ from datetime import datetime
 
 
 class Spotify():
+    
     def __init__(self):
 
         #** Get Spotify Details **
@@ -91,6 +92,61 @@ class Spotify():
         #** Return "PlaylistNotFound" if Request Body Is Empty (Shouldn't Happen) **
         else:
             return "PlaylistNotFound"
+
+
+    def GetAlbumInfo(self, AlbumID):
+
+        #** Get An Albums Songs **
+        AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.BotHead)
+
+        #** Check If Request Was A Success **
+        while AlbumData.status_code != 200:
+            
+            #** Check if Bot Credentials Have Expired **
+            if 401 == AlbumData.status_code:
+                self.RefreshBotToken()
+                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.BotHead)
+                
+            #** Check If Rate Limit Has Been Applied **
+            elif 429 == AlbumData.status_code:
+                print("\n----------------------RATE LIMIT REACHED--------------------")
+                print("Location: Spotify -> GetAlbumInfo")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                Time = AlbumData.headers['Retry-After']
+                sleep(Time)
+                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.BotHead)
+                
+            #** Check If Album Not Found, and Return "AlbumNotFound" **
+            elif 404 == AlbumData.status_code:
+                return "PlaylistNotFound"
+            
+            #** If Other Error Occurs, Raise Error **
+            else:
+                print("\n----------------------UNEXPECTED ERROR--------------------")
+                print("Location: Spotify -> GetPlaylistSongs")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                print("Error: Spotify Request Code "+str(AlbumData.status_code))
+                return "UnexpectedError"
+        
+        #** Itterate Through Each Song And Check Ignore If Empty **
+        if AlbumData != []:
+            AlbumData = AlbumData.json()
+            Songs = {}
+            for Song in AlbumData['tracks']['items']:
+                if Songs != []:
+                
+                    #** Get Formatted Data For Each Song **
+                    Song['album'] = {'name': AlbumData['name'], 'id': AlbumData['id'], 'images': [{'url': AlbumData['images'][0]['url']}], 'album_type': AlbumData['album_type'], 'release_date': AlbumData['release_date']}
+                    Song['popularity'] = AlbumData['popularity']
+                    Songs.update(self.FormatSongData(Song))
+            
+            #** Return Filled Dictionary Of Songs **
+            Songs = {'PlaylistInfo': {'Name': AlbumData['name'], 'Length': AlbumData['tracks']['total']}, 'Tracks': Songs}
+            return Songs
+        
+        #** Return "AlbumNotFound" if Request Body Is Empty (Shouldn't Happen) **
+        else:
+            return "AlbumNotFound"
         
 
     def GetSongInfo(self, SongID):
@@ -132,10 +188,10 @@ class Spotify():
             Song = Song.json()
 
             #** Get Formatted Song Data **
-            Songs = self.FormatSongData(Song)
+            SongInfo = self.FormatSongData(Song)
             
             #** Return Dictionary Of Song Information **
-            return Songs
+            return SongInfo
         
         #** Return "SongNotFound" if Request Body Is Empty (Shouldn't Happen) **
         else:
@@ -272,7 +328,18 @@ class Spotify():
                 print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
                 print("Error: Spotify Request Code "+str(Result.status_code))
                 return "UnexpectedError"
-        
-        Result = Result.json()
-        print(Result.json())
 
+        #** Check if Request Body Empty (Shouldn't Happen) & Convert to Json **
+        if Result != []:
+            Result = Result.json()
+
+            #** Get Formatted Song Data **
+            SongInfo = self.FormatSongData(Result['items'][0])
+            
+            #** Return Dictionary Of Song Information **
+            return SongInfo
+        
+        #** Return "SongNotFound" if Request Body Is Empty (Shouldn't Happen) **
+        else:
+            return "SongNotFound"
+        
