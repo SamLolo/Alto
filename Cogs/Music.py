@@ -388,7 +388,7 @@ class MusicCog(commands.Cog):
 
         #** If No Volume Change, Return Current Volume **
         if not(args):
-            await ctx.send("**Current Volume:** "+Player.volume+"%")
+            await ctx.send("**Current Volume:** "+str(Player.volume)+"%")
 
         #** Get New Volume From Args **
         else:
@@ -483,7 +483,7 @@ class MusicCog(commands.Cog):
 
                 #** Format Queue Into Embed & Send Into Discord **
                 UpNext = discord.Embed(
-                    title=self.Emojis['Play']+" Up Next:",
+                    title = "Up Next:",
                     description = Queue)
                 if Player.shuffle:
                     Shuffle = "✅"
