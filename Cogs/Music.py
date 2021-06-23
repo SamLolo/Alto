@@ -88,6 +88,8 @@ class MusicCog(commands.Cog):
             Config = json.load(ConfigFile)
             ConfigFile.close()
         self.Emojis = Config['Variables']['Emojis']
+        self.Emojis["True"] = "✅"
+        self.Emojis["False"] = "❌"
 
 
     def cog_unload(self):
@@ -119,11 +121,19 @@ class MusicCog(commands.Cog):
 
                 #** Join Voice Channel **
                 await ctx.guild.change_voice_state(channel=ctx.author.voice.channel)
+                
+            #** If Bot Doesn't Need To Connect, Raise Error **
+            elif ctx.command.name in ['stop', 'pause', 'skip', 'queue']:
+                raise commands.CheckFailure("BotVoice")
+                
         else:
 
             #** Check If Author Is In Same VC as Bot **
             if int(Player.channel_id) != ctx.author.voice.channel.id:
-                raise commands.CheckFailure(message="BotVoice")
+                raise commands.CheckFailure(message="SameVoice")
+            
+        #** Return Player Accociated With Guild **
+        return Player
 
 
     async def track_hook(self, event):
@@ -356,22 +366,13 @@ class MusicCog(commands.Cog):
     @commands.command(aliases=['disconnect', 'dc'])
     async def stop(self, ctx):
 
-        #** Ensure Voice To Make Sure Client Is Good To Run **
-        await self.ensure_voice(ctx)
-        
-        #** Get Guild Player & Check If Connected **
-        player = self.client.lavalink.player_manager.get(ctx.guild.id)
-        if not(player.is_connected):
-            await ctx.send("I'm not currently connected!")
+        #** Ensure Voice To Make Sure Client Is Good To Run & Get Guild Player**
+        Player = await self.ensure_voice(ctx)
 
-        #** Check If Command Author is in same VC as Music Bot **
-        elif not(ctx.author.voice) or (player.is_connected and ctx.author.voice.channel.id != int(player.channel_id)):
-            await ctx.send("Please join a voice channel to use this command!")
-
-        #** Clear Queue & Stop Playing Music **
-        else:
-            player.queue.clear()
-            await player.stop()
+        #** Clear Queue & Stop Playing Music If Music Playing**
+        if Player.is_playing:
+            Player.queue.clear()
+            await Player.stop()
             
             #** Disconnect From VC & Send Message Accordingly **
             await ctx.guild.change_voice_state(channel=None)
@@ -383,9 +384,8 @@ class MusicCog(commands.Cog):
     async def volume(self, ctx, *args):
 
         #** Ensure Voice To Make Sure Client Is Good To Run & Get Player **
-        await self.ensure_voice(ctx)
-        Player = self.client.lavalink.player_manager.get(ctx.guild.id)
-
+        Player = await self.ensure_voice(ctx)
+        
         #** If No Volume Change, Return Current Volume **
         if not(args):
             await ctx.send("**Current Volume:** "+str(Player.volume)+"%")
@@ -397,15 +397,10 @@ class MusicCog(commands.Cog):
             #** Check Volume is Integer Between 0 -> 100 **
             if Volume.isdecimal():
                 if int(Volume) <= 100 and int(Volume) > 0:
-            
-                    #**  & Check If Connected **
-                    if not(Player.is_connected):
-                        await ctx.send("I'm not currently connected!")
 
                     #** If Connected Set Volume & Confirm Volume Change **
-                    else:
-                        await Player.set_volume(int(Volume))
-                        await ctx.send("Volume Set To "+str(Volume)+"%")
+                    await Player.set_volume(int(Volume))
+                    await ctx.send("Volume Set To "+str(Volume)+"%")
 
                 #** If Issue With Input, Let User Know About The Issue **
                 else:
@@ -418,7 +413,7 @@ class MusicCog(commands.Cog):
         @commands.command(aliases=['s' ,'forceskip', 'fs', 'next'])
         async def skip(self, ctx):
             
-            #** Ensure Voice Before Allowing Command To Run **
+            #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
             await self.ensure_voice(ctx)
             
             #** Get Guild Player & Check If Connected **
@@ -440,87 +435,75 @@ class MusicCog(commands.Cog):
     @commands.command(aliases=['unpause'])
     async def pause(self, ctx):
         
-        #** Ensure Voice Before Allowing Command To Run **
-        await self.ensure_voice(ctx)
-        
-        #** Get Guild Player & Check If Connected **
-        Player = self.client.lavalink.player_manager.get(ctx.guild.id)
-        if not(Player.is_connected):
-            await ctx.send("I'm not currently connected!")
+        #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
+        Player = await self.ensure_voice(ctx)
         
         #** Check If Player Is Actually Playing A Song **
-        elif not(Player.is_playing) and not(Player.paused):
+        if not(Player.is_playing) and not(Player.paused):
             await ctx.send("I'm not currently playing anything!")
 
         #** If Connected & Playing Skip Song & Confirm Track Skipped **
         else:
+            Player.paused = not(Player.paused)
             if Player.paused:
-                await Player.set_pause(False)
-                await ctx.send("Player Unpaused!")
-            else:
-                await Player.set_pause(True)
                 await ctx.send("Player Paused!")
+            else:
+                await ctx.send("Player Unpaused!")
 
     
     @commands.guild_only()
     @commands.command(aliases=['q'])
     async def queue(self, ctx):
         
-        #** Ensure Voice Before Allowing Command To Run **
-        await self.ensure_voice(ctx)
-        
-        #** Get Guild Player & Check If Connected **
-        Player = self.client.lavalink.player_manager.get(ctx.guild.id)
-        if not(Player.is_connected):
-            await ctx.send("I'm not currently connected!")
+        #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
+        Player = await self.ensure_voice(ctx)
 
         #** Format Queue List Into String **
-        else:
-            if Player.queue != []:
-                Queue = ""
-                for i in range(len(Player.queue)):
-                    Queue += str(i+1)+") ["+Player.queue[i]["title"]+"]("+Player.queue[i]["uri"]+")\n"
+        if Player.queue != []:
+            Queue = ""
+            for i in range(len(Player.queue)):
+                Queue += str(i+1)+") ["+Player.queue[i]["title"]+"]("+Player.queue[i]["uri"]+")\n"
 
-                #** Format Queue Into Embed & Send Into Discord **
-                UpNext = discord.Embed(
-                    title = "Up Next:",
-                    description = Queue)
-                if Player.shuffle:
-                    Shuffle = "✅"
-                else:
-                    Shuffle = "❌"
-                if Player.repeat:
-                    Loop = "✅"
-                else:
-                    Loop = "❌"
-                UpNext.set_footer(text="Shuffle: "+Shuffle+"  Loop: "+Loop)
-                await ctx.send(embed=UpNext)
-            
-            #** If Queue Empty, Just Send Plain Text **
-            else:
-                await ctx.send("Queue Is Currently Empty!")
+            #** Format Queue Into Embed & Send Into Discord **
+            UpNext = discord.Embed(
+                title = "Up Next:",
+                description = Queue)
+            UpNext.set_footer(text="Shuffle: "+self.Emojis[str(Player.shuffle)]+"  Loop: "+self.Emojis[str(Player.repeat)])
+            await ctx.send(embed=UpNext)
+        
+        #** If Queue Empty, Just Send Plain Text **
+        else:
+            await ctx.send("Queue Is Currently Empty!")
 
 
     @commands.guild_only()
     @commands.command(aliases=['m', 'mix', 'mixup'])
     async def shuffle(self, ctx):
         
-        #** Ensure Voice Before Allowing Command To Run **
-        await self.ensure_voice(ctx)
-        
-        #** Get Guild Player & Check If Connected **
-        Player = self.client.lavalink.player_manager.get(ctx.guild.id)
-        if not(Player.is_connected):
-            await ctx.send("I'm not currently connected!")
+        #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
+        Player = await self.ensure_voice(ctx)
 
-        #** If Connected & Playing Skip Song & Confirm Track Skipped **
+        #** Enable / Disable Shuffle Mode **
+        Player.shuffle = not(Player.shuffle)
+        if Player.shuffle:
+            await ctx.send("Player Shuffled!")
         else:
-            if Player.shuffle:
-                Player.shuffle = False
-                await ctx.send("Player No Longer Shuffled!")
-            else:
-                Player.shuffle = True
-                await ctx.send("Player Shuffled!")
+            await ctx.send("Player No Longer Shuffled!")
+
+
+    @commands.guild_only()
+    @commands.command(aliases=['l', 'repeat'])
+    async def loop(self, ctx):
+        
+        #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
+        Player = await self.ensure_voice(ctx)
+
+        #** Enable / Disable Repeat Mode **
+        Player.repeat = not(Player.repeat)
+        if Player.repeat:
+            await ctx.send("Current Track Now Looping!")
+        else:
+            await ctx.send("Track Loop Disabled!")
 
 
     @commands.command(aliases=['song', 'i', 'songinfo'])

@@ -3,12 +3,8 @@
         "Playing": "Beta V1.03",
         "Watching": "!help"
     },
-    "StatusTime":
-        "5"
-    ,
-    "Prefix": [
-        "!"
-    ],
+    "StatusTime": "5",
+    "Prefix": "!",
     "Variables": {
         "Emojis": {
             "Tick": "<a:checkmark:738865801964027904>",

@@ -125,6 +125,8 @@ async def on_command_error(ctx, error):
         if str(error) == "UserVoice":
             Temp = await ctx.message.channel.send("To use this command, please join a Voice Channel!")
         elif str(error) == "BotVoice":
+            Temp = await ctx.message.channel.send("I'm Not Currently Connected!")
+        elif str(error) == "SameVoice":
             Temp = await ctx.message.channel.send("You must be in my Voice Channel to use this!")
         else:
             raise error
