@@ -113,7 +113,7 @@ class MusicCog(commands.Cog):
 
                 #** Check If Bot Has Permission To Speak and Raise Error **
                 Permissions = ctx.author.voice.channel.permissions_for(ctx.me)
-                if not Permissions.connect or not Permissions.speak:
+                if not(Permissions.connect) or not(Permissions.speak):
                     raise commands.BotMissingPermissions(["Connect", "Speak"])
 
                 #** Store Channel ID as Value In Player **
@@ -452,6 +452,23 @@ class MusicCog(commands.Cog):
 
     
     @commands.guild_only()
+    @commands.command(aliases=['s' ,'forceskip', 'fs', 'next'])
+    async def skip(self, ctx):
+
+        #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
+        Player = await self.ensure_voice(ctx)
+        
+        #** Check If Player Is Actually Playing A Song **
+        if not(Player.is_playing):
+            await ctx.send("I'm not currently playing anything!")
+
+        #** If Connected & Playing Skip Song & Confirm Track Skipped **
+        else:
+            await ctx.send("**Skipped Track:** "+Player.current["title"])
+            await Player.skip()
+    
+    
+    @commands.guild_only()
     @commands.command(aliases=['q'])
     async def queue(self, ctx):
         
@@ -492,7 +509,7 @@ class MusicCog(commands.Cog):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['l', 'repeat'])
+    @commands.command(aliases=['repeat'])
     async def loop(self, ctx):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -504,6 +521,49 @@ class MusicCog(commands.Cog):
             await ctx.send("Current Track Now Looping!")
         else:
             await ctx.send("Track Loop Disabled!")
+
+
+    @commands.guild_only()
+    @commands.command(aliases=['np', 'now'])
+    async def nowplaying(self, ctx):
+        
+        #** Ensure Cmd Is Good To Run & Get Player **
+        Player = await self.ensure_voice(ctx)
+        print(dir(Player.current))
+        
+        #** If Track Has Spotify Info, Configure List of Artists **
+        if Player.current.extra['spotify'] != {}:
+            Artists = ""
+            for i in range(len(Player.current.extra['spotify']['artists'])):
+                if i == 0:
+                    Artists += "["+Player.current.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+Player.current.extra['spotify']['artistID'][i]+")"
+                elif i != len(Player.current.extra['spotify']['artists'])-1:
+                    Artists += ", ["+Player.current.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+Player.current.extra['spotify']['artistID'][i]+")"
+                else:
+                    Artists += " & ["+Player.current.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+Player.current.extra['spotify']['artistID'][i]+")"
+            
+            #** Create Now Playing Embed **
+            NowPlaying = discord.Embed(
+                title = "Now Playing:",
+                description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"
+                            +self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")")
+            NowPlaying.set_thumbnail(url=Player.current.extra['spotify']['thumbnail'])
+            NowPlaying.add_field(name="By:", value=Artists)
+            NowPlaying.add_field(name="Position:", value=lavalink.format_time(Player.position_timestamp)+" / "+lavalink.format_time(Player.current.duration))
+            NowPlaying.set_footer(text="Up Next: ["+Player.queue[i]["title"]+"]("+Player.queue[i]["uri"]+")")
+
+        #** If No Spotify Info, Create Basic Now Playing Embed **
+        else:
+            NowPlaying = discord.Embed(
+                title = "Now Playing:",
+                description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")")
+
+        #** Send Embed To Channel Where First Play Cmd Was Ran & Add Reactions**
+        Message = await ctx.send(embed=NowPlaying)
+        await Message.add_reaction(self.Emojis['SkipBack'])
+        await Message.add_reaction(self.Emojis['Play'])
+        await Message.add_reaction(self.Emojis['Pause'])
+        await Message.add_reaction(self.Emojis['SkipForwards'])
 
 
     @commands.command(aliases=['song', 'i', 'songinfo'])
