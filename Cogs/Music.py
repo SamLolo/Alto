@@ -98,6 +98,16 @@ class MusicCog(commands.Cog):
         self.client.lavalink._event_hooks.clear()
 
 
+    async def format_time(self, time):
+        
+        Time = lavalink.parse_time(time)
+        if Time[1] == 0.0:
+            return str(int(Time[2]))+":"+str(int(Time[3])).zfill(2)
+        else:
+            return str(int(Time[1]))+":"+str(int(Time[2])).zfill(2)+":"+str(int(Time[3])).zfill(2)
+                
+
+
     async def ensure_voice(self, ctx):
         
         #** Return a Player If One Exists, Otherwise Create One **
@@ -377,6 +387,10 @@ class MusicCog(commands.Cog):
             #** Disconnect From VC & Send Message Accordingly **
             await ctx.guild.change_voice_state(channel=None)
             await ctx.send("Disconnected!")
+            
+        #** If Music Not Playing, Raise Error **
+        else:
+            raise commands.CheckFailure(message="NotPlaying")
 
     
     @commands.guild_only()
@@ -439,8 +453,8 @@ class MusicCog(commands.Cog):
         Player = await self.ensure_voice(ctx)
         
         #** Check If Player Is Actually Playing A Song **
-        if not(Player.is_playing) and not(Player.paused):
-            await ctx.send("I'm not currently playing anything!")
+        if not(Player.is_playing):
+            raise commands.CheckFailure(message="NotPlaying")
 
         #** If Connected & Playing Skip Song & Confirm Track Skipped **
         else:
@@ -460,7 +474,7 @@ class MusicCog(commands.Cog):
         
         #** Check If Player Is Actually Playing A Song **
         if not(Player.is_playing):
-            await ctx.send("I'm not currently playing anything!")
+            raise commands.CheckFailure(message="NotPlaying")
 
         #** If Connected & Playing Skip Song & Confirm Track Skipped **
         else:
@@ -549,8 +563,11 @@ class MusicCog(commands.Cog):
                             +self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")")
             NowPlaying.set_thumbnail(url=Player.current.extra['spotify']['thumbnail'])
             NowPlaying.add_field(name="By:", value=Artists)
-            NowPlaying.add_field(name="Position:", value=lavalink.format_time(Player.position_timestamp)+" / "+lavalink.format_time(Player.current.duration))
-            NowPlaying.set_footer(text="Up Next: ["+Player.queue[i]["title"]+"]("+Player.queue[i]["uri"]+")")
+            NowPlaying.add_field(name="Position:", value= await self.format_time(Player.position)+" / "+ await self.format_time(Player.current.duration))
+            if Player.queue == []:
+                NowPlaying.set_footer(text="Up Next: Nothing")
+            else:
+                NowPlaying.set_footer(text="Up Next: "+Player.queue[i]["title"])
 
         #** If No Spotify Info, Create Basic Now Playing Embed **
         else:

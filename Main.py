@@ -128,6 +128,8 @@ async def on_command_error(ctx, error):
             Temp = await ctx.message.channel.send("I'm Not Currently Connected!")
         elif str(error) == "SameVoice":
             Temp = await ctx.message.channel.send("You must be in my Voice Channel to use this!")
+        elif str(error) == "NotPlaying":
+            Temp = await ctx.message.channel.send("I'm Not Currently Playing Anything!")
         else:
             raise error
         await asyncio.sleep(5)
