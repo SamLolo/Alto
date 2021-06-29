@@ -10,6 +10,9 @@ import string
 import asyncio
 import mysql.connector
 import lavalink
+import requests
+from PIL import Image
+from io import BytesIO
 from datetime import datetime
 from discord.ext import commands
 
@@ -107,6 +110,28 @@ class MusicCog(commands.Cog):
             return str(int(Time[1]))+":"+str(int(Time[2])).zfill(2)+":"+str(int(Time[3])).zfill(2)
                 
 
+    async def format_artists(self, Artists, IDs):
+        
+        #** Prepare Empty String **
+        Formatted = ""
+        
+        #** Loop Through Artists **
+        for i in range(len(Artists)):
+            
+            #** If First Index, Add Artist & Link **
+            if i == 0:
+                Formatted += "["+Artists[i]+"](https://open.spotify.com/artist/"+IDs[i]+")"
+                
+            #** If Not Last Index, Add Comma Before Artist **
+            elif i != len(Artists)-1:
+                Formatted += ", ["+Artists[i]+"](https://open.spotify.com/artist/"+IDs[i]+")"
+                
+            #** If Last Index, add & Before Artist **
+            else:
+                Formatted += " & ["+Artists[i]+"](https://open.spotify.com/artist/"+IDs[i]+")"
+
+        #** Returned Formatted String **
+        return Formatted
 
     async def ensure_voice(self, ctx):
         
@@ -185,12 +210,25 @@ class MusicCog(commands.Cog):
                     title = "Now Playing:",
                     description = self.Emojis['Youtube']+" ["+event.track["title"]+"]("+event.track["uri"]+")")
 
+            #** Fetch Previous Now Playing Message & Check If Exists **
+            OldMessage = event.player.fetch('NowPlaying')
+
             #** Send Embed To Channel Where First Play Cmd Was Ran & Add Reactions**
             Message = await Channel.send(embed=NowPlaying)
             await Message.add_reaction(self.Emojis['SkipBack'])
             await Message.add_reaction(self.Emojis['Play'])
             await Message.add_reaction(self.Emojis['Pause'])
             await Message.add_reaction(self.Emojis['SkipForwards'])
+
+            #** Store Now Playing Message In Player **
+            event.player.store('NowPlaying', Message)
+
+            #** Sleep Before Deleting Last Message **
+            await asyncio.sleep(0.5)
+            if OldMessage is not None:
+                
+                #** Delete Previous Message If One Found **
+                await OldMessage.delete()
 
 
     @commands.guild_only()
@@ -215,7 +253,7 @@ class MusicCog(commands.Cog):
 
                 #** Get Track From Lavalink Player & Assign Song Data**
                 Results = await Player.node.get_tracks(Query)
-                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True, spotify={})
+                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
 
             #** Check If User Input Is A Correct Spotify Track URL & Get Song Data **
             elif Query.startswith("https://open.spotify.com/track/"):
@@ -232,7 +270,7 @@ class MusicCog(commands.Cog):
 
                 #** Get Track From Lavalink Player & Assign Track Data **
                 Results = await Player.node.get_tracks(Search)
-                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True, spotify={
+                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={
                     'name': Song['Name'],
                     'artists': Song['Artists'],
                     'artistID': Song['ArtistID'],
@@ -243,7 +281,7 @@ class MusicCog(commands.Cog):
             else:
                 Results = await Player.node.get_tracks(Query)
                 print(Results)
-                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True, spotify={})
+                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
 
             #** Check If Request Successful and Tracks Found **
             if not(Results):
@@ -333,7 +371,7 @@ class MusicCog(commands.Cog):
                     Results = await Player.node.get_tracks(Search)
                     
                     #** Assign Track Data **
-                    Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author.id, recommended=True, spotify={
+                    Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={
                         'name': Song['Name'],
                         'artists': Song['Artists'],
                         'artistID': Song['ArtistID'],
@@ -355,7 +393,7 @@ class MusicCog(commands.Cog):
                         print(Title.title())
 
                     #** Assign Track Data **
-                    Track = lavalink.models.AudioTrack(Track, ctx.author.id, recommended=True, spotify={})
+                    Track = lavalink.models.AudioTrack(Track, ctx.author, recommended=True, spotify={})
                     
                 #** Add Song To Queue & Play if Not Already Playing **
                 Player.add(requester=ctx.author.id, track=Track)
@@ -458,7 +496,8 @@ class MusicCog(commands.Cog):
 
         #** If Connected & Playing Skip Song & Confirm Track Skipped **
         else:
-            Player.paused = not(Player.paused)
+            print(Player.paused)
+            await Player.set_pause(not(Player.paused))
             if Player.paused:
                 await ctx.send("Player Paused!")
             else:
@@ -543,44 +582,55 @@ class MusicCog(commands.Cog):
         
         #** Ensure Cmd Is Good To Run & Get Player **
         Player = await self.ensure_voice(ctx)
-        print(dir(Player.current))
         
-        #** If Track Has Spotify Info, Configure List of Artists **
+        #** Create Now Playing Embed **
+        NowPlaying = discord.Embed(
+            title = "Now Playing:",
+        )
+        
+        #** Set Author & Footer and Add Position Field **
+        NowPlaying.set_author(name="Requested By "+str(Player.current.requester)+"", icon_url=Player.current.requester.avatar_url)
+        NowPlaying.add_field(name="Position:", value= await self.format_time(Player.position)+" / "+ await self.format_time(Player.current.duration))
+        if Player.queue == []:
+            NowPlaying.set_footer(text="Up Next: Nothing")
+        else:
+            NowPlaying.set_footer(text="Up Next: "+Player.queue[0]["title"])
+        
+        
+        #** If Track Has Spotify Info, Format List of Artists **
         if Player.current.extra['spotify'] != {}:
-            Artists = ""
-            for i in range(len(Player.current.extra['spotify']['artists'])):
-                if i == 0:
-                    Artists += "["+Player.current.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+Player.current.extra['spotify']['artistID'][i]+")"
-                elif i != len(Player.current.extra['spotify']['artists'])-1:
-                    Artists += ", ["+Player.current.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+Player.current.extra['spotify']['artistID'][i]+")"
-                else:
-                    Artists += " & ["+Player.current.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+Player.current.extra['spotify']['artistID'][i]+")"
-            
-            #** Create Now Playing Embed **
-            NowPlaying = discord.Embed(
-                title = "Now Playing:",
-                description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"
-                            +self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")")
+            Artists = await self.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
+
+            #** Set Descrition and Thumbnail & Add By Field Above Positon Field **
+            NowPlaying.description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"+self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")"
             NowPlaying.set_thumbnail(url=Player.current.extra['spotify']['thumbnail'])
-            NowPlaying.add_field(name="By:", value=Artists)
-            NowPlaying.add_field(name="Position:", value= await self.format_time(Player.position)+" / "+ await self.format_time(Player.current.duration))
-            if Player.queue == []:
-                NowPlaying.set_footer(text="Up Next: Nothing")
-            else:
-                NowPlaying.set_footer(text="Up Next: "+Player.queue[i]["title"])
+            NowPlaying.insert_field_at(0, name="By:", value=Artists)
 
         #** If No Spotify Info, Create Basic Now Playing Embed **
         else:
-            NowPlaying = discord.Embed(
-                title = "Now Playing:",
-                description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")")
-
+            
+            #** Get Thumbnail From Youtube URL **
+            print(Player.current.uri)
+            VideoID = Player.current.uri.split("=")[1]
+            print(Youtube.GetVideoInfo(VideoID))
+            
+            #** 
+            NowPlaying.description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
+            NowPlaying.insert_field_at(0, name="By:", value=Player.current.author)
+            
         #** Send Embed To Channel Where First Play Cmd Was Ran & Add Reactions**
         Message = await ctx.send(embed=NowPlaying)
         await Message.add_reaction(self.Emojis['SkipBack'])
         await Message.add_reaction(self.Emojis['Play'])
         await Message.add_reaction(self.Emojis['Pause'])
         await Message.add_reaction(self.Emojis['SkipForwards'])
+
+
+    @commands.guild_only()
+    @commands.command(aliases=['words'])
+    async def lyrics(self, ctx):
+        
+        print()
 
 
     @commands.command(aliases=['song', 'i', 'songinfo'])

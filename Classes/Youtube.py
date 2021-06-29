@@ -52,7 +52,7 @@ class YoutubeAPI():
         SearchDict = {}
         for Result in Results['items']:
             if Result['id']['kind'] == 'youtube#video':    
-                SearchDict.update({Result['id']['videoId']: {'Tittle': Result['snippet']['title'],
+                SearchDict.update({Result['id']['videoId']: {'Title': Result['snippet']['title'],
                                                              'Description': Result['snippet']['description'],
                                                              'Channel': Result['snippet']['channelTitle'], 
                                                              'ChannelID': Result['snippet']['channelId'],
@@ -66,7 +66,7 @@ class YoutubeAPI():
     def GetVideoInfo(self, VideoID):
         
         #** Request Info About Video ID From Youtube API **
-        Data = {'part': 'player,contentDetails,topicDetails,statistics', 'id': VideoID, 'key': self.Key}
+        Data = {'part': 'snippet,player,contentDetails,topicDetails,statistics', 'id': VideoID, 'key': self.Key}
         Info = requests.get('https://youtube.googleapis.com/youtube/v3/videos', Data, headers = self.Header)
 
         #** Check If Request Was A Success **
@@ -129,7 +129,13 @@ class YoutubeAPI():
                                             'Music': Topic,
                                             'Views': Info['statistics']['viewCount'],
                                             'Likes': Info['statistics']['likeCount'],
-                                            'Dislikes': Info['statistics']['dislikeCount']}}
+                                            'Dislikes': Info['statistics']['dislikeCount'],
+                                            'Title': Info['snippet']['title'],
+                                            'Description': Info['snippet']['description'],
+                                            'Channel': Info['snippet']['channelTitle'], 
+                                            'ChannelID': Info['snippet']['channelId'],
+                                            'Thumbnail': Info['snippet']['thumbnails']['default']['url'],
+                                            'PublishDate': Info['snippet']['publishedAt']}}
         
         #** Return Filled SongData Dictionary **
         return SongData

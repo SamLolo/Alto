@@ -258,6 +258,7 @@ async def recommendations(ctx):
 @client.command()
 async def reload(ctx, CogName):
     client.reload_extension("Cogs."+CogName)
+    await ctx.message.delete()
 
 
 #!-------------------------------ADD COGS-------------------------------#
