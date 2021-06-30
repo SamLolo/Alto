@@ -90,6 +90,8 @@ class MusicCog(commands.Cog):
         with open('Config.json') as ConfigFile:
             Config = json.load(ConfigFile)
             ConfigFile.close()
+            
+        #** Setup Emojis **
         self.Emojis = Config['Variables']['Emojis']
         self.Emojis["True"] = "✅"
         self.Emojis["False"] = "❌"
@@ -103,7 +105,10 @@ class MusicCog(commands.Cog):
 
     async def format_time(self, time):
         
+        #** Parse Time Into Days, Hours, Minutes & Seconds **
         Time = lavalink.parse_time(time)
+        
+        #** Create Strings Of Time In 24 Hour Clock **
         if Time[1] == 0.0:
             return str(int(Time[2]))+":"+str(int(Time[3])).zfill(2)
         else:
@@ -112,10 +117,8 @@ class MusicCog(commands.Cog):
 
     async def format_artists(self, Artists, IDs):
         
-        #** Prepare Empty String **
+        #** Prepare Empty String & Start Loop Through Artists **
         Formatted = ""
-        
-        #** Loop Through Artists **
         for i in range(len(Artists)):
             
             #** If First Index, Add Artist & Link **
@@ -132,6 +135,7 @@ class MusicCog(commands.Cog):
 
         #** Returned Formatted String **
         return Formatted
+
 
     async def ensure_voice(self, ctx):
         
@@ -178,6 +182,11 @@ class MusicCog(commands.Cog):
             #** When Queue Empty, Disconnect From VC **
             Guild = self.client.get_guild(int(event.player.guild_id))
             await Guild.change_voice_state(channel=None)
+            
+            #** Remove Old Now Playing Message & Delete Stored Value **
+            OldMessage = event.player.fetch('NowPlaying')
+            await OldMessage.delete()
+            event.player.delete('NowPlaying')
             
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
@@ -584,9 +593,7 @@ class MusicCog(commands.Cog):
         Player = await self.ensure_voice(ctx)
         
         #** Create Now Playing Embed **
-        NowPlaying = discord.Embed(
-            title = "Now Playing:",
-        )
+        NowPlaying = discord.Embed(title = "Now Playing:")
         
         #** Set Author & Footer and Add Position Field **
         NowPlaying.set_author(name="Requested By "+str(Player.current.requester)+"", icon_url=Player.current.requester.avatar_url)
@@ -596,12 +603,11 @@ class MusicCog(commands.Cog):
         else:
             NowPlaying.set_footer(text="Up Next: "+Player.queue[0]["title"])
         
-        
         #** If Track Has Spotify Info, Format List of Artists **
         if Player.current.extra['spotify'] != {}:
             Artists = await self.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
 
-            #** Set Descrition and Thumbnail & Add By Field Above Positon Field **
+            #** Set Descrition and Thumbnail & Add By Field Above Position Field **
             NowPlaying.description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"+self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")"
             NowPlaying.set_thumbnail(url=Player.current.extra['spotify']['thumbnail'])
             NowPlaying.insert_field_at(0, name="By:", value=Artists)
@@ -609,28 +615,30 @@ class MusicCog(commands.Cog):
         #** If No Spotify Info, Create Basic Now Playing Embed **
         else:
             
-            #** Get Thumbnail From Youtube URL **
-            print(Player.current.uri)
+            #** Get Info From Youtube URL **
             VideoID = Player.current.uri.split("=")[1]
-            print(Youtube.GetVideoInfo(VideoID))
+            VideoInfo = Youtube.GetVideoInfo(VideoID)[VideoID]
             
-            #** 
+            #** Set Descrition and Thumbnail & Add By Field Above Position Field **
             NowPlaying.description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
-            NowPlaying.insert_field_at(0, name="By:", value=Player.current.author)
+            NowPlaying.set_thumbnail(url=VideoInfo['Thumbnail'])
+            NowPlaying.insert_field_at(0, name="By:", value="["+Player.current.author+"](https://www.youtube.com/channel/"+VideoInfo['ChannelID']+")")
             
         #** Send Embed To Channel Where First Play Cmd Was Ran & Add Reactions**
         Message = await ctx.send(embed=NowPlaying)
-        await Message.add_reaction(self.Emojis['SkipBack'])
-        await Message.add_reaction(self.Emojis['Play'])
-        await Message.add_reaction(self.Emojis['Pause'])
-        await Message.add_reaction(self.Emojis['SkipForwards'])
+        for emoji in ['SkipBack', 'Play', 'Pause', 'SkipForwards']:
+            await Message.add_reaction(self.Emojis[emoji])
 
 
     @commands.guild_only()
     @commands.command(aliases=['words'])
-    async def lyrics(self, ctx):
+    async def lyrics(self, ctx, *args):
         
-        print()
+        #** Get Lyrics For Requested Song **
+        Lyrics = SongData.GetLyrics(" ".join(args))
+        
+        #** Return Lyrics To User **
+        await ctx.send("```\n"+Lyrics['Meta']['Title']+"\nBy: "+Lyrics['Meta']['Artist']+"\n\n"+Lyrics['Lyrics']+"```")
 
 
     @commands.command(aliases=['song', 'i', 'songinfo'])

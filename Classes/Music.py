@@ -140,3 +140,40 @@ class Music(Spotify):
 
         #** Return List Of Recommended Songs **
         return Recommendations['tracks']
+
+
+    def GetLyrics(self, Query):
+        
+        #** Request Lyrics From API **
+        Lyrics = requests.get("https://lyrics-api.powercord.dev/lyrics?", params={"input": Query.replace(" ", "%20")})
+        
+        #** Check If Request Was A Success **
+        while Lyrics.status_code != 200:
+                
+            #** Check If Lyrics Not Found, and Return "LyricsNotFound" **
+            if 404 == Lyrics.status_code:
+                return "LyricsNotFound"
+            
+            #** If Other Error Occurs, Raise Error **
+            else:
+                print("\n----------------------UNEXPECTED ERROR--------------------")
+                print("Location: Music -> GetLyrics")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                print("Error: Request Status Code "+str(Lyrics.status_code))
+                return "UnexpectedError"
+        
+        #** Get Lyrics Json **
+        Lyrics = Lyrics.json()['data'][0]
+        
+        LyricData = {"Lyrics": Lyrics['lyrics'],
+                     "Meta": {
+                         "Title": Lyrics['name'],
+                         "Artist": Lyrics['artist'],
+                         "Art": Lyrics['album_art'],
+                         "URL": Lyrics['url']},
+                     "Spotify": {
+                         "TrackID": Lyrics['meta']['spotify']['track'],
+                         "ArtistID": Lyrics['meta']['spotify']['artists']}}
+        
+        #** Return Formatted Data **
+        return LyricData
