@@ -637,8 +637,22 @@ class MusicCog(commands.Cog):
         #** Get Lyrics For Requested Song **
         Lyrics = SongData.GetLyrics(" ".join(args))
         
+        #** Get Most Dominant Colour In Album Art **
+        RGB = SongData.GetColour(Lyrics['Meta']['Art'])
+        Colour = discord.Colour.from_rgb(RGB[0], RGB[1], RGB[2])
+        
+        #** Create Lyric Embed **
+        LyricEmbed = discord.Embed(
+            title = Lyrics['Meta']['Title'],
+            description = "**By: **["+Lyrics['Meta']['Artist']+"](https://open.spotify.com/track/"+Lyrics['Spotify']['ArtistID'][0]+")\n\n"+Lyrics['Lyrics'],
+            colour = Colour)
+        LyricEmbed.set_thumbnail(url=Lyrics['Meta']['Art'])
+        
+        #** Get Embed Length (Max 6000) For Test Purposes **
+        print(len(LyricEmbed))
+        
         #** Return Lyrics To User **
-        await ctx.send("```\n"+Lyrics['Meta']['Title']+"\nBy: "+Lyrics['Meta']['Artist']+"\n\n"+Lyrics['Lyrics']+"```")
+        await ctx.send(embed=LyricEmbed)
 
 
     @commands.command(aliases=['song', 'i', 'songinfo'])

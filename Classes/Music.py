@@ -9,6 +9,7 @@ import pandas as pd
 from time import sleep
 from sklearn import tree
 from datetime import datetime
+from colorthief import ColorThief
 from Classes.Spotify import Spotify
 
 
@@ -177,3 +178,20 @@ class Music(Spotify):
         
         #** Return Formatted Data **
         return LyricData
+    
+    
+    def GetColour(self, URL):
+        
+        #** Get Contents Of Image URL **
+        Image = requests.get(URL)
+
+        #** Write Image To Temp PNG File **
+        File = open("image.png", "w")
+        File.write(Image.content)
+        File.close()
+        
+        #** Get Most Dominant Colour In Image **
+        Colour = ColorThief('image.png').get_color(quality=1)
+        
+        #** Return RGB Colour Tuple **
+        return Colour
