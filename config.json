@@ -23,6 +23,7 @@
     },
     "Active_Extensions": [
         "Cogs.Utility",
-        "Cogs.Music"
+        "Cogs.Music",
+        "Cogs.Account"
     ]
 }

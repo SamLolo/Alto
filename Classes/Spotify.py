@@ -332,14 +332,21 @@ class Spotify():
         #** Check if Request Body Empty (Shouldn't Happen) & Convert to Json **
         if Result != []:
             Result = Result.json()
-
-            #** Get Formatted Song Data **
-            SongInfo = self.FormatSongData(Result['items'][0])
             
-            #** Return Dictionary Of Song Information **
-            return SongInfo
+            #** Check If Any Results Returned **
+            if Result['tracks']['items'] != []:
+
+                #** Get Formatted Song Data Of Top Result **
+                SongInfo = self.FormatSongData(Result['tracks']['items'][0])
+                
+                #** Return Dictionary Of Song Information **
+                return SongInfo
+            
+            #** Return Song Not Found If No Songs Returned **
+            else:
+                return "SongNotFound"
         
-        #** Return "SongNotFound" if Request Body Is Empty (Shouldn't Happen) **
+        #** Return "SongNotFound" If Request Body Is Empty (Shouldn't Happen) **
         else:
             return "SongNotFound"
         

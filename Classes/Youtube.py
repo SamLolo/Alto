@@ -63,7 +63,30 @@ class YoutubeAPI():
         return SearchDict
     
     
-    def GetVideoInfo(self, VideoID):
+    def GetVideoInfo(self, Track):
+        
+        #** Get Video ID **
+        VideoID = Track['info']['uri'].split("=")[1]
+    
+        #** Check If Song Title Is A Music Video
+        if ("Official Video" in Track['info']['title'] or 'Official Music Video' in Track['info']['title'] or 'Official Lyric Video' in Track['info']['title'] or (Track['info']['author']+" - ").lower() in Track['info']['title'].lower()) and Track['info']['length'] <= 600000:
+            Title = (Track['info']['title'].lower()).replace('official video', '').replace('official music video', '').replace('official lyric video', '').replace('[]', '').replace('()', '')
+            
+            #** Get Title & Artist Of Song **
+            if " - " in Title:
+                Title = Title.split(" - ")
+                Artist = Title[0]
+                Title = Title[1]
+            else:
+                Artist = Track['info']['author']
+            
+            #** Set Music To True & Add New Title **
+            SongData = {VideoID: {'Music': True,
+                                  'Title': Title.title(), 
+                                  'Artist': Artist.title()}}
+            
+            #** Return Data **
+            return SongData
         
         #** Request Info About Video ID From Youtube API **
         Data = {'part': 'snippet,player,contentDetails,topicDetails,statistics', 'id': VideoID, 'key': self.Key}
@@ -122,11 +145,18 @@ class YoutubeAPI():
             Hours = None
             Minutes = None
             Seconds = int(Duration.replace('S', ''))
+        
+        #** Get Artist / Author Of Video **
+        if " - " in Track['info']['title']:
+            Artist = Track['info']['title'].split(" - ")[0]
+        else:
+            Artist = Track['info']['author']
 
         #** Fill Necessary Data Into A Dictionary Ready To Be Returned **
         SongData = {Info['id']: {'Duration': {'Hours': Hours, 'Minutes': Minutes, 'Seconds': Seconds},
                                             'Player': PlayerURL,
                                             'Music': Topic,
+                                            'Artist': Artist,
                                             'Views': Info['statistics']['viewCount'],
                                             'Likes': Info['statistics']['likeCount'],
                                             'Dislikes': Info['statistics']['dislikeCount'],

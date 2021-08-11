@@ -244,6 +244,8 @@ class MusicCog(commands.Cog):
     @commands.command(aliases=['p'])
     async def play(self, ctx, *, Query):
         
+        MusicVid = 0  # { For Test Purposes }
+        
         #** Ensure Voice To Make Sure Client Is Good To Run **
         await self.ensure_voice(ctx)
     
@@ -367,7 +369,6 @@ class MusicCog(commands.Cog):
             
             #** For Length Of Playlist, Loop Through Adding Songs **
             Message = True
-            MusicVid = 0  # { For Test Purposes }
             while True:
                 
                 #** If Spotify URL, Get Youtube Track For Song **
@@ -396,13 +397,40 @@ class MusicCog(commands.Cog):
                         print("Playlist Queued!")
                         break
                     
-                    if ("Official Video" in Track['info']['title'] or 'Official Music Video' in Track['info']['title'] or 'Official Lyric Video' in Track['info']['title'] or (Track['info']['author']+" - ").lower() in Track['info']['title'].lower()) and Track['info']['length'] <= 600000:
-                        MusicVid += 1 # { For Test Purposes }
-                        Title = (Track['info']['title'].lower()).replace('official video', '').replace('official music video', '').replace('official lyric video', '').replace('[]', '').replace('()', '').replace(Track['info']['author'].lower()+' - ', '')
-                        print(Title.title())
+                    #** Get Video ID From URI **
+                    VideoID = Track['info']['uri'].split("=")[1]
+                    
+                    #** Get Youtube Track Info & Check If Music Video Detected **
+                    Info = Youtube.GetVideoInfo(Track)
+                    if Info[VideoID]['Music']:
+                        
+                        #** If Music Video Detected, Search For Song On Spotify **
+                        SpotifyInfo = SongData.SearchSpotify(Info[VideoID]['Title'], Info[VideoID]['Artist'])
+                        
 
-                    #** Assign Track Data **
-                    Track = lavalink.models.AudioTrack(Track, ctx.author, recommended=True, spotify={})
+                        if SpotifyInfo == "SongNotFound":
+                            print(Info)
+                            Track = lavalink.models.AudioTrack(Track, ctx.author, recommended=True, spotify={}, youtube={})
+                            
+                        #** Get ID of Song From Dictionary **
+                        else:
+                            for Keys in SpotifyInfo.keys():
+                                ID = Keys
+                            
+                            #** Assign Track Data **
+                            SpotifyInfo = SpotifyInfo[ID]
+                            Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, 
+                                spotify={
+                                    'name': SpotifyInfo['Name'],
+                                    'artists': SpotifyInfo['Artists'],
+                                    'artistID': SpotifyInfo['ArtistID'],
+                                    'URI': "https://open.spotify.com/track/"+ID,
+                                    'thumbnail': SpotifyInfo['Art']},
+                                youtube={})
+
+                    #** Assign Track Data **  
+                    else:
+                        Track = lavalink.models.AudioTrack(Track, ctx.author, recommended=True, spotify={})
                     
                 #** Add Song To Queue & Play if Not Already Playing **
                 Player.add(requester=ctx.author.id, track=Track)
@@ -586,6 +614,37 @@ class MusicCog(commands.Cog):
 
 
     @commands.guild_only()
+    @commands.command(aliases=['timeskip'])
+    async def seek(self, ctx, time):
+        
+        #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
+        Player = await self.ensure_voice(ctx)
+
+        #** Check If Track Seeable **
+        if Player.current.is_seekable:
+
+            #** Check If Seek Time Is Within Current Track **
+            if int(time)*1000 < int(Player.current.duration - Player.position):
+
+                #** Seek Forward Specified Time in ms **
+                await Player.seek(Player.position + float(int(time)*1000))
+
+                #** Let User Know How Much Time Has Been Skipped **
+                await ctx.send("Skipped Forwards "+time+" Seconds!")
+
+            #** Otherwise Skip Track**
+            else:
+                await Player.skip()
+
+                #** Let User Know Track Has Been Skipped **
+                await ctx.send("Current Track Skipped!")
+
+        #** Let User Know Audio Isn't Seekable **
+        else:
+            await ctx.send(Player.current['title']+" is not seekable!")
+    
+
+    @commands.guild_only()
     @commands.command(aliases=['np', 'now'])
     async def nowplaying(self, ctx):
         
@@ -630,7 +689,6 @@ class MusicCog(commands.Cog):
             await Message.add_reaction(self.Emojis[emoji])
 
 
-    @commands.guild_only()
     @commands.command(aliases=['words'])
     async def lyrics(self, ctx, *args):
         

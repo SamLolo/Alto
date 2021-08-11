@@ -3,6 +3,7 @@
 
 
 import os
+import json
 import discord
 import random
 import string
@@ -73,7 +74,16 @@ class UtilityCog(commands.Cog):
 
         #** Assign Other Class Objects **
         self.ActiveStates = {}
-        self.Tick = "<a:checkmark:738865801964027904>"
+
+         #** Load Config File **
+        with open('Config.json') as ConfigFile:
+            Config = json.load(ConfigFile)
+            ConfigFile.close()
+            
+        #** Setup Emojis **
+        self.Emojis = Config['Variables']['Emojis']
+        self.Emojis["True"] = "✅"
+        self.Emojis["False"] = "❌"
 
 
     @commands.command(aliases=['l', 'connect'])
@@ -162,7 +172,7 @@ class UtilityCog(commands.Cog):
                 Error = True
                 
             if not(Error):
-                await Unlink.add_reaction(self.Tick)
+                await Unlink.add_reaction(self.Emojis['Tick'])
                 
                 #** Check Function To Be Called When Checking If Correct Reaction Has Taken Place **
                 def ReactionAdd(Reaction):
