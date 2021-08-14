@@ -71,6 +71,11 @@ intents = discord.Intents.default()
 intents.members = True
 client = commands.Bot(command_prefix = Config['Prefix'], case_insensitive=True, intents=intents)
 
+#** Setup Emojis **
+Emojis = Config['Variables']['Emojis']
+Emojis["True"] = "✅"
+Emojis["False"] = "❌"
+
 
 #!--------------------------------DISCORD EVENTS-----------------------------------# 
 
@@ -83,10 +88,13 @@ async def on_ready():
     await client.wait_until_ready()
     print("Bot Is Now Online & Ready!\n")
 
-    #** Setup Emojis **
-    self.Emojis = Config['Variables']['Emojis']
-    self.Emojis["True"] = "✅"
-    self.Emojis["False"] = "❌"
+
+@client.event
+async def on_guild_join(Guild):
+    for Channel in Guild.channels:
+        if isinstance(Channel, discord.channel.TextChannel):
+            await Channel.send(Config['Welcome_Message'])
+            break
 
 
 @client.event

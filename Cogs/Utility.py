@@ -195,6 +195,18 @@ class UtilityCog(commands.Cog):
             await Temp.delete()
 
 
+    @commands.command(aliases=['pg'])
+    async def ping(self, ctx):
+
+        #** Return Client Latency in ms **
+        await ctx.send("Pong! "+str(round(self.client.latency * 1000))+"ms")
+    
+
+    @commands.command(aliases=['up'])
+    async def uptime(self, ctx):
+        print("N/A")
+
+
 #!-------------------SETUP FUNCTION-------------------#
 
 

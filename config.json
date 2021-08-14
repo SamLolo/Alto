@@ -5,6 +5,7 @@
     },
     "StatusTime": "5",
     "Prefix": "!",
+    "Welcome_Message": "Thanks for choosing my music bot!",
     "Variables": {
         "Emojis": {
             "Tick": "<a:checkmark:738865801964027904>",
