@@ -48,7 +48,7 @@ class UserData():
     def AddUser(self, discordID):
 
         #** Add Blank Listening History Row **
-        self.cursor.execute("INSERT INTO history (Song1) VALUES ('None');")
+        self.cursor.execute("INSERT INTO history () VALUES ();")
         self.connection.commit()
 
         #** Get ID of Listening History **
@@ -56,7 +56,7 @@ class UserData():
         HistoryID = self.cursor.fetchone()[0]
 
         #** Add Blank Statistics Row **
-        self.cursor.execute("INSERT INTO user_stats (TopSong) VALUES ('None');")
+        self.cursor.execute("INSERT INTO user_stats () VALUES ();")
         self.connection.commit()
 
         #** Get ID of User Statistics **
@@ -64,7 +64,7 @@ class UserData():
         StatsID = self.cursor.fetchone()[0]
 
         #** Write Data About User To Users Table **
-        Data = (discordID, str(HistoryID), str(StatsID), "None", "None")
+        Data = (discordID, str(StatsID), str(HistoryID), "None", "None")
         self.cursor.execute("INSERT INTO users VALUES "+str(Data)+";")
         self.connection.commit()
 
@@ -75,4 +75,29 @@ class UserData():
         User = self.GetUser(DiscordID)
         self.cursor.execute("DELETE FROM spotify WHERE ID='"+User[4]+"'")
         self.cursor.execute("UPDATE users SET Spotify = 'None' WHERE DiscordID = '"+str(DiscordID)+"';")
+        self.connection.commit()
+
+    def AddSongHistory(self, ID, Song):
+
+        #** Get Current History **
+        History = list(self.GetHistory(ID))
+
+        #** Add New Song To Stack **
+        try:
+            Index = History.index(None)
+            History.pop(Index)
+            History.insert(Index, Song)
+        except:
+            History.pop(0)
+            History.append(Song)
+
+        #** Format SQL Execute String **
+        ToExecute = "UPDATE history SET ID = '"+str(History[0])+"'"
+        for i in range(49):
+            if History[i+1] != None:
+                ToExecute += ", Song"+str(i+1)+" = '"+str(History[i+1])+"'"
+        ToExecute += " WHERE ID = '"+str(History[0])+"'"
+
+        #** Write Changes To Database **
+        self.cursor.execute(ToExecute)
         self.connection.commit()

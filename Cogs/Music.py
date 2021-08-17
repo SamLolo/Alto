@@ -158,6 +158,9 @@ class MusicCog(commands.Cog):
                 #** Store Channel ID as Value In Player **
                 Player.store('Channel', ctx.channel.id)
 
+                #** Store Voice Channel Bot Is Connecting To **
+                Player.store('Voice', ctx.author.voice.channel)
+
                 #** Join Voice Channel **
                 await ctx.guild.change_voice_state(channel=ctx.author.voice.channel)
                 
@@ -240,6 +243,26 @@ class MusicCog(commands.Cog):
                 await OldMessage.delete()
 
 
+            # { Add Track To Listening History For All In VC } #
+
+
+            #** Wait 5 Seconds & Get Voice Channel **
+            await asyncio.sleep(5)
+            Voice = event.player.fetch("Voice")
+
+            #** Get UserData for Each Member In Database **
+            for Member in Voice.members:
+                if Member.id != 803939964092940308:
+                    User = Database.GetUser(Member.id)
+
+                    #** Add User If DiscordID Doesn't Exist **
+                    if not(User):
+                        User = Database.AddUser(Member.id)
+
+                    print(User[2])
+                    Database.AddSongHistory(User[2], event.track.extra['spotify']['ID'])
+
+
     @commands.guild_only()
     @commands.command(aliases=['p'])
     async def play(self, ctx, *, Query):
@@ -283,6 +306,7 @@ class MusicCog(commands.Cog):
                 Results = await Player.node.get_tracks(Search)
                 Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={
                     'name': Song['Name'],
+                    'ID': SpotifyID,
                     'artists': Song['Artists'],
                     'artistID': Song['ArtistID'],
                     'URI': Query,
@@ -383,6 +407,7 @@ class MusicCog(commands.Cog):
                     #** Assign Track Data **
                     Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={
                         'name': Song['Name'],
+                        'ID': SpotifyID,
                         'artists': Song['Artists'],
                         'artistID': Song['ArtistID'],
                         'URI': "https://open.spotify.com/track/"+ID,
@@ -422,6 +447,7 @@ class MusicCog(commands.Cog):
                             Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, 
                                 spotify={
                                     'name': SpotifyInfo['Name'],
+                                    'ID': SpotifyID,
                                     'artists': SpotifyInfo['Artists'],
                                     'artistID': SpotifyInfo['ArtistID'],
                                     'URI': "https://open.spotify.com/track/"+ID,
@@ -462,6 +488,11 @@ class MusicCog(commands.Cog):
             #** Disconnect From VC & Send Message Accordingly **
             await ctx.guild.change_voice_state(channel=None)
             await ctx.send("Disconnected!")
+
+            #** Remove Old Now Playing Message & Delete Stored Value **
+            OldMessage = Player.fetch('NowPlaying')
+            await OldMessage.delete()
+            Player.delete('NowPlaying')
             
         #** If Music Not Playing, Raise Error **
         else:
