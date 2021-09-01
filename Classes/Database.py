@@ -5,18 +5,47 @@
 import os
 import json
 import requests
+from datetime import datetime
+import mysql.connector
 
 
-#!--------------------------------DATABASE CONNECTIONS-----------------------------------#
+#!--------------------------------DATABASE CONNECTION---------------------------------#
+
+
+#** Get Connection Details **
+Host = os.environ["DATABASE_HOST"]
+User = os.environ["DATABASE_USER"]
+Password = os.environ["DATABASE_PASS"]
+
+#** Connect To Database **
+connection = mysql.connector.connect(host = Host,
+                                    database = "Melody",
+                                    user = User,
+                                    password = Password)
+
+#** Setup Cursor and Output Successful Connection **                  
+if connection.is_connected():
+    cursor = connection.cursor()
+    cursor.execute("SELECT database();")
+    print("Database Connection Established: "+datetime.now().strftime("%H:%M")+"\n")
+
+#** Delete Connection Details **
+del Host
+del User
+del Password
+
+
+#!--------------------------------DATABASE OPERATIONS-----------------------------------#
 
 
 class UserData():
     
-    def __init__(self, cursor, connection):
+    def __init__(self):
 
-        #** Assign Class Objects **
+        #** Setup Objects **
         self.cursor = cursor
         self.connection = connection
+
 
     def GetUser(self, discordID):
 
@@ -27,6 +56,7 @@ class UserData():
         #** Return Returned Row **
         return UserData
 
+
     def GetStats(self, ID):
 
         #** Get Users Statistics From Database **
@@ -36,6 +66,7 @@ class UserData():
         #** Return Returned Row **
         return Stats
 
+
     def GetHistory(self, ID):
 
         #** Get Users Listening History From Database **
@@ -44,6 +75,7 @@ class UserData():
 
         #** Return Returned Row **
         return History
+
 
     def AddUser(self, discordID):
 
@@ -71,11 +103,13 @@ class UserData():
         #** Return User Data Just Created **
         return Data
     
+
     def RemoveSpotify(self, DiscordID):
         User = self.GetUser(DiscordID)
         self.cursor.execute("DELETE FROM spotify WHERE ID='"+User[4]+"'")
         self.cursor.execute("UPDATE users SET Spotify = 'None' WHERE DiscordID = '"+str(DiscordID)+"';")
         self.connection.commit()
+
 
     def AddSongHistory(self, ID, Song):
 
@@ -101,3 +135,17 @@ class UserData():
         #** Write Changes To Database **
         self.cursor.execute(ToExecute)
         self.connection.commit()
+
+
+    def AddSongCache(self, Data):
+
+        print()
+
+
+    def SearchCache(self, ID):
+
+        #** Get Song From Database Cache **
+        self.cursor.excute("SELECT * FROM cache WHERE ID = '"+str(ID)+"';")
+        Song = self.cursor.fetchone()
+
+        print(Song)

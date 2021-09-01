@@ -26,7 +26,7 @@ from Classes.Music import Music
 from Classes.Youtube import YoutubeAPI
 
 
-#!--------------------------------DATABASE CONNECTION-----------------------------------# 
+#!--------------------------------STARTUP-----------------------------------# 
 
 
 #** Startup Sequence **
@@ -34,35 +34,12 @@ print("-----------------------LOADING EXTENTION----------------------")
 print("Name: Cogs.Music")
 print("Modules Imported: ✓")
 
-#** Get Connection Details **
-Host = os.environ["DATABASE_HOST"]
-User = os.environ["DATABASE_USER"]
-Password = os.environ["DATABASE_PASS"]
-
-#** Connect To Database **
-connection = mysql.connector.connect(host = Host,
-                                     database = "Melody",
-                                     user = User,
-                                     password = Password)
-
-#** Setup Cursor and Output Successful Connection **                  
-if connection.is_connected():
-    cursor = connection.cursor()
-    cursor.execute("SELECT database();")
-    Record = cursor.fetchone()
-    print("Database Connected: ✓")
-
-#** Delete Connection Details **
-del Host
-del User
-del Password
-
 
 #!------------------------INITIALISE CLASSES-------------------#
 
 
 Youtube = YoutubeAPI()
-Database = UserData(cursor, connection)
+Database = UserData()
 SongData = Music()
 
 

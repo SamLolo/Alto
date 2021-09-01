@@ -14,35 +14,12 @@ from discord.utils import get
 from discord.ext import commands
 
 
-#!--------------------------------DATABASE CONNECTION-----------------------------------# 
+#!--------------------------------STARTUP-----------------------------------# 
 
 
 #** Startup Sequence **
 print("-----------------------STARTING UP----------------------")
 print("Startup Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
-
-#** Get Connection Details **
-Host = os.environ["DATABASE_HOST"]
-User = os.environ["DATABASE_USER"]
-Password = os.environ["DATABASE_PASS"]
-
-#** Connect To Database **
-connection = mysql.connector.connect(host = Host,
-                                     database = "Melody",
-                                     user = User,
-                                     password = Password)
-
-#** Setup Cursor and Output Successful Connection **                  
-if connection.is_connected():
-    cursor = connection.cursor()
-    cursor.execute("SELECT database();")
-    Record = cursor.fetchone()
-    print("Connected To Database: "+Record[0].title()+"\n")
-
-#** Delete Connection Details **
-del Host
-del User
-del Password
 
 
 #!-------------------------------FETCH CLASSES-----------------------------#
@@ -54,7 +31,7 @@ from Classes.Database import UserData
 from Classes.Music import Music
 
 Youtube = YoutubeAPI()
-Database = UserData(cursor, connection)
+Database = UserData()
 SongData = Music()
 
 

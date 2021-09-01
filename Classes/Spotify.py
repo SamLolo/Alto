@@ -8,6 +8,7 @@ import base64
 import requests
 from time import sleep
 from datetime import datetime
+from Classes.Database import UserData
 
 
 #!--------------------------------SPOTIFY-----------------------------------#
@@ -28,6 +29,9 @@ class Spotify():
 
         #** Get A Bot Token For API Calls **
         self.RefreshBotToken()
+
+        #** Setup Database **
+        self.Database = UserData()
 
 
     def RefreshBotToken(self):

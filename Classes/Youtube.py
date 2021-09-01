@@ -6,6 +6,7 @@ import os
 import json
 import requests
 from datetime import datetime
+from Classes.Database import UserData
 
 
 #!---------------------------------YOUTUBE---------------------------------------#
@@ -18,6 +19,9 @@ class YoutubeAPI():
         #** Create Class Objects For Requests **
         self.Key = os.environ["GOOGLE_KEY"]
         self.Header = {'Accept': 'application/json'}
+
+        #** Setup Database Connection **
+        self.Database = UserData()
         
     
     def Search(self, Query):
@@ -66,6 +70,8 @@ class YoutubeAPI():
     def GetVideoInfo(self, Track):
         
         #** Get Video ID **
+        print(Track)
+        print(Track['info']['uri'])
         VideoID = Track['info']['uri'].split("=")[1]
     
         #** Check If Song Title Is A Music Video
