@@ -9,6 +9,7 @@ import requests
 import mysql.connector
 from time import sleep
 from datetime import datetime
+from Classes.Database import UserData
 
 
 #!--------------------------------SPOTIFY USER-----------------------------------#
@@ -16,11 +17,10 @@ from datetime import datetime
 
 class SpotifyUser():
     
-    def __init__(self, DiscordID, Cursor, Connection):
+    def __init__(self, DiscordID):
 
-        #** Set Database Connection Details **
-        self.cursor = Cursor
-        self.connection = Connection
+        #** Set Database Class **
+        self.Database = UserData()
 
         #** Get Spotify Details **
         self.SpotifyID = os.environ["SPOTIFY_CLIENT"]
@@ -32,22 +32,24 @@ class SpotifyUser():
         self.AuthHead = {"Content-Type": "application/x-www-form-urlencoded", 'Authorization': 'Basic {0}'.format(AuthStr)}
 
         #** Get Spotify Credentials From Database **
-        self.cursor.execute("SELECT spotify FROM users WHERE discordID='"+str(DiscordID)+"';")
-        ID = self.cursor.fetchone()
+        ID = self.Database.GetUser(DiscordID)
         if str(ID) != 'None':
             if str(ID[0]) != 'None':
-                self.cursor.execute("SELECT * FROM spotify WHERE ID='"+str(ID[0])+"';")
-                Data = self.cursor.fetchone()
+                Data = self.Database.GetSpotify(ID[0])
+                if Data != None:
 
-                #** Assign Class Objects **
-                self.Refresh = Data[2]
-                self.Name = Data[3]
-                self.ID = Data[4]
-                self.Pic = Data[5]
-                self.Connected = True
+                    #** Assign Class Objects **
+                    self.Refresh = Data[2]
+                    self.Name = Data[3]
+                    self.ID = Data[4]
+                    self.Pic = Data[5]
+                    self.Connected = True
 
-                #** Get UserToken & User Header For New User **
-                self.RefreshUserToken()
+                    #** Get UserToken & User Header For New User **
+                    self.RefreshUserToken()
+
+                else:
+                    self.Connected = False
             else:
                 self.Connected = False
         else:

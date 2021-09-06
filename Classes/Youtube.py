@@ -71,12 +71,11 @@ class YoutubeAPI():
         
         #** Get Video ID **
         print(Track)
-        print(Track['info']['uri'])
-        VideoID = Track['info']['uri'].split("=")[1]
+        VideoID = Track.uri.split("=")[1]
     
         #** Check If Song Title Is A Music Video
-        if ("Official Video" in Track['info']['title'] or 'Official Music Video' in Track['info']['title'] or 'Official Lyric Video' in Track['info']['title'] or (Track['info']['author']+" - ").lower() in Track['info']['title'].lower()) and Track['info']['length'] <= 600000:
-            Title = (Track['info']['title'].lower()).replace('official video', '').replace('official music video', '').replace('official lyric video', '').replace('[]', '').replace('()', '')
+        if ("Official Video" in Track.title or 'Official Music Video' in Track.title or 'Official Lyric Video' in Track.title or (Track.author+" - ").lower() in Track.title.lower()) and Track.duration <= 600000:
+            Title = (Track.title.lower()).replace('official video', '').replace('official music video', '').replace('official lyric video', '').replace('[]', '').replace('()', '')
             
             #** Get Title & Artist Of Song **
             if " - " in Title:
@@ -84,7 +83,7 @@ class YoutubeAPI():
                 Artist = Title[0]
                 Title = Title[1]
             else:
-                Artist = Track['info']['author']
+                Artist = Track.author
             
             #** Set Music To True & Add New Title **
             SongData = {VideoID: {'Music': True,
@@ -153,25 +152,25 @@ class YoutubeAPI():
             Seconds = int(Duration.replace('S', ''))
         
         #** Get Artist / Author Of Video **
-        if " - " in Track['info']['title']:
-            Artist = Track['info']['title'].split(" - ")[0]
+        if " - " in Track.title:
+            Artist = Track.title.split(" - ")[0]
         else:
-            Artist = Track['info']['author']
+            Artist = Track.author
 
         #** Fill Necessary Data Into A Dictionary Ready To Be Returned **
         SongData = {Info['id']: {'Duration': {'Hours': Hours, 'Minutes': Minutes, 'Seconds': Seconds},
-                                            'Player': PlayerURL,
-                                            'Music': Topic,
-                                            'Artist': Artist,
-                                            'Views': Info['statistics']['viewCount'],
-                                            'Likes': Info['statistics']['likeCount'],
-                                            'Dislikes': Info['statistics']['dislikeCount'],
-                                            'Title': Info['snippet']['title'],
-                                            'Description': Info['snippet']['description'],
-                                            'Channel': Info['snippet']['channelTitle'], 
-                                            'ChannelID': Info['snippet']['channelId'],
-                                            'Thumbnail': Info['snippet']['thumbnails']['default']['url'],
-                                            'PublishDate': Info['snippet']['publishedAt']}}
+                                 'Player': PlayerURL,
+                                 'Music': Topic,
+                                 'Artist': Artist,
+                                 'Views': Info['statistics']['viewCount'],
+                                 'Likes': Info['statistics']['likeCount'],
+                                 'Dislikes': Info['statistics']['dislikeCount'],
+                                 'Title': Info['snippet']['title'],
+                                 'Description': Info['snippet']['description'],
+                                 'Channel': Info['snippet']['channelTitle'], 
+                                 'ChannelID': Info['snippet']['channelId'],
+                                 'Thumbnail': Info['snippet']['thumbnails']['default']['url'],
+                                 'PublishDate': Info['snippet']['publishedAt']}}
         
         #** Return Filled SongData Dictionary **
         return SongData

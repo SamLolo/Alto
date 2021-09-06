@@ -68,7 +68,7 @@ class UtilityCog(commands.Cog):
     
         #** Check if User Already Has A Linked Account **
         Error = False
-        Spotify = SpotifyUser(ctx.author.id, cursor, connection)
+        Spotify = SpotifyUser(ctx.author.id)
         if Spotify.Connected == False:
 
             #** Add User To Database **
@@ -104,6 +104,7 @@ class UtilityCog(commands.Cog):
             if not(Error):
                 print(State)
                 await asyncio.sleep(10)
+                connection, cursor = Database.get_connection()
                 cursor.execute("SELECT * FROM spotify WHERE State = '"+str(State)+"';")
                 Spotify = cursor.fetchone()
                 connection.commit()

@@ -237,7 +237,11 @@ class MusicCog(commands.Cog):
                         User = Database.AddUser(Member.id)
 
                     print(User[2])
-                    Database.AddSongHistory(User[2], event.track.extra['spotify']['ID'])
+                    if event.track.extra['spotify'] != {}:
+                        Database.AddSongHistory(User[2], "SP-"+event.track.extra['spotify']['ID'])
+                    else:
+                        ID = event.track.uri.split("=")[1]
+                        Database.AddSongHistory(User[2], "YT-"+ID)
 
 
     @commands.guild_only()
@@ -265,6 +269,7 @@ class MusicCog(commands.Cog):
                 #** Get Track From Lavalink Player & Assign Song Data**
                 Results = await Player.node.get_tracks(Query)
                 Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
+                Youtube.GetVideoInfo(Track)
 
             #** Check If User Input Is A Correct Spotify Track URL & Get Song Data **
             elif Query.startswith("https://open.spotify.com/track/"):
@@ -294,6 +299,7 @@ class MusicCog(commands.Cog):
                 Results = await Player.node.get_tracks(Query)
                 print(Results)
                 Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
+                Youtube.GetVideoInfo(Track)
 
             #** Check If Request Successful and Tracks Found **
             if not(Results):
@@ -684,7 +690,7 @@ class MusicCog(commands.Cog):
             
             #** Get Info From Youtube URL **
             VideoID = Player.current.uri.split("=")[1]
-            VideoInfo = Youtube.GetVideoInfo(VideoID)[VideoID]
+            VideoInfo = Youtube.GetVideoInfo(Player.current)[VideoID]
             
             #** Set Descrition and Thumbnail & Add By Field Above Position Field **
             NowPlaying.description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"

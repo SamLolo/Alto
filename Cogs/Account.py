@@ -11,6 +11,7 @@ import json
 import mysql.connector
 from datetime import datetime
 from discord.ext import commands
+from Cogs.Pagination import add_page
 
 
 #!------------------------------IMPORT CLASSES----------------------------------#
@@ -64,7 +65,7 @@ class AccountCog(commands.Cog):
     async def recommendations(self, ctx):
 
         #** Add User To Database **
-        User = SpotifyUser(ctx.author.id, cursor, connection)
+        User = SpotifyUser(ctx.author.id)
         if User.Connected:
             print("User Found")
             
@@ -81,13 +82,13 @@ class AccountCog(commands.Cog):
             print("Got Recomendations")
             
             #** Randomly Choose 10 Songs From 50 Recomendations **
-            Recommendations = {}
+            Recommendations = []
             Description = ""
             for i in range(10):
                 Song = random.choice(NewSongs)
                 while Song in Recommendations.values():
                     Song = random.choice(NewSongs)
-                Recommendations[i] = Song
+                Recommendations.append(Song)
 
             #** Prepare Data On Songs Ready To Be Displayed **
             Data = Recommendations[0]
@@ -118,6 +119,40 @@ class AccountCog(commands.Cog):
             await Page.add_reaction(self.Emojis['Next'])
             CurrentPage = 0
             print("Sent!")
+
+
+
+            Data = {}
+            for i in range(len(Recommendations)):
+
+                Song = Recommendations[i]['name']+"\nBy: "
+                for j in range(len(Recommendations[i]['artists'])):
+                    if j == 0:
+                        Song += "["+Recommendations[i]['artists'][j]['name']+"]("+Recommendations[i]['artists'][j]['external_urls']['spotify']+")"
+                    elif j != len(Data['artists'])-1:
+                        Song += ", ["+Recommendations[i]['artists'][j]['name']+"]("+Recommendations[i]['artists'][j]['external_urls']['spotify']+")"
+                    else:
+                        Song += " & ["+Recommendations[i]['artists'][j]['name']+"]("+Recommendations[i]['artists'][j]['external_urls']['spotify']+")"
+                Links = self.Emojis['Spotify']+" Song: [Spotify]("+Recommendations[i]['external_urls']['spotify']+")\n"
+                if Recommendations[i]['preview_url'] != None:
+                    Links += self.Emojis['Preview']+" Song: [Preview]("+Recommendations[i]['preview_url']+")\n"
+                Links += self.Emojis['Album']+" Album: ["+Recommendations[i]['album']['name']+"]("+Recommendations[i]['album']['external_urls']['spotify']+")"
+
+                #** Add Info To Data Dictionary **
+                Data[i] = {"title": "Your Recommendations",
+                           "thumbnail": Recommendations[i]['album']['images'][0]['url'],
+                           "footer": "("+(i+1)+"/10) React To See More Recommendations!",
+                           "fields": [{"name": "Song "+(i+1),
+                                       "value": Song,
+                                       "inline": False},
+                                      {"name": "Links:",
+                                       "value": Links,
+                                       "inline": False}]}
+
+                #** Add Embed To Active Pages In Pagination Cog **
+                await add_page(Data)
+
+
 
             #** Check Function To Be Called When Checking If Correct Reaction Has Taken Place **
             def ReactionAdd(Reaction):

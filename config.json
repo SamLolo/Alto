@@ -25,6 +25,7 @@
     "Active_Extensions": [
         "Cogs.Utility",
         "Cogs.Music",
-        "Cogs.Account"
+        "Cogs.Account",
+        "Cogs.Pagination"
     ]
 }

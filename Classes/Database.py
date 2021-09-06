@@ -25,7 +25,7 @@ connection = mysql.connector.connect(host = Host,
 
 #** Setup Cursor and Output Successful Connection **                  
 if connection.is_connected():
-    cursor = connection.cursor()
+    cursor = connection.cursor(buffered=True)
     cursor.execute("SELECT database();")
     print("Database Connection Established: "+datetime.now().strftime("%H:%M")+"\n")
 
@@ -45,6 +45,12 @@ class UserData():
         #** Setup Objects **
         self.cursor = cursor
         self.connection = connection
+
+
+    def return_connection(self):
+
+        #** Return Database Connection & Cursor **
+        return self.connection, self.cursor
 
 
     def GetUser(self, discordID):
@@ -75,6 +81,16 @@ class UserData():
 
         #** Return Returned Row **
         return History
+
+
+    def GetSpotify(self, ID):
+
+        #** Get Spotify Credentials From Database **
+        self.cursor.execute("SELECT * FROM spotify WHERE ID='"+str(ID[0])+"';")
+        Data = self.cursor.fetchone()
+
+        #** Return Data **
+        return Data
 
 
     def AddUser(self, discordID):
