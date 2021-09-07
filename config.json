@@ -23,9 +23,9 @@
         }
     },
     "Active_Extensions": [
+        "Cogs.Pagination",
         "Cogs.Utility",
         "Cogs.Music",
-        "Cogs.Account",
-        "Cogs.Pagination"
+        "Cogs.Account"
     ]
 }

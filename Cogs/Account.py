@@ -11,7 +11,6 @@ import json
 import mysql.connector
 from datetime import datetime
 from discord.ext import commands
-from Cogs.Pagination import add_page
 
 
 #!------------------------------IMPORT CLASSES----------------------------------#
@@ -60,6 +59,10 @@ class AccountCog(commands.Cog):
         self.Emojis["True"] = "✅"
         self.Emojis["False"] = "❌"
 
+        #** Get Pagination Cog **
+        self.Pagination = self.client.get_cog("EmbedPaginator")
+        print(self.Pagination)
+
 
     @commands.command(aliases=['r', 'recommend', 'suggest', 'songideas'])
     async def recommendations(self, ctx):
@@ -68,6 +71,9 @@ class AccountCog(commands.Cog):
         User = SpotifyUser(ctx.author.id)
         if User.Connected:
             print("User Found")
+
+            #** Send Initial Waiting Message To User **
+            Page = await ctx.send("**Analysing Your Spotify History...**")
             
             #** Get User Playlists & Songs In Those Playlists **
             Playlists = User.GetUserPlaylists()
@@ -77,6 +83,9 @@ class AccountCog(commands.Cog):
                 Songs.update(SongData.GetPlaylistSongs(PlaylistID)['Tracks'])
             print("Got Songs")
             
+            #** Update User On Progress **
+            await Page.edit(content="**Adding The Finishing Touches...**")
+
             #** Get Recommendations From Returned Songs **
             NewSongs = SongData.Recommend(Songs)
             print("Got Recomendations")
@@ -86,50 +95,20 @@ class AccountCog(commands.Cog):
             Description = ""
             for i in range(10):
                 Song = random.choice(NewSongs)
-                while Song in Recommendations.values():
+                while Song in Recommendations:
                     Song = random.choice(NewSongs)
                 Recommendations.append(Song)
 
-            #** Prepare Data On Songs Ready To Be Displayed **
-            Data = Recommendations[0]
-            Song = Data['name']+"\nBy: "
-            for i in range(len(Data['artists'])):
-                if i == 0:
-                    Song += "["+Data['artists'][i]['name']+"]("+Data['artists'][i]['external_urls']['spotify']+")"
-                elif i != len(Data['artists'])-1:
-                    Song += ", ["+Data['artists'][i]['name']+"]("+Data['artists'][i]['external_urls']['spotify']+")"
-                else:
-                    Song += " & ["+Data['artists'][i]['name']+"]("+Data['artists'][i]['external_urls']['spotify']+")"
-            Links = self.Emojis['Spotify']+" Song: [Spotify]("+Data['external_urls']['spotify']+")\n"
-            if Data['preview_url'] != None:
-                Links += self.Emojis['Preview']+" Song: [Preview]("+Data['preview_url']+")\n"
-            Links += self.Emojis['Album']+" Album: ["+Data['album']['name']+"]("+Data['album']['external_urls']['spotify']+")"
-
-            #** Setup Base Embed With Fields For First Song **
-            BaseEmbed = discord.Embed(
-                title = "Your Recommendations")
-            BaseEmbed.set_thumbnail(url=Recommendations[0]['album']['images'][0]['url'])
-            BaseEmbed.add_field(name="Song 1:", value=Song, inline=False)
-            BaseEmbed.add_field(name="Links:", value=Links, inline=False)
-            BaseEmbed.set_footer(text="(1/10) React To See More Recommendations!")
-
-            #** Send First Embed To Discord And Add Reactions **
-            Page = await ctx.send(embed=BaseEmbed)
-            await Page.add_reaction(self.Emojis['Back'])
-            await Page.add_reaction(self.Emojis['Next'])
-            CurrentPage = 0
-            print("Sent!")
-
-
-
+            #** Loop Through Data & Create Dictionary Of Embed Pages **
             Data = {}
             for i in range(len(Recommendations)):
 
+                #** Format Embed Sections **
                 Song = Recommendations[i]['name']+"\nBy: "
                 for j in range(len(Recommendations[i]['artists'])):
                     if j == 0:
                         Song += "["+Recommendations[i]['artists'][j]['name']+"]("+Recommendations[i]['artists'][j]['external_urls']['spotify']+")"
-                    elif j != len(Data['artists'])-1:
+                    elif j != len(Recommendations[i]['artists'])-1:
                         Song += ", ["+Recommendations[i]['artists'][j]['name']+"]("+Recommendations[i]['artists'][j]['external_urls']['spotify']+")"
                     else:
                         Song += " & ["+Recommendations[i]['artists'][j]['name']+"]("+Recommendations[i]['artists'][j]['external_urls']['spotify']+")"
@@ -138,66 +117,27 @@ class AccountCog(commands.Cog):
                     Links += self.Emojis['Preview']+" Song: [Preview]("+Recommendations[i]['preview_url']+")\n"
                 Links += self.Emojis['Album']+" Album: ["+Recommendations[i]['album']['name']+"]("+Recommendations[i]['album']['external_urls']['spotify']+")"
 
-                #** Add Info To Data Dictionary **
-                Data[i] = {"title": "Your Recommendations",
-                           "thumbnail": Recommendations[i]['album']['images'][0]['url'],
-                           "footer": "("+(i+1)+"/10) React To See More Recommendations!",
-                           "fields": [{"name": "Song "+(i+1),
-                                       "value": Song,
-                                       "inline": False},
-                                      {"name": "Links:",
-                                       "value": Links,
-                                       "inline": False}]}
+                #** Create New Embed **
+                NewPage = discord.Embed(
+                    title = "Your Recommendations")
+                NewPage.set_thumbnail(url=Recommendations[i]['album']['images'][0]['url'])
+                NewPage.add_field(name="Song "+str(i+1)+":", value=Song, inline=False)
+                NewPage.add_field(name="Links:", value=Links, inline=False)
+                NewPage.set_footer(text="("+str(i+1)+"/10) React To See More Recommendations!")
 
-                #** Add Embed To Active Pages In Pagination Cog **
-                await add_page(Data)
+                #** Display First Recomendation To User **
+                if i == 0:
+                    await Page.edit(content=None, embed=NewPage)
+                    await Page.add_reaction(self.Emojis['Back'])
+                    await Page.add_reaction(self.Emojis['Next'])
+                    print("Sent!")
 
+                #** Convert Embed To Dictionary and Add To Data Dictionary **
+                Data[str(i)] = NewPage.to_dict()
 
-
-            #** Check Function To Be Called When Checking If Correct Reaction Has Taken Place **
-            def ReactionAdd(Reaction):
-                return (Reaction.message_id == Page.id) and (Reaction.user_id != 803939964092940308)
-
-            #** Watches For Reactions, Checks Them And Then Acts Accordingly **
-            while True:
-                Reaction = await client.wait_for("raw_reaction_add", check=ReactionAdd)
-                if Reaction.event_type == 'REACTION_ADD':
-                    await Page.remove_reaction(Reaction.emoji, Reaction.member)
-                    if Reaction.emoji == self.Emojis['Next'] or Reaction.emoji == self.Emojis['Back']:
-                        
-                        #** Adjust Current Page Based On Reaction **
-                        if CurrentPage == 9 and Reaction.emoji == self.Emojis['Next']:
-                            CurrentPage = 0
-                        elif CurrentPage == 0 and Reaction.emoji == self.Emojis['Back']:
-                            CurrentPage = 9
-                        else:
-                            if Reaction.emoji == self.Emojis['Next']:
-                                CurrentPage += 1
-                            else:
-                                CurrentPage -= 1
-                                
-                        #** Prepare New Data For Next Song **
-                        Data = Recommendations[CurrentPage]
-                        Song = Data['name']+"\nBy: "
-                        for i in range(len(Data['artists'])):
-                            if i == 0:
-                                Song += "["+Data['artists'][i]['name']+"]("+Data['artists'][i]['external_urls']['spotify']+")"
-                            elif i != len(Data['artists'])-1:
-                                Song += ", ["+Data['artists'][i]['name']+"]("+Data['artists'][i]['external_urls']['spotify']+")"
-                            else:
-                                Song += " & ["+Data['artists'][i]['name']+"]("+Data['artists'][i]['external_urls']['spotify']+")"
-                        Links = self.Emojis['Spotify']+" Song: [Spotify]("+Data['external_urls']['spotify']+")\n"
-                        if Data['preview_url'] != None:
-                            Links += self.Emojis['Preview']+" Song: [Preview]("+Data['preview_url']+")\n"
-                        Links += self.Emojis['Album']+" Album: ["+Data['album']['name']+"]("+Data['album']['external_urls']['spotify']+")"
-                        
-                        #** Format New Embed And Sent It Into Discord **
-                        BaseEmbed.set_thumbnail(url=Recommendations[CurrentPage]['album']['images'][0]['url'])
-                        BaseEmbed.clear_fields()
-                        BaseEmbed.add_field(name="Song "+str(CurrentPage+1)+":", value=Song, inline=False)
-                        BaseEmbed.add_field(name="Links:", value=Links, inline=False)
-                        BaseEmbed.set_footer(text="("+str(CurrentPage+1)+"/10) React To See More Recommendations!")
-                        await Page.edit(embed=BaseEmbed)
+            #** Add Embed To Active Pages In Pagination Cog **
+            await self.Pagination.add_page(Page.id, Data)
+            print("All Pages Created!")
                         
         #** Let User Know If They've Not Connected Their Spotify **
         else:

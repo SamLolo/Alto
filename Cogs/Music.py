@@ -24,6 +24,7 @@ from Classes.SpotifyUser import SpotifyUser
 from Classes.Database import UserData
 from Classes.Music import Music
 from Classes.Youtube import YoutubeAPI
+from Classes.Soundcloud import SoundcloudAPI
 
 
 #!--------------------------------STARTUP-----------------------------------# 
@@ -41,6 +42,7 @@ print("Modules Imported: ✓")
 Youtube = YoutubeAPI()
 Database = UserData()
 SongData = Music()
+Soundcloud = SoundcloudAPI()
 
 
 #!------------------------MUSIC COG-----------------------#
@@ -264,7 +266,7 @@ class MusicCog(commands.Cog):
             
             #** Check If User Input is URL and If Not Specify YT Search **
             if not(Query.startswith("https://") or Query.startswith("http://")):
-                Query = "ytsearch:"+Query
+                Query = "scsearch:"+Query
 
                 #** Get Track From Lavalink Player & Assign Song Data**
                 Results = await Player.node.get_tracks(Query)
@@ -282,7 +284,7 @@ class MusicCog(commands.Cog):
                 if Song == "SongNotFound":
                     raise commands.UserInputError(message="Bad URL")
                 Song = Song[SpotifyID]          
-                Search = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
+                Search = "scsearch:"+Song['Artists'][0]+" "+Song['Name']
 
                 #** Get Track From Lavalink Player & Assign Track Data **
                 Results = await Player.node.get_tracks(Search)
@@ -297,9 +299,10 @@ class MusicCog(commands.Cog):
             #** If Query is Youtube or Soundcloud URL, Get Track From Lavalink Player & Assign Song Data **
             else:
                 Results = await Player.node.get_tracks(Query)
-                print(Results)
                 Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
-                Youtube.GetVideoInfo(Track)
+                print(Track)
+                #Youtube.GetVideoInfo(Track)
+                Soundcloud.get_track(Track.id)
 
             #** Check If Request Successful and Tracks Found **
             if not(Results):
@@ -384,7 +387,7 @@ class MusicCog(commands.Cog):
                     if str(ID)+str(Song) == '-1':
                         print("Playlist/Album Queued!")
                         break
-                    Search = "ytsearch:"+Song['Artists'][0]+" "+Song['Name']
+                    Search = "scsearch:"+Song['Artists'][0]+" "+Song['Name']
                     Results = await Player.node.get_tracks(Search)
                     
                     #** Assign Track Data **

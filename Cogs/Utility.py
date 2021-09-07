@@ -104,7 +104,7 @@ class UtilityCog(commands.Cog):
             if not(Error):
                 print(State)
                 await asyncio.sleep(10)
-                connection, cursor = Database.get_connection()
+                connection, cursor = Database.return_connection()
                 cursor.execute("SELECT * FROM spotify WHERE State = '"+str(State)+"';")
                 Spotify = cursor.fetchone()
                 connection.commit()

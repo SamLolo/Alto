@@ -32,24 +32,23 @@ class SpotifyUser():
         self.AuthHead = {"Content-Type": "application/x-www-form-urlencoded", 'Authorization': 'Basic {0}'.format(AuthStr)}
 
         #** Get Spotify Credentials From Database **
-        ID = self.Database.GetUser(DiscordID)
+        ID = self.Database.GetUser(DiscordID)[4]
+        print(ID)
         if str(ID) != 'None':
-            if str(ID[0]) != 'None':
-                Data = self.Database.GetSpotify(ID[0])
-                if Data != None:
+            Data = self.Database.GetSpotify(ID)
+            print(Data)
+            if Data != None:
 
-                    #** Assign Class Objects **
-                    self.Refresh = Data[2]
-                    self.Name = Data[3]
-                    self.ID = Data[4]
-                    self.Pic = Data[5]
-                    self.Connected = True
+                #** Assign Class Objects **
+                self.Refresh = Data[2]
+                self.Name = Data[3]
+                self.ID = Data[4]
+                self.Pic = Data[5]
+                self.Connected = True
 
-                    #** Get UserToken & User Header For New User **
-                    self.RefreshUserToken()
+                #** Get UserToken & User Header For New User **
+                self.RefreshUserToken()
 
-                else:
-                    self.Connected = False
             else:
                 self.Connected = False
         else:
