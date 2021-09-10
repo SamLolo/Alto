@@ -7,6 +7,7 @@ import json
 import base64
 import requests
 import pandas as pd
+from time import sleep
 from sklearn import tree
 from datetime import datetime
 from Classes.Database import UserData
