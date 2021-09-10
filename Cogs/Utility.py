@@ -16,10 +16,8 @@ from discord.ext import commands
 #!------------------------------IMPORT CLASSES----------------------------------#
 
 
-from Classes.SpotifyUser import SpotifyUser
+from Classes.Users import Users
 from Classes.Database import UserData
-from Classes.Music import Music
-from Classes.Youtube import YoutubeAPI
 
 
 #!--------------------------------STARTUP-----------------------------------# 
@@ -34,9 +32,7 @@ print("Modules Imported: ✓\n")
 #!------------------------INITIALISE CLASSES-------------------#
 
 
-Youtube = YoutubeAPI()
 Database = UserData()
-SongData = Music()
 
 
 #!------------------------UTILITY COG-----------------------#
@@ -68,7 +64,7 @@ class UtilityCog(commands.Cog):
     
         #** Check if User Already Has A Linked Account **
         Error = False
-        Spotify = SpotifyUser(ctx.author.id)
+        Spotify = Users(ctx.author.id)
         if Spotify.Connected == False:
 
             #** Add User To Database **

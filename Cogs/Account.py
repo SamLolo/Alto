@@ -16,10 +16,10 @@ from discord.ext import commands
 #!------------------------------IMPORT CLASSES----------------------------------#
 
 
-from Classes.SpotifyUser import SpotifyUser
+from Classes.Users import Users
 from Classes.Database import UserData
 from Classes.Music import Music
-from Classes.Youtube import YoutubeAPI
+from Classes.Utils import Utility
 
 
 #!--------------------------------STARTUP-----------------------------------# 
@@ -34,9 +34,9 @@ print("Modules Imported: ✓\n")
 #!------------------------INITIALISE CLASSES-------------------#
 
 
-Youtube = YoutubeAPI()
 Database = UserData()
 SongData = Music()
+Utils = Utility()
 
 
 #!------------------------UTILITY COG-----------------------#
@@ -68,7 +68,7 @@ class AccountCog(commands.Cog):
     async def recommendations(self, ctx):
 
         #** Add User To Database **
-        User = SpotifyUser(ctx.author.id)
+        User = Users(ctx.author.id)
         if User.Connected:
             print("User Found")
 

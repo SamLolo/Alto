@@ -25,9 +25,9 @@ print("Startup Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
 #!-------------------------------FETCH CLASSES-----------------------------#
 
 
+from Classes.Database import UserData
 from Classes.Youtube import YoutubeAPI
 from Classes.SpotifyUser import SpotifyUser
-from Classes.Database import UserData
 from Classes.Music import Music
 
 Youtube = YoutubeAPI()

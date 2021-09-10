@@ -20,11 +20,10 @@ from discord.ext import commands
 #!------------------------------IMPORT CLASSES----------------------------------#
 
 
-from Classes.SpotifyUser import SpotifyUser
+from Classes.Users import Users
 from Classes.Database import UserData
 from Classes.Music import Music
-from Classes.Youtube import YoutubeAPI
-from Classes.Soundcloud import SoundcloudAPI
+from Classes.Utils import Utility
 
 
 #!--------------------------------STARTUP-----------------------------------# 
@@ -39,10 +38,9 @@ print("Modules Imported: ✓")
 #!------------------------INITIALISE CLASSES-------------------#
 
 
-Youtube = YoutubeAPI()
 Database = UserData()
 SongData = Music()
-Soundcloud = SoundcloudAPI()
+Utils = Utility()
 
 
 #!------------------------MUSIC COG-----------------------#
@@ -82,40 +80,6 @@ class MusicCog(commands.Cog):
         self.client.lavalink._event_hooks.clear()
 
 
-    async def format_time(self, time):
-        
-        #** Parse Time Into Days, Hours, Minutes & Seconds **
-        Time = lavalink.parse_time(time)
-        
-        #** Create Strings Of Time In 24 Hour Clock **
-        if Time[1] == 0.0:
-            return str(int(Time[2]))+":"+str(int(Time[3])).zfill(2)
-        else:
-            return str(int(Time[1]))+":"+str(int(Time[2])).zfill(2)+":"+str(int(Time[3])).zfill(2)
-                
-
-    async def format_artists(self, Artists, IDs):
-        
-        #** Prepare Empty String & Start Loop Through Artists **
-        Formatted = ""
-        for i in range(len(Artists)):
-            
-            #** If First Index, Add Artist & Link **
-            if i == 0:
-                Formatted += "["+Artists[i]+"](https://open.spotify.com/artist/"+IDs[i]+")"
-                
-            #** If Not Last Index, Add Comma Before Artist **
-            elif i != len(Artists)-1:
-                Formatted += ", ["+Artists[i]+"](https://open.spotify.com/artist/"+IDs[i]+")"
-                
-            #** If Last Index, add & Before Artist **
-            else:
-                Formatted += " & ["+Artists[i]+"](https://open.spotify.com/artist/"+IDs[i]+")"
-
-        #** Returned Formatted String **
-        return Formatted
-
-
     async def ensure_voice(self, ctx):
         
         #** Return a Player If One Exists, Otherwise Create One **
@@ -153,7 +117,7 @@ class MusicCog(commands.Cog):
             if int(Player.channel_id) != ctx.author.voice.channel.id:
                 raise commands.CheckFailure(message="SameVoice")
             
-        #** Return Player Accociated With Guild **
+        #** Return Player Associated With Guild **
         return Player
 
 
@@ -271,7 +235,7 @@ class MusicCog(commands.Cog):
                 #** Get Track From Lavalink Player & Assign Song Data**
                 Results = await Player.node.get_tracks(Query)
                 Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
-                Youtube.GetVideoInfo(Track)
+                SongData.GetVideoInfo(Track)
 
             #** Check If User Input Is A Correct Spotify Track URL & Get Song Data **
             elif Query.startswith("https://open.spotify.com/track/"):
@@ -302,7 +266,7 @@ class MusicCog(commands.Cog):
                 Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
                 print(Track)
                 #Youtube.GetVideoInfo(Track)
-                Soundcloud.get_track(Track.id)
+                UserData.GetSoundcloudTrack(Track.id)
 
             #** Check If Request Successful and Tracks Found **
             if not(Results):
@@ -412,7 +376,7 @@ class MusicCog(commands.Cog):
                     VideoID = Track['info']['uri'].split("=")[1]
                     
                     #** Get Youtube Track Info & Check If Music Video Detected **
-                    Info = Youtube.GetVideoInfo(Track)
+                    Info = SongData.GetVideoInfo(Track)
                     if Info[VideoID]['Music']:
                         
                         #** If Music Video Detected, Search For Song On Spotify **
@@ -673,7 +637,7 @@ class MusicCog(commands.Cog):
         
         #** Set Author & Footer and Add Position Field **
         NowPlaying.set_author(name="Requested By "+str(Player.current.requester)+"", icon_url=Player.current.requester.avatar_url)
-        NowPlaying.add_field(name="Position:", value= await self.format_time(Player.position)+" / "+ await self.format_time(Player.current.duration))
+        NowPlaying.add_field(name="Position:", value= await Utils.format_time(Player.position)+" / "+ await Utils.format_time(Player.current.duration))
         if Player.queue == []:
             NowPlaying.set_footer(text="Up Next: Nothing")
         else:
@@ -681,7 +645,7 @@ class MusicCog(commands.Cog):
         
         #** If Track Has Spotify Info, Format List of Artists **
         if Player.current.extra['spotify'] != {}:
-            Artists = await self.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
+            Artists = await Utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
 
             #** Set Descrition and Thumbnail & Add By Field Above Position Field **
             NowPlaying.description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"+self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")"
@@ -693,7 +657,7 @@ class MusicCog(commands.Cog):
             
             #** Get Info From Youtube URL **
             VideoID = Player.current.uri.split("=")[1]
-            VideoInfo = Youtube.GetVideoInfo(Player.current)[VideoID]
+            VideoInfo = SongData.GetVideoInfo(Player.current)[VideoID]
             
             #** Set Descrition and Thumbnail & Add By Field Above Position Field **
             NowPlaying.description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
@@ -713,7 +677,7 @@ class MusicCog(commands.Cog):
         Lyrics = SongData.GetLyrics(" ".join(args))
         
         #** Get Most Dominant Colour In Album Art **
-        RGB = SongData.GetColour(Lyrics['Meta']['Art'])
+        RGB = Utils.GetColour(Lyrics['Meta']['Art'])
         Colour = discord.Colour.from_rgb(RGB[0], RGB[1], RGB[2])
         
         #** Create Lyric Embed **
@@ -747,14 +711,7 @@ class MusicCog(commands.Cog):
 
                 #** Format Returned Data Ready To Be Put Into The Embeds **
                 SongInfo = SongInfo[SpotifyID]
-                Description = "**By: **"
-                for i in range(len(SongInfo['Artists'])):
-                    if i == 0:
-                        Description += "["+SongInfo['Artists'][i]+"](https://open.spotify.com/artist/"+SongInfo['ArtistID'][i]+")"
-                    elif i != len(SongInfo['Artists'])-1:
-                        Description += ", ["+SongInfo['Artists'][i]+"](https://open.spotify.com/artist/"+SongInfo['ArtistID'][i]+")"
-                    else:
-                        Description += " & ["+SongInfo['Artists'][i]+"](https://open.spotify.com/artist/"+SongInfo['ArtistID'][i]+")"
+                Description = "**By: **" + Utils.format_artists(SongInfo['Artists'], SongInfo['ArtistID'])
                 Links = self.Emojis['Spotify']+" Song: [Spotify](https://open.spotify.com/track/"+SpotifyID+")\n"
                 if SongInfo['Preview'] != None:
                     Links += self.Emojis['Preview']+" Song: [Preview]("+SongInfo['Preview']+")\n"
