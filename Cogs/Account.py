@@ -100,7 +100,7 @@ class AccountCog(commands.Cog):
                 Recommendations.append(Song)
 
             #** Loop Through Data & Create Dictionary Of Embed Pages **
-            Data = {}
+            Data = []
             for i in range(len(Recommendations)):
 
                 #** Format Embed Sections **
@@ -133,7 +133,7 @@ class AccountCog(commands.Cog):
                     print("Sent!")
 
                 #** Convert Embed To Dictionary and Add To Data Dictionary **
-                Data[str(i)] = NewPage.to_dict()
+                Data.append(NewPage.to_dict())
 
             #** Add Embed To Active Pages In Pagination Cog **
             await self.Pagination.add_page(Page.id, Data)

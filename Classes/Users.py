@@ -87,7 +87,6 @@ class SpotifyUser():
         return Playlists
 
 
-
 #!-------------------------UTILS------------------------!#
 
 
@@ -97,3 +96,5 @@ class Users(SpotifyUser):
         
         #** Initialise SpotifyUser & Listening History Classes **
         super().__init__()
+        
+        

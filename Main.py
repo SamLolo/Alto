@@ -4,11 +4,8 @@
 
 import os
 import json
-import string
-import random
 import asyncio
 import discord
-import mysql.connector
 from datetime import datetime
 from discord.utils import get
 from discord.ext import commands
@@ -26,11 +23,8 @@ print("Startup Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
 
 
 from Classes.Database import UserData
-from Classes.Youtube import YoutubeAPI
-from Classes.SpotifyUser import SpotifyUser
 from Classes.Music import Music
 
-Youtube = YoutubeAPI()
 Database = UserData()
 SongData = Music()
 

@@ -179,6 +179,22 @@ class UtilityCog(commands.Cog):
     @commands.command(aliases=['up'])
     async def uptime(self, ctx):
         print("N/A")
+        
+    
+    @commands.command(alaises=['inv'])
+    async def invite(self, ctx):
+        
+        #** Create Embed With Invite Information **
+        Invite = discord.Embed(
+            title="Invite Flare To Your Discord Server!",
+            colour=discord.Colour.orange(),
+            description="A whole new way to listen to music awaits you:\n🎶 [Flare | Discord Music](https://discord.com/api/oauth2/authorize?client_id=803939964092940308&permissions=139921845328&scope=bot) 🎶")
+        
+        #** Send Embed To Discord **
+        await ctx.send(embed=Invite)
+        
+    
+    
 
 
 #!-------------------SETUP FUNCTION-------------------#

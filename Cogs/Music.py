@@ -11,7 +11,6 @@ import asyncio
 import mysql.connector
 import lavalink
 import requests
-from PIL import Image
 from io import BytesIO
 from datetime import datetime
 from discord.ext import commands
