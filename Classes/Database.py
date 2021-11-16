@@ -153,15 +153,41 @@ class UserData():
         self.connection.commit()
 
 
-    def AddSongCache(self, Data):
+    def AddSongCache(self, SpotifyID, SoundcloudID, AudioData):
 
-        print()
+        #** Format Data to Be Added To Cache **
+        Columns = ['SpotifyID', 'SoundcloudID', 'Name', 'Artists', 'ArtistID', 'Album', 'AlbumID', 'Art', 'colour', 'Release', 'Popularity', 'Explicit', 'Preview']
+        Values = [SpotifyID, SoundcloudID]
+        for column in Columns[2:]:
+            if column in AudioData.keys():
+                value = AudioData[column]
+                if type(value) == list:
+                    value = ", ".join(value)
+                elif str(value) == "N/A":
+                    value = None
+                Values.append(value)
+            else:
+                Values.append(None)
+        print(Values)
+
+        #** Add Data To Database **
+        ToExecute = "INSERT INTO cache (SpotifyID, SoundcloudID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        Values = tuple(Values)
+        #self.cursor.execute(ToExecute, Values)
+        #self.connection.commit()
 
 
-    def SearchCache(self, ID):
+    def SearchCache(self, Platform, ID):
 
-        #** Get Song From Database Cache **
-        self.cursor.excute("SELECT * FROM cache WHERE ID = '"+str(ID)+"';")
-        Song = self.cursor.fetchone()
+        if Platform == "Spotify":
+            #** Get Song From Database Cache Using Spotify ID **
+            self.cursor.excute("SELECT * FROM cache WHERE SpotifyID = '"+str(ID)+"';")
+            Song = self.cursor.fetchone()
+
+        else:
+            #** Get Song From Database Cache Using Soundcloud ID **
+            self.cursor.excute("SELECT * FROM cache WHERE SoundcloudID = '"+str(ID)+"';")
+            Song = self.cursor.fetchone()
 
         print(Song)
+        return Song

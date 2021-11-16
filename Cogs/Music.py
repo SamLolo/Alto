@@ -77,6 +77,7 @@ class MusicCog(commands.Cog):
         
         #** Clear Event Hooks When Cog Unloaded **
         self.client.lavalink._event_hooks.clear()
+        print("Music Cog Unloaded!")
 
 
     async def ensure_voice(self, ctx):
@@ -125,6 +126,7 @@ class MusicCog(commands.Cog):
         if isinstance(event, lavalink.events.QueueEndEvent):
             
             #** When Queue Empty, Disconnect From VC **
+            print("QueueEndEvent")
             Guild = self.client.get_guild(int(event.player.guild_id))
             await Guild.change_voice_state(channel=None)
             
@@ -153,16 +155,16 @@ class MusicCog(commands.Cog):
                 #** Create Now Playing Embed **
                 NowPlaying = discord.Embed(
                     title = "Now Playing:",
-                    description = self.Emojis['Youtube']+" ["+event.track["title"]+"]("+event.track["uri"]+")\n"
+                    description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")\n"
                                 +self.Emojis['Spotify']+" ["+event.track.extra['spotify']['name']+"]("+event.track.extra['spotify']['URI']+")")
-                NowPlaying.set_thumbnail(url=event.track.extra['spotify']['thumbnail'])
+                NowPlaying.set_thumbnail(url=event.track.extra['spotify']['art'])
                 NowPlaying.add_field(name="By:", value=Artists)
 
             #** If No Spotify Info, Create Basic Now Playing Embed **
             else:
                 NowPlaying = discord.Embed(
                     title = "Now Playing:",
-                    description = self.Emojis['Youtube']+" ["+event.track["title"]+"]("+event.track["uri"]+")")
+                    description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")")
 
             #** Fetch Previous Now Playing Message & Check If Exists **
             OldMessage = event.player.fetch('NowPlaying')
@@ -227,14 +229,13 @@ class MusicCog(commands.Cog):
             
             #? ---------- LOAD TRACK ---------- ?#
             
-            #** Check If User Input is URL and If Not Specify YT Search **
+            #** Check If User Input is URL and If Not Specify SC Search **
             if not(Query.startswith("https://") or Query.startswith("http://")):
                 Query = "scsearch:"+Query
 
                 #** Get Track From Lavalink Player & Assign Song Data**
                 Results = await Player.node.get_tracks(Query)
                 Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
-                SongData.GetVideoInfo(Track)
 
             #** Check If User Input Is A Correct Spotify Track URL & Get Song Data **
             elif Query.startswith("https://open.spotify.com/track/"):
@@ -251,13 +252,29 @@ class MusicCog(commands.Cog):
 
                 #** Get Track From Lavalink Player & Assign Track Data **
                 Results = await Player.node.get_tracks(Search)
-                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={
-                    'name': Song['Name'],
-                    'ID': SpotifyID,
-                    'artists': Song['Artists'],
-                    'artistID': Song['ArtistID'],
-                    'URI': Query,
-                    'thumbnail': Song['Art']})
+                if len(Results) > 0:
+                    Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={
+                        'name': Song['Name'],
+                        'ID': SpotifyID,
+                        'artists': Song['Artists'],
+                        'artistID': Song['ArtistID'],
+                        'URI': Query,
+                        'art': Song['Art'],
+                        'album': Song['Album'],
+                        'albumID': Song['AlbumID'],
+                        'release': Song['Release'],
+                        'popularity': Song['Popularity'],
+                        'explicit': Song['Explicit'],
+                        'preview': Song['Preview']})
+
+                    #** Add New Data To Song Cache **
+                    print(Track)
+                    print(Track.duration)
+                    URI = Track.uri
+                    URI = URI.split("/")
+                    Database.AddSongCache(SpotifyID, URI[4], Song)
+                else:
+                    await ctx.send("Couldn't find a song with the specified Input")
 
             #** If Query is Youtube or Soundcloud URL, Get Track From Lavalink Player & Assign Song Data **
             else:
@@ -647,8 +664,8 @@ class MusicCog(commands.Cog):
             Artists = await Utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
 
             #** Set Descrition and Thumbnail & Add By Field Above Position Field **
-            NowPlaying.description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"+self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")"
-            NowPlaying.set_thumbnail(url=Player.current.extra['spotify']['thumbnail'])
+            NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"+self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")"
+            NowPlaying.set_thumbnail(url=Player.current.extra['spotify']['art'])
             NowPlaying.insert_field_at(0, name="By:", value=Artists)
 
         #** If No Spotify Info, Create Basic Now Playing Embed **
@@ -659,7 +676,7 @@ class MusicCog(commands.Cog):
             VideoInfo = SongData.GetVideoInfo(Player.current)[VideoID]
             
             #** Set Descrition and Thumbnail & Add By Field Above Position Field **
-            NowPlaying.description = self.Emojis['Youtube']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
+            NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
             NowPlaying.set_thumbnail(url=VideoInfo['Thumbnail'])
             NowPlaying.insert_field_at(0, name="By:", value="["+Player.current.author+"](https://www.youtube.com/channel/"+VideoInfo['ChannelID']+")")
             
@@ -789,10 +806,3 @@ class MusicCog(commands.Cog):
 
 def setup(client):
     client.add_cog(MusicCog(client))
-    
-    
-#!-----------------UNLOAD FUNCTION-------------------#
-    
-    
-def teardown(bot):
-    MusicCog.cog_unload()

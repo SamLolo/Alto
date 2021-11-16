@@ -54,7 +54,6 @@ Emojis["False"] = "❌"
 @client.event
 async def on_ready():
     print("Connection Established!")
-    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name=" Beta V1.03"))
     print("Preparing Internal Cache...")
     await client.wait_until_ready()
     print("Bot Is Now Online & Ready!\n")

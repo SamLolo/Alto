@@ -3,7 +3,7 @@
         "Playing": "DEV 1.04",
         "Watching": "!help"
     },
-    "StatusTime": "5",
+    "StatusTime": 60,
     "Prefix": "!",
     "Welcome_Message": "Thanks for choosing my music bot!",
     "Variables": {
@@ -19,13 +19,15 @@
             "Play": "<:Play:839922846264066098>",
             "Pause": "<:Pause:839922854069141515>",
             "SkipBack": "<:SkipBack:839922836000997426>",
-            "SkipForwards": "<:SkipForwards:839922825992601651>"
+            "SkipForwards": "<:SkipForwards:839922825992601651>",
+            "Soundcloud": "<:Soundcloud:897135141040832563>"
         }
     },
     "Active_Extensions": [
         "Cogs.Pagination",
         "Cogs.Utility",
         "Cogs.Music",
-        "Cogs.Account"
+        "Cogs.Account",
+        "Cogs.Background"
     ]
 }

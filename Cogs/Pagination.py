@@ -143,8 +143,6 @@ class EmbedPaginator(commands.Cog):
         NewEmbed = self.format_embed(Page)
         return NewEmbed
         
-        
-
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, Reaction):

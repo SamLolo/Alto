@@ -68,7 +68,7 @@ class AccountCog(commands.Cog):
     async def recommendations(self, ctx):
 
         #** Add User To Database **
-        User = Users(ctx.author.id)
+        User = Users(self.client, ctx.author.id)
         if User.Connected:
             print("User Found")
 

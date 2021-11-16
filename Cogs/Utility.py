@@ -64,7 +64,7 @@ class UtilityCog(commands.Cog):
     
         #** Check if User Already Has A Linked Account **
         Error = False
-        Spotify = Users(ctx.author.id)
+        Spotify = Users(self.client, ctx.author.id)
         if Spotify.Connected == False:
 
             #** Add User To Database **

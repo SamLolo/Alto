@@ -292,7 +292,16 @@ class Spotify():
                 Song[key] = "N/A"
 
         #** Return Dictionary (Songs) With Key: <SongID> and Value: <dict containing song infomation> **
-        SongData = {Song['id']: {'Name': Song['name'], 'Artists': Artists, 'ArtistID': ArtistID, 'Album': Song['album']['name'], 'AlbumID': Song['album']['id'], 'Art': Song['album']['images'][0]['url'], 'Release': Date, 'Popularity': Song['popularity'], 'Explicit': Song['explicit'], 'Preview': Song['preview_url']}}
+        SongData = {Song['id']: {'Name': Song['name'], 
+                                 'Artists': Artists, 
+                                 'ArtistID': ArtistID, 
+                                 'Album': Song['album']['name'], 
+                                 'AlbumID': Song['album']['id'], 
+                                 'Art': Song['album']['images'][0]['url'], 
+                                 'Release': Date, 
+                                 'Popularity': Song['popularity'], 
+                                 'Explicit': Song['explicit'], 
+                                 'Preview': Song['preview_url']}}
         return SongData
 
 
@@ -646,7 +655,9 @@ class Music(Spotify, YoutubeAPI, SoundcloudAPI):
             print(len(Genres))
             for Genre in Genres:
                 UserGenres[Genre] += 1
-        UserGenres = {key:value for key, value in sorted(UserGenres.items(), key=lambda item: item[1], reverse=True)}
+                
+        UserGenres = {key:value for key, value in sorted(UserGenres.items(), key=lambda item: item[1], reverse=True)} #! Replace with
+                                                                                                                      #! Sorting Algorithm
 
         #**Construct Pandas Dataframe and Get Averages and Max / Min of Data **
         Dataframe = pd.DataFrame(Data, columns = ['duration_ms', 'key', 'mode', 'time_signature', 'acousticness', 'danceability', 'energy', 'instrumentalness', 'liveness', 'loudness', 'speechiness', 'valence', 'tempo'])

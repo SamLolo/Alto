@@ -92,9 +92,14 @@ class SpotifyUser():
 
 class Users(SpotifyUser):
     
-    def __init__(self):
+    def __init__(self, client, DiscordID):
+        
+        #** Setup Discord Client object **
+        self.client = client
         
         #** Initialise SpotifyUser & Listening History Classes **
         super().__init__()
         
-        
+        #** Get User Object **
+        self.user = self.client.get_user(DiscordID)
+        self.userData = UserData.GetUser(DiscordID)
