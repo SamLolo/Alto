@@ -104,6 +104,9 @@ class MusicCog(commands.Cog):
                 #** Store Voice Channel Bot Is Connecting To **
                 Player.store('Voice', ctx.author.voice.channel)
 
+                #** Create Empty Users List **
+                Player.store('Users', [])
+
                 #** Join Voice Channel **
                 await ctx.guild.change_voice_state(channel=ctx.author.voice.channel)
                 
@@ -194,21 +197,38 @@ class MusicCog(commands.Cog):
             await asyncio.sleep(5)
             Voice = event.player.fetch("Voice")
 
-            #** Get UserData for Each Member In Database **
+            #** Get List Of Members In Voice Channel **
+            UserIDs = []
             for Member in Voice.members:
                 if Member.id != 803939964092940308:
-                    User = Database.GetUser(Member.id)
+                    UserIDs.append(Member.id)
+            print(UserIDs)
 
-                    #** Add User If DiscordID Doesn't Exist **
-                    if not(User):
-                        User = Database.AddUser(Member.id)
+            #** Check Old Users Stored In Players Are Still Listening, If Not Teardown User Object **
+            UserList = event.player.fetch('Users')
+            print(UserList)
+            for User in UserList:
+                print(type(User.userData['discordID']))
+                if not(int(User.userData['discordID']) in UserIDs):
+                    print(UserIDs)
+                    print(User.userData['discordID'])
+                    await User.save()
+                    UserList.remove(User)
+                else:
+                    UserIDs.remove(int(User.userData['discordID']))
+            
+            #** Add New User Objects For Newly Joined Listeners & Store New User List Back In Player **
+            for DiscordID in UserIDs:
+                UserList.append(Users(self.client, DiscordID))
+            event.player.store('Users', UserList)
 
-                    print(User[2])
-                    if event.track.extra['spotify'] != {}:
-                        Database.AddSongHistory(User[2], "SP-"+event.track.extra['spotify']['ID'])
-                    else:
-                        ID = event.track.uri.split("=")[1]
-                        Database.AddSongHistory(User[2], "YT-"+ID)
+            #** For All Current Listeners, Add New Song To Their Song History **
+            for User in UserList:
+                if event.track.extra['spotify'] != {}:
+                    await User.incrementHistory("SP-"+event.track.extra['spotify']['ID'])
+                else:
+                    ID = event.track.uri.split("/")[4]
+                    await User.incrementHistory("SC-"+ID)
 
 
     @commands.guild_only()
@@ -373,7 +393,7 @@ class MusicCog(commands.Cog):
                     #** Assign Track Data **
                     Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={
                         'name': Song['Name'],
-                        'ID': SpotifyID,
+                        'ID': ID,
                         'artists': Song['Artists'],
                         'artistID': Song['ArtistID'],
                         'URI': "https://open.spotify.com/track/"+ID,
@@ -413,7 +433,7 @@ class MusicCog(commands.Cog):
                             Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, 
                                 spotify={
                                     'name': SpotifyInfo['Name'],
-                                    'ID': SpotifyID,
+                                    'ID': ID,
                                     'artists': SpotifyInfo['Artists'],
                                     'artistID': SpotifyInfo['ArtistID'],
                                     'URI': "https://open.spotify.com/track/"+ID,
@@ -459,12 +479,20 @@ class MusicCog(commands.Cog):
             OldMessage = Player.fetch('NowPlaying')
             await OldMessage.delete()
             Player.delete('NowPlaying')
+
+            #** Save All Current Users Stored In Player To Database **
+            UserList = Player.fetch('Users')
+            for User in UserList:
+                await User.save()
+
+            #** Remove Player From Cache **
+            self.client.lavalink.player_manager.remove(ctx.guild.id)
             
         #** If Music Not Playing, Raise Error **
         else:
             raise commands.CheckFailure(message="NotPlaying")
 
-    
+
     @commands.guild_only()
     @commands.command(aliases=['v', 'loudness'])
     async def volume(self, ctx, *args):

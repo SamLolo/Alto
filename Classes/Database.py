@@ -59,8 +59,15 @@ class UserData():
         self.cursor.execute("SELECT * FROM users WHERE DiscordID = '"+str(discordID)+"';")
         UserData = self.cursor.fetchone()
 
+        #** Format UserData To Dictionary **
+        Dict = {"discordID": UserData[0],
+                "stats": UserData[1],
+                "history": UserData[2],
+                "settings": UserData[3],
+                "spotify": UserData[4]}
+
         #** Return Returned Row **
-        return UserData
+        return Dict
 
 
     def GetStats(self, ID):
@@ -79,8 +86,16 @@ class UserData():
         self.cursor.execute("SELECT * FROM history WHERE ID = '"+str(ID)+"';")
         History = self.cursor.fetchone()
 
+        #** Format History Into Dictionary **
+        Songs = []
+        for i in range(len(History)-3):
+            Songs.append(History[i+3])
+        Dict = {"inPointer": int(History[1]),
+                "outPointer": int(History[2]),
+                "queue": Songs}
+
         #** Return Returned Row **
-        return History
+        return Dict
 
 
     def GetSpotify(self, ID):

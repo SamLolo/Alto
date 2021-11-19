@@ -16,9 +16,11 @@ from Classes.Database import UserData
 #!--------------------------------SPOTIFY-----------------------------------#
 
 
-class Spotify():
+class Spotify(object):
     
     def __init__(self):
+
+        super(Spotify, self).__init__()
 
         #** Get Spotify Details **
         self.ID = os.environ["SPOTIFY_CLIENT"]
@@ -369,9 +371,11 @@ class Spotify():
 #!---------------------------------YOUTUBE---------------------------------------#
 
 
-class YoutubeAPI():
+class YoutubeAPI(object):
     
     def __init__(self):
+
+        super(YoutubeAPI, self).__init__()
 
         #** Create Class Objects For Requests **
         self.Key = os.environ["GOOGLE_KEY"]
@@ -536,9 +540,11 @@ class YoutubeAPI():
 #!---------------------------------SOUNDCLOUD---------------------------------------#
 
 
-class SoundcloudAPI():
+class SoundcloudAPI(object):
     
     def __init__(self):
+
+        super(SoundcloudAPI, self).__init__()
 
         #** Create Class Objects For Requests **
         self.ClientID = os.environ["SOUNDCLOUD_ID"]
@@ -563,7 +569,7 @@ class Music(Spotify, YoutubeAPI, SoundcloudAPI):
     def __init__(self):
 
         #** Initialise Youtube, Soundcloud & Spotify API Classes **
-        super().__init__()
+        super(Music, self).__init__()
 
         #** Assign Class Objects **
         self.Genres = ['dance', 'pop', 'house', 'alternative', 'country', 'classical', 'electronic', 'folk', 'hip-hop', 'rock', 'heavy-metal', 'indie', 'jazz', 'reggae', 'rnb']
