@@ -12,7 +12,7 @@ from discord.utils import get
 #!-------------------------EMBED CLASS-----------------------!#
 
 
-class Embed():
+class EmbedQueue():
     
     def __init__(self):
         
@@ -93,15 +93,15 @@ class EmbedPaginator(commands.Cog):
     async def add_pages(self, MessageID, Pages):
         
         #** Setup New Embed **
-        Embed = Embed()
+        EmbedObj = EmbedQueue()
         
         #** Add Pages To Queue **
         for Page in Pages[1:]:
-            Embed.enqueue(Page)
-        Embed.enqueue(Pages[0])
+            EmbedObj.enqueue(Page)
+        EmbedObj.enqueue(Pages[0])
 
         #** Add Page To Open Pages **
-        self.OpenPages[MessageID] = Embed
+        self.OpenPages[MessageID] = EmbedObj
 
 
     async def format_embed(self, Embed):

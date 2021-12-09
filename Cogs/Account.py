@@ -2,13 +2,10 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
-import os
 import discord
 import random
-import string
 import asyncio
 import json
-import mysql.connector
 from datetime import datetime
 from discord.ext import commands
 
@@ -42,7 +39,7 @@ Utils = Utility()
 #!------------------------UTILITY COG-----------------------#
 
 
-class AccountCog(commands.Cog):
+class AccountCog(commands.Cog, name="Account"):
 
     def __init__(self, client):
 

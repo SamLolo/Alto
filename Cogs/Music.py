@@ -6,12 +6,8 @@ import os
 import json
 import discord
 import random
-import string
 import asyncio
-import mysql.connector
 import lavalink
-import requests
-from io import BytesIO
 from datetime import datetime
 from discord.ext import commands
 
@@ -45,7 +41,7 @@ Utils = Utility()
 #!------------------------MUSIC COG-----------------------#
 
 
-class MusicCog(commands.Cog):
+class MusicCog(commands.Cog, name="Music"):
 
     def __init__(self, client):
 
@@ -232,7 +228,7 @@ class MusicCog(commands.Cog):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['p'])
+    @commands.command(aliases=['p'], description="Allows you to play music through a Discord Voice Channel from a variety of sources.")
     async def play(self, ctx, *, Query):
         
         MusicVid = 0  # { For Test Purposes }
@@ -253,25 +249,55 @@ class MusicCog(commands.Cog):
             if not(Query.startswith("https://") or Query.startswith("http://")):
                 Query = "scsearch:"+Query
 
-                #** Get Track From Lavalink Player & Assign Song Data**
+                #** Get Track From Lavalink Player **
                 Results = await Player.node.get_tracks(Query)
-                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
+                print(Results['tracks'][0])
+                if len(Results) > 0:
+                    URI = Results['tracks'][0]['info']['identifier'].split("/")
+                    ID  = URI[4].split(":")[2]
+                    print(ID)
 
-            #** Check If User Input Is A Correct Spotify Track URL & Get Song Data **
+                    #** Check If Song Is In Cache **
+                    Song = Database.SearchCache('Soundcloud', ID)
+                    if Song == None:
+
+                        Songs = SongData.SearchSpotify(Results['tracks'][0]['info']['title'], Results['tracks'][0]['info']['author'])
+                        if Songs == "UnexpectedError":
+                            Results = None
+                        elif Songs == "SongNotFound":
+                            Results = []
+                        else:
+
+                            print(Songs)
+
+                    Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={})
+
+            #** Check If User Input Is A Correct Spotify Track URL**
             elif Query.startswith("https://open.spotify.com/track/"):
                 SpotifyID = (Query.split("/"))[4].split("?")[0]
                 if len(SpotifyID) != 22:
                     raise commands.UserInputError(message="Bad URL")
-                Song = SongData.GetSongInfo(SpotifyID)
 
-                #** Raise Error if No Song Found Otherwise Reformat Query With New Data **
-                if Song == "SongNotFound":
-                    raise commands.UserInputError(message="Bad URL")
-                Song = Song[SpotifyID]          
+                #** Get Song From Cache & Check If It Is Cached **
+                Song = Database.SearchCache('Spotify', SpotifyID)
+                Cached = True
+                if Song == None:
+
+                    #** If Not Cached, Get Song Info **
+                    Cached = False
+                    Song = SongData.GetSongInfo(SpotifyID)
+
+                    #** Raise Error if No Song Found Otherwise Reformat Query With New Data **
+                    if Song == "SongNotFound":
+                        raise commands.UserInputError(message="Bad URL")
+                    Song = Song[SpotifyID]          
+                
+                #** Format Query With New Data & Get Tracks From Query **
                 Search = "scsearch:"+Song['Artists'][0]+" "+Song['Name']
-
-                #** Get Track From Lavalink Player & Assign Track Data **
+                print(Search)
                 Results = await Player.node.get_tracks(Search)
+
+                #** Create Track Object **
                 if len(Results) > 0:
                     Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={
                         'name': Song['Name'],
@@ -286,15 +312,15 @@ class MusicCog(commands.Cog):
                         'popularity': Song['Popularity'],
                         'explicit': Song['Explicit'],
                         'preview': Song['Preview']})
-
-                    #** Add New Data To Song Cache **
                     print(Track)
                     print(Track.duration)
-                    URI = Track.uri
-                    URI = URI.split("/")
-                    Database.AddSongCache(SpotifyID, URI[4], Song)
-                else:
-                    await ctx.send("Couldn't find a song with the specified Input")
+
+                    #** If Not Cached, Add New Data To Song Cache **
+                    if not(Cached):
+                        URI = Track.identifier.split("/")
+                        ID  = URI[4].split(":")[2]
+                        print(ID)
+                        Database.AddSongCache(SpotifyID, ID, Song)
 
             #** If Query is Youtube or Soundcloud URL, Get Track From Lavalink Player & Assign Song Data **
             else:
@@ -306,7 +332,7 @@ class MusicCog(commands.Cog):
 
             #** Check If Request Successful and Tracks Found **
             if not(Results):
-                await ctx.send("**Unexpected Error!**\nIf this error persists, please contact Lolo#6699")
+                await ctx.send("**Unexpected Error!**\nPlease check ur Query & Try Again. If this error persists, contact Lolo#6699")
             elif Results['tracks'] == []:
                 await ctx.send("**No Songs Found!**\nPlease Check Your Query & Try Again")
             else:
@@ -460,7 +486,137 @@ class MusicCog(commands.Cog):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['disconnect', 'dc'])
+    @commands.command(aliases=['t'], description="Allows you to play music through a Discord Voice Channel from a variety of sources.")
+    async def test(self, ctx, *, Query):
+
+        #** Ensure Voice To Make Sure Client Is Good To Run **
+        await self.ensure_voice(ctx)
+    
+        #** Get Guild Player from Cache & Remove "<>" Embed Characters from Query **
+        Player = self.client.lavalink.player_manager.get(ctx.guild.id)
+        Query = Query.strip('<>')
+
+        if Query.startswith("https://open.spotify.com/"):
+
+            #** Strip ID From URL **
+            SpotifyID = (Query.split("/"))[4].split("?")[0]
+            if len(SpotifyID) != 22:
+                raise commands.UserInputError(message="Bad URL")
+            Cached = False
+
+            #**------------INPUT: TRACK---------------**#
+
+            if "track" in Query:
+
+                #** Get Song From Cache & Check If It Is Cached **
+                SongInfo = Database.SearchCache('Spotify', SpotifyID)
+                if SongInfo == None:
+
+                    #** If Not Cached, Get Song Info **
+                    SongInfo = SongData.GetSongInfo(SpotifyID)
+                    PlaylistInfo = None
+
+                    #** Raise Error if No Song Found Otherwise Reformat Query With New Data **
+                    if SongInfo == "SongNotFound":
+                        raise commands.UserInputError(message="Bad URL")
+                
+                else:
+                    Cached = True
+
+            #**------------INPUT: PLAYLIST---------------**#
+
+            elif "playlist" in Query:
+
+                #** Get Playlist Info From Spotify Web API **
+                SongInfo = SongData.GetPlaylistSongs(SpotifyID)
+                if SongInfo == "PlaylistNotFound":
+                    raise commands.UserInputError(message="Bad URL")
+
+                PlaylistInfo = SongInfo[SpotifyID]
+                SongInfo = SongInfo['Tracks']
+                Type = "Playlist"
+
+            #**------------INPUT: ALBUM---------------**#
+
+            elif "album" in Query:
+
+                #** Get Album Info From Spotify Web API **
+                SongInfo = SongData.GetAlbumInfo(SpotifyID)
+                if SongInfo == "PlaylistNotFound":
+                    raise commands.UserInputError(message="Bad URL")
+
+                PlaylistInfo = SongInfo[SpotifyID]
+                SongInfo = SongInfo['Tracks']
+                Type = "Album"
+
+            #**-----------QUEUE SONGS--------------**#
+            
+            #** Iterate Though List Of Spotify ID's **#
+            for SpotifyID in list(SongInfo.keys()):
+                
+                #** Search SoundCloud For Track **
+                Info = SongInfo[SpotifyID]
+                Search = "scsearch:"+Info['Artists'][0]+" "+Info['Name']
+                Results = await Player.node.get_tracks(Search)
+
+                #** Create Track Object **
+                if len(Results) > 0:
+                    Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, spotify={
+                        'name': Info['Name'],
+                        'ID': SpotifyID,
+                        'artists': Info['Artists'],
+                        'artistID': Info['ArtistID'],
+                        'URI': Query,
+                        'art': Info['Art'],
+                        'album': Info['Album'],
+                        'albumID': Info['AlbumID'],
+                        'release': Info['Release'],
+                        'popularity': Info['Popularity'],
+                        'explicit': Info['Explicit'],
+                        'preview': Info['Preview']})
+                    print(Track)
+                    print(Track.duration)
+                
+                #** If Track Duration = 30s, Inform It's Only A Preview **
+                if Track.duration == 3000:
+                    await ctx.send("We could only fetch a preview for the requested song!")
+
+                #** Send Queued Embed **
+                if list(SongInfo.keys()).index(SpotifyID) == 0:
+                    if PlaylistInfo == None:
+                        if len(Info['Artists']) > 1:
+                            Artists = Utils.format_artists(Info['Artists'], Info['ArtistID'])
+                        Queued = discord.Embed(
+                            title = self.Emojis["Spotify"]+" Track Added To Queue!",
+                            description = "["+Info['Name']+"]("+Query+") \nBy: "+Artists)
+                    else:
+                        Queued = discord.Embed(
+                            title = self.Emojis["Spotify"]+" "+Type+" Added To Queue!",
+                            description = "["+PlaylistInfo['Name']+"]("+Query+") - "+str(PlaylistInfo['Length'])+" Tracks")
+                    await ctx.send(embed=Queued)
+
+                #**-----------------ADD TO CACHE----------------**#
+
+                if not(Cached):
+                    
+                    #** Create Song Info Dict & Send To Database **
+                    URI = Track.identifier.split("/")
+                    ID  = URI[4].split(":")[2]
+                    RGB = Utils.get_colour(Info['Art'])
+                    ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
+                    ToCache = ToCache.update(Info)
+                    Database.AddFullSongCache(ToCache)
+
+                #**-----------------PLAY / ADD TO QUEUE--------------**#
+
+                #** Add Song To Queue & Play if Not Already Playing **
+                Player.add(requester=ctx.author.id, track=Track)
+                if not(Player.is_playing):
+                    await Player.play()
+
+
+    @commands.guild_only()
+    @commands.command(aliases=['disconnect', 'dc'], description="Stops any currently playing audio in your voice channel.")
     async def stop(self, ctx):
 
         #** Ensure Voice To Make Sure Client Is Good To Run & Get Guild Player**
@@ -494,7 +650,7 @@ class MusicCog(commands.Cog):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['v', 'loudness'])
+    @commands.command(aliases=['v', 'loudness'], description="Adjusts the volume of the audio player between 0% and 100%.")
     async def volume(self, ctx, *args):
 
         #** Ensure Voice To Make Sure Client Is Good To Run & Get Player **
@@ -546,7 +702,7 @@ class MusicCog(commands.Cog):
 
     
     @commands.guild_only()
-    @commands.command(aliases=['unpause'])
+    @commands.command(aliases=['unpause'], description="Pauses or unpauses the audio player.")
     async def pause(self, ctx):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -567,7 +723,7 @@ class MusicCog(commands.Cog):
 
     
     @commands.guild_only()
-    @commands.command(aliases=['s' ,'forceskip', 'fs', 'next'])
+    @commands.command(aliases=['s' ,'forceskip', 'fs', 'next'], description="Skips the currently playing song and plays the next song in th queue.")
     async def skip(self, ctx):
 
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -584,7 +740,7 @@ class MusicCog(commands.Cog):
     
     
     @commands.guild_only()
-    @commands.command(aliases=['q'])
+    @commands.command(aliases=['q'], description="Displays the bots current queue of songs.")
     async def queue(self, ctx):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -609,7 +765,7 @@ class MusicCog(commands.Cog):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['m', 'mix', 'mixup'])
+    @commands.command(aliases=['m', 'mix', 'mixup'], description="Shuffles the playback of songs in the queue.")
     async def shuffle(self, ctx):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -624,7 +780,7 @@ class MusicCog(commands.Cog):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['repeat'])
+    @commands.command(aliases=['repeat'], description="Loops the current song until the command is ran again.")
     async def loop(self, ctx):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -639,7 +795,7 @@ class MusicCog(commands.Cog):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['timeskip'])
+    @commands.command(aliases=['timeskip'], description="Skips forward or backwards in time in the currently playing song.")
     async def seek(self, ctx, time):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -670,7 +826,7 @@ class MusicCog(commands.Cog):
     
 
     @commands.guild_only()
-    @commands.command(aliases=['np', 'now'])
+    @commands.command(aliases=['np', 'now'], description="Displays information about the currently playing song.")
     async def nowplaying(self, ctx):
         
         #** Ensure Cmd Is Good To Run & Get Player **
@@ -714,7 +870,7 @@ class MusicCog(commands.Cog):
             await Message.add_reaction(self.Emojis[emoji])
 
 
-    @commands.command(aliases=['words'])
+    @commands.command(aliases=['words'], description="Displays a specified songs lyrics.")
     async def lyrics(self, ctx, *args):
         
         #** Get Lyrics For Requested Song **
@@ -738,7 +894,7 @@ class MusicCog(commands.Cog):
         await ctx.send(embed=LyricEmbed)
 
 
-    @commands.command(aliases=['song', 'i', 'songinfo'])
+    @commands.command(aliases=['song', 'i', 'songinfo'], description="Displays both basic and more indepth information about a specified song.")
     async def info(self, ctx, SpotifyID):
 
         #** Format Input Data and Check To Make Sure It's A Valid ID **

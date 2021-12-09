@@ -67,8 +67,6 @@ class BackgroundTasks(commands.Cog):
         await self.client.change_presence(activity=discord.Activity(type=Activity, name=" "+str(self.Status[self.CurrentStatus][1])))
         
 
-
-
 #!-------------------SETUP FUNCTION-------------------#
 
 

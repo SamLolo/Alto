@@ -40,7 +40,10 @@ with open('Config.json') as ConfigFile:
 #** Creating Bot Client **
 intents = discord.Intents.default()
 intents.members = True
-client = commands.Bot(command_prefix = Config['Prefix'], case_insensitive=True, intents=intents)
+client = commands.Bot(command_prefix = Config['Prefix'], 
+                      case_insensitive=True, 
+                      intents=intents,
+                      help_command=None)
 
 #** Setup Emojis **
 Emojis = Config['Variables']['Emojis']

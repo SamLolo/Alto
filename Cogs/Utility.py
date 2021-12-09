@@ -2,13 +2,11 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
-import os
 import json
 import discord
 import random
 import string
 import asyncio
-import mysql.connector
 from datetime import datetime
 from discord.ext import commands
 
@@ -38,7 +36,7 @@ Database = UserData()
 #!------------------------UTILITY COG-----------------------#
 
 
-class UtilityCog(commands.Cog):
+class UtilityCog(commands.Cog, name="Utility"):
 
     def __init__(self, client):
 
@@ -59,7 +57,7 @@ class UtilityCog(commands.Cog):
         self.Emojis["False"] = "❌"
 
 
-    @commands.command(aliases=['l', 'connect'])
+    @commands.command(aliases=['l', 'connect'], description="Allows you to link your spotify with your account on the bot.")
     async def link(self, ctx):
     
         #** Check if User Already Has A Linked Account **
@@ -83,7 +81,7 @@ class UtilityCog(commands.Cog):
                     break
 
             #** Send Embed With Auth URL Into User's DMs And Notify User **
-            AuthURL = "https://accounts.spotify.com/authorize?client_id=710b5d6211ee479bb370e289ed1cda3d&response_type=code&redirect_uri=http%3A%2F%2F82.22.157.214:5000%2F&scope=playlist-read-private%20playlist-read-collaborative&state="+State
+            AuthURL = "https://accounts.spotify.com/authorize?client_id=710b5d6211ee479bb370e289ed1cda3d&response_type=code&redirect_uri=http%3A%2F%2F82.22.157.214:5000%2F&scope=playlist-read-private%20playlist-read-collaborative%20user-read-private&state="+State
             Embed = discord.Embed(
                 title = "Link Your Spotify Account!",
                 description = "To link your spotify account, [Click Here]("+AuthURL+")!\nOnce authorised, you'll receive a confirmation underneath!",
@@ -169,19 +167,19 @@ class UtilityCog(commands.Cog):
             await Temp.delete()
 
 
-    @commands.command(aliases=['pg'])
+    @commands.command(aliases=['pg'], description="Displays the bot's current ping to Discord in milliseconds.")
     async def ping(self, ctx):
 
         #** Return Client Latency in ms **
         await ctx.send("Pong! "+str(round(self.client.latency * 1000))+"ms")
     
 
-    @commands.command(aliases=['up'])
+    @commands.command(aliases=['up'], description="Displays the time since the bot last went down.")
     async def uptime(self, ctx):
         print("N/A")
         
     
-    @commands.command(alaises=['inv'])
+    @commands.command(aliases=['inv'], description="Displays the bot's Discord invite link.")
     async def invite(self, ctx):
         
         #** Create Embed With Invite Information **

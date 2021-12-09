@@ -188,21 +188,48 @@ class UserData():
         #** Add Data To Database **
         ToExecute = "INSERT INTO cache (SpotifyID, SoundcloudID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
         Values = tuple(Values)
-        #self.cursor.execute(ToExecute, Values)
-        #self.connection.commit()
+        self.cursor.execute(ToExecute, Values)
+        self.connection.commit()
+        print("Added To Cache")
+
+
+    def AddFullSongCache(self, Info):
+
+        #** Add Data To Database **
+        Values = (Info['SpotifyID'], Info['SoundcloudID'], Info['SoundcloudURL'], Info['Name'], Info['Artists'], Info['ArtistID'], Info[']Album'], 
+                  Info['AlbumID'], Info['Art'], Info['colour'], Info['Release'], Info['Popularity'], Info['Explicit'], Info['Preview'])
+        ToExecute = "REPLACE INTO cache (SpotifyID, SoundcloudID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        self.cursor.execute(ToExecute, Values)
+        self.connection.commit()
+        print("Added To Cache")
 
 
     def SearchCache(self, Platform, ID):
 
         if Platform == "Spotify":
             #** Get Song From Database Cache Using Spotify ID **
-            self.cursor.excute("SELECT * FROM cache WHERE SpotifyID = '"+str(ID)+"';")
+            self.cursor.execute("SELECT * FROM cache WHERE SpotifyID = '"+str(ID)+"';")
             Song = self.cursor.fetchone()
 
         else:
             #** Get Song From Database Cache Using Soundcloud ID **
-            self.cursor.excute("SELECT * FROM cache WHERE SoundcloudID = '"+str(ID)+"';")
+            self.cursor.execute("SELECT * FROM cache WHERE SoundcloudID = '"+str(ID)+"';")
             Song = self.cursor.fetchone()
 
-        print(Song)
+        if Song != None:
+
+            Song = {"SpotifyID": Song[0],
+                    "SoundcloudID": Song[1],
+                    "Name": Song[2],
+                    "Artists": list(Song[3].split(", ")),
+                    "ArtistID": list(Song[4].split(", ")),
+                    "Album": Song[5],
+                    "AlbumID": Song[6],
+                    "Art": Song[7],
+                    "Colour": Song[8],
+                    "Release": Song[9],
+                    "Popularity": Song[10],
+                    "Explicit": Song[11],
+                    "Preview": Song[12]}
+
         return Song

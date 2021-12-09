@@ -561,7 +561,7 @@ class SoundcloudAPI(object):
         print(Result)
 
 
-#!--------------------------------HISTORY-----------------------------------#
+#!--------------------------------MUSIC-----------------------------------#
 
 
 class Music(Spotify, YoutubeAPI, SoundcloudAPI):
