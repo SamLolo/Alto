@@ -86,8 +86,8 @@ class MusicCog(commands.Cog, name="Music"):
             raise commands.CheckFailure(message="UserVoice")
 
         #** Check If Bot If Is Connected & Needs to Connect to VC **
-        if not Player.is_connected:
-            if ctx.command.name in ['play']:
+        if not(Player.is_connected):
+            if ctx.command.name in ['play', 'test']:
 
                 #** Check If Bot Has Permission To Speak and Raise Error **
                 Permissions = ctx.author.voice.channel.permissions_for(ctx.me)
@@ -509,12 +509,13 @@ class MusicCog(commands.Cog, name="Music"):
             if "track" in Query:
 
                 #** Get Song From Cache & Check If It Is Cached **
-                SongInfo = Database.SearchCache('Spotify', SpotifyID)
+                SongInfo = Database.SearchCache(SpotifyID)
+                print(SongInfo)
+                PlaylistInfo = None
                 if SongInfo == None:
 
                     #** If Not Cached, Get Song Info **
                     SongInfo = SongData.GetSongInfo(SpotifyID)
-                    PlaylistInfo = None
 
                     #** Raise Error if No Song Found Otherwise Reformat Query With New Data **
                     if SongInfo == "SongNotFound":
@@ -584,8 +585,7 @@ class MusicCog(commands.Cog, name="Music"):
                 #** Send Queued Embed **
                 if list(SongInfo.keys()).index(SpotifyID) == 0:
                     if PlaylistInfo == None:
-                        if len(Info['Artists']) > 1:
-                            Artists = Utils.format_artists(Info['Artists'], Info['ArtistID'])
+                        Artists = Utils.format_artists(Info['Artists'], Info['ArtistID'])
                         Queued = discord.Embed(
                             title = self.Emojis["Spotify"]+" Track Added To Queue!",
                             description = "["+Info['Name']+"]("+Query+") \nBy: "+Artists)
@@ -593,19 +593,9 @@ class MusicCog(commands.Cog, name="Music"):
                         Queued = discord.Embed(
                             title = self.Emojis["Spotify"]+" "+Type+" Added To Queue!",
                             description = "["+PlaylistInfo['Name']+"]("+Query+") - "+str(PlaylistInfo['Length'])+" Tracks")
+                    Queued.set_footer(text="Requested By "+ctx.author.display_name+"#"+str(ctx.author.discriminator))
                     await ctx.send(embed=Queued)
-
-                #**-----------------ADD TO CACHE----------------**#
-
-                if not(Cached):
-                    
-                    #** Create Song Info Dict & Send To Database **
-                    URI = Track.identifier.split("/")
-                    ID  = URI[4].split(":")[2]
-                    RGB = Utils.get_colour(Info['Art'])
-                    ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
-                    ToCache = ToCache.update(Info)
-                    Database.AddFullSongCache(ToCache)
+                    await ctx.message.delete()
 
                 #**-----------------PLAY / ADD TO QUEUE--------------**#
 
@@ -614,6 +604,46 @@ class MusicCog(commands.Cog, name="Music"):
                 if not(Player.is_playing):
                     await Player.play()
 
+                #**-----------------ADD TO CACHE----------------**#
+
+                if not(Cached):
+                    #** Get SoundcloudID & Primary Colour Of Album Art **
+                    URI = Track.identifier.split("/")
+                    ID  = URI[4].split(":")[2]
+                    RGB = Utils.get_colour(Info['Art'])
+                    #** Create Song Info Dict With Formatted Data & Send To Database **
+                    ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
+                    ToCache.update(Info)
+                    if ToCache['Explicit'] == 'N/A':
+                        ToCache['Explicit'] = None
+                    Database.AddFullSongCache(ToCache)
+            
+        elif Query.startswith("https://soundcloud.com/") or not(Query.startswith("https://")):
+
+            if not(Query.startswith("https://")):
+                
+                #** Get Track From Lavalink Player **
+                Results = await Player.node.get_tracks("scsearch:"+Query)
+                print(Results['tracks'][0])
+                if len(Results) > 0:
+                    URI = Results['tracks'][0]['info']['identifier'].split("/")
+                    ID  = URI[4].split(":")[2]
+                    print(ID)
+
+                    #** Check If Song Is In Cache **
+                    Song = Database.SearchCache(ID)
+                    if Song == None:
+                        Song = SongData.SearchSpotify(Results['tracks'][0]['info']['title'], Results['tracks'][0]['info']['author'])
+
+                        #** Check Song Is Returned Correctly **
+                        if Song in ["SongNotFound", "UnexpectedError"]:
+                            Results = None
+
+                        print(Song)
+
+            elif len(Query.split("//")) == 4:
+
+                print("Artist")
 
     @commands.guild_only()
     @commands.command(aliases=['disconnect', 'dc'], description="Stops any currently playing audio in your voice channel.")

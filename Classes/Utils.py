@@ -26,7 +26,7 @@ class Utility():
         Image = requests.get(URL)
 
         #** Write Image To Temp PNG File **
-        File = open("temp.png", "w")
+        File = open("temp.png", "wb")
         File.write(Image.content)
         File.close()
         

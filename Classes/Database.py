@@ -195,18 +195,20 @@ class UserData():
 
     def AddFullSongCache(self, Info):
 
-        #** Add Data To Database **
-        Values = (Info['SpotifyID'], Info['SoundcloudID'], Info['SoundcloudURL'], Info['Name'], Info['Artists'], Info['ArtistID'], Info[']Album'], 
-                  Info['AlbumID'], Info['Art'], Info['colour'], Info['Release'], Info['Popularity'], Info['Explicit'], Info['Preview'])
-        ToExecute = "REPLACE INTO cache (SpotifyID, SoundcloudID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        #** Create Tuple With Formatted Data Inside **
+        Values = (int(Info['SoundcloudID']), Info['SoundcloudURL'], Info['SpotifyID'], Info['Name'], str(Info['Artists']).strip("[]"), str(Info['ArtistID']).strip("[]"), 
+                  Info['Album'], Info['AlbumID'], Info['Art'], str(Info['Colour']), Info['Release'], Info['Popularity'], Info['Explicit'], Info['Preview'])
+        
+        #** Write Data To Database Cache Replacing Any Old Columns Of Data With Same Primary Key **
+        ToExecute = "REPLACE INTO cache (SoundcloudID, SoundcloudURL, SpotifyID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
         self.cursor.execute(ToExecute, Values)
         self.connection.commit()
         print("Added To Cache")
 
 
-    def SearchCache(self, Platform, ID):
+    def SearchCache(self, ID):
 
-        if Platform == "Spotify":
+        if len(ID) == 22:
             #** Get Song From Database Cache Using Spotify ID **
             self.cursor.execute("SELECT * FROM cache WHERE SpotifyID = '"+str(ID)+"';")
             Song = self.cursor.fetchone()
@@ -217,19 +219,19 @@ class UserData():
             Song = self.cursor.fetchone()
 
         if Song != None:
-
-            Song = {"SpotifyID": Song[0],
-                    "SoundcloudID": Song[1],
-                    "Name": Song[2],
-                    "Artists": list(Song[3].split(", ")),
-                    "ArtistID": list(Song[4].split(", ")),
-                    "Album": Song[5],
-                    "AlbumID": Song[6],
-                    "Art": Song[7],
-                    "Colour": Song[8],
-                    "Release": Song[9],
-                    "Popularity": Song[10],
-                    "Explicit": Song[11],
-                    "Preview": Song[12]}
-
+            #** Format Returned Data Into A Dict To Return **
+            Song = {Song[2]: {"SoundcloudID": Song[0],
+                    "SoundcloudURL": Song[1],
+                    "Name": Song[3],
+                    "Artists": Song[4].replace("'", "").split(", "),
+                    "ArtistID": Song[5].replace("'", "").split(", "),
+                    "Album": Song[6],
+                    "AlbumID": Song[7],
+                    "Art": Song[8],
+                    "Colour": tuple(Song[9]),
+                    "Release": Song[10],
+                    "Popularity": Song[11],
+                    "Explicit": Song[12],
+                    "Preview": Song[13],
+                    "LastUpdated": Song[14]}}
         return Song

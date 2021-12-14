@@ -2,6 +2,9 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
+import math
+import json
+import copy
 import discord
 import asyncio
 from datetime import datetime
@@ -34,32 +37,6 @@ class HelpCommand(object):
         Embed = discord.Embed(title = "Using The Bot",
                               description = "",
                               colour=discord.Colour.orange())
-        
-        #** Return Embed Object **
-        return Embed
-    
-
-    def Extension(self, CogName):
-        
-        #** Get Cog Object **
-        Cog = self.client.get_cog(CogName)
-        
-        #** Create Basic Embed **
-        Embed = discord.Embed(title = "Catergory: "+CogName,
-                              colour=discord.Colour.orange())
-        
-        #** Itterate Through Commands In Cog **
-        for command in Cog.walk_commands():
-            
-            #** Create Field Description With Command Aliases And Command Description **
-            Value = "*"+command.description+"*\n ---------------------------"
-            if command.aliases != []:
-                Value = "`Aliases: !"+(", !".join(command.aliases))+"`\n"+Value
-            else:
-                Value = "`Aliases: None`"+Value
-                
-            #** Add Field About Command To Embed **
-            Embed.add_field(name="**__"+command.name.title()+"__**", value=Value, inline=False)
         
         #** Return Embed Object **
         return Embed
@@ -98,6 +75,16 @@ class HelpCog(commands.Cog, HelpCommand):
         
         #** Assign Class Objects **
         self.client = client
+        self.Pagination = self.client.get_cog("EmbedPaginator")
+        self.activeCogs = {'Music': 'All music-related commands, including playing music.', 'Account': '', 'Utility': ''}
+        
+        #** Load Config File **
+        with open('Config.json') as ConfigFile:
+            Config = json.load(ConfigFile)
+            ConfigFile.close()
+            
+        #** Setup Emojis **
+        self.Emojis = Config['Variables']['Emojis']
         
         #** Get List Of Active Commands **
         self.activeCommands = []
@@ -113,12 +100,69 @@ class HelpCog(commands.Cog, HelpCommand):
         print("'"+input+"'")
         if input == "":
             Embed = self.MainMenu()
+            
+        #**--------------COMMAND CATERGORY---------------**#
+        
         elif input.title() in list(self.activeCogs.keys()):
-            Embed = self.Extension(input.title())
+            
+            #** Get Cog Object **
+            Cog = self.client.get_cog(input.title())
+            
+            #** Create Basic Embed **
+            CategoryEmbed = discord.Embed(title = "Catergory: "+input.title(),
+                                colour=discord.Colour.orange())
+            
+            #** Iterate Through Commands In Cog **
+            PageData = []
+            for CommandNo, command in enumerate(Cog.walk_commands()):
+                
+                #** If 10 Commands Reached, Add To Embed Page Number & Create Pagination Object. **
+                if (CommandNo % 10) == 0 and CommandNo != 0:
+                    CategoryEmbed.set_footer(text="Page "+str(CommandNo // 10))
+                    PageDict = copy.deepcopy(CategoryEmbed.to_dict())
+                    PageData.append(PageDict)
+                    print("[PAGE]\n")
+                    print(PageData)
+                    print()
+                    
+                    #** If First Page, Send Embed & Add Reactions **#
+                    if (CommandNo / 10) == 1:
+                        Page = await ctx.send(embed=CategoryEmbed)
+                        await Page.add_reaction(self.Emojis['Back'])
+                        await Page.add_reaction(self.Emojis['Next'])
+                    
+                    #** Clear Embed Fields **
+                    CategoryEmbed.clear_fields()
+                    print(PageDict)
+                
+                #** Create Field Description With Command Aliases And Command Description **
+                Value = "*"+command.description+"*\n ---------------------------"
+                if command.aliases != []:
+                    Value = "`Aliases: !"+(", !".join(command.aliases))+"`\n"+Value
+                else:
+                    Value = "`Aliases: None`"+Value
+                    
+                #** Add Field About Command To Embed **
+                CategoryEmbed.add_field(name="**__"+command.name.title()+"__**", value=Value, inline=False)
+            
+            if len(list(Cog.walk_commands())) > 10 and (CommandNo % 10) != 0:
+                CategoryEmbed.set_footer(text="Page "+str(int(math.ceil(CommandNo / 10))))
+                PageData.append(CategoryEmbed.to_dict())
+                print("[PAGE]\n")
+                print(PageData)
+                print()
+                
+            #** Send Embed if less than 10 commands otherwise Create Pagination For Embed **
+            if PageData == []:
+                await ctx.send(embed=CategoryEmbed)
+            else:
+                await self.Pagination.add_pages(Page.id, PageData)
+                print("Pagination Sent!")
+                
+        #**------------------SINGLE COMMAND------------------**#
+                
         elif input.lower() in self.activeCommands:
             Embed = self.Command(input.lower())
-            
-        await ctx.send(embed=Embed)
         
 
 #!-------------------SETUP FUNCTION-------------------#

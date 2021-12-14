@@ -136,7 +136,7 @@ class Spotify(object):
                 print("Error: Spotify Request Code "+str(AlbumData.status_code))
                 return "UnexpectedError"
         
-        #** Itterate Through Each Song And Check Ignore If Empty **
+        #** Iterate Through Each Song And Check Ignore If Empty **
         if AlbumData != []:
             AlbumData = AlbumData.json()
             Songs = {}

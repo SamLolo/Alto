@@ -9,62 +9,79 @@ from discord.ext import commands
 from discord.utils import get
 
 
+#!--------------------------------STARTUP-----------------------------------# 
+
+
+#** Startup Sequence **
+print("-----------------------LOADING EXTENTION----------------------")
+print("Name: Cogs.Pagination")
+print()
+
+
 #!-------------------------EMBED CLASS-----------------------!#
 
 
 class EmbedQueue():
     
-    def __init__(self):
+    def __init__(self, size):
         
         self.pages = []
         self.inPointer = 0
         self.outPointer = 0
-        self.maxSize = 10
+        self.maxSize = size
         self.full = False
         
     def check_empty(self):
-            
-        return not(self.full)
+        
+        #** Check Queue Isn't Full & Pointers Aren't The Same **
+        return (not(self.full) and self.outPointer == self.inPointer)
         
     def check_full(self):
         
-        if self.inPointer == self.outPointer and len(self.pages) == self.maxSize:
-            self.full = True
-            return True
-        
-        return False
+        #** Check If Queue Is Full & Pointers Are The Same **
+        return (self.full and self.inPointer == self.outPointer)
         
     def enqueue(self, page):
         
+        #** Check Queue Isn't Full & Add Page **
         if not(self.check_full()):
-            
-            self.pages[self.inPointer] = page
-            if self.inPointer == self.maxSize:
+            try:
+                self.pages[self.inPointer] = page
+            except:
+                self.pages.append(page)
+
+            #** Adjust InPointer Forward 1 and Set Full To True If Same As OutPointer **
+            if self.inPointer == (self.maxSize - 1):
                 self.inPointer = 0
             else:
                 self.inPointer += 1
-                
-            print(self.pages)
-            
+
+            if self.inPointer == self.outPointer and len(self.pages) == self.maxSize:
+                self.full = True
+        
+        #** Print Full If Queue Is Full **
         else:
             print("Queue is full!")
             
         
     def dequeue(self):
         
+        #** Check If Queue Is Empty & Get Page Where OutPointer Currently Is ** 
         if not(self.check_empty()):
-            
             Page = self.pages[self.outPointer]
-            if self.outPointer == self.maxSize:
+            
+            #** Adjust OutPointer Forward By 1 **
+            if self.outPointer == (self.maxSize - 1):
                 self.outPointer = 0
             else:
                 self.outPointer += 1
             
+            #** Set Full To False If Currently True & Return Page**
             if self.full:
                 self.full = False
-                
             return Page
-                
+
+        #** Print If Queue Is Empty & Return None Value **
         else:
             print("Nothing To Dequeue!")
             return None
@@ -93,7 +110,7 @@ class EmbedPaginator(commands.Cog):
     async def add_pages(self, MessageID, Pages):
         
         #** Setup New Embed **
-        EmbedObj = EmbedQueue()
+        EmbedObj = EmbedQueue(len(Pages))
         
         #** Add Pages To Queue **
         for Page in Pages[1:]:
@@ -116,32 +133,35 @@ class EmbedPaginator(commands.Cog):
     async def get_next(self, MessageID):
         
         #** Get Embed Object **
-        Embed = self.OpenPages[MessageID]
+        try:
+            Embed = self.OpenPages[MessageID]
+        except:
+            return None
         
         #** Move Page To Back Of Queue **
         Page = Embed.dequeue()
         Embed.enqueue(Page)
         
-        #** Format Embed & Return Embed Object **
-        NewEmbed = self.format_embed(Page)
-        return NewEmbed
+        #** Return Embed Dictionary **
+        return Page
     
     
     async def get_last(self, MessageID):
         
         #** Get Embed Object **
-        Embed = self.OpenPages[MessageID]
+        try:
+            Embed = self.OpenPages[MessageID]
+        except:
+            print("Pages not found!")
+            return None
         
-        #** Move Page To Back Of Queue **
-        Embed.outPointer = Embed.maxSize
-        Temp = Embed.dequeue()
-        Page = Embed.dequeue()
-        Embed.enqueue(Page)
-        Embed.enqueue(Temp)
+        #** Work Through Page Queue To Find Last Page **
+        for i in range(Embed.maxSize - 1):
+            Page = Embed.dequeue()
+            Embed.enqueue(Page)
         
-        #** Format Embed & Return Embed Object **
-        NewEmbed = self.format_embed(Page)
-        return NewEmbed
+        #** Return Embed Dictionary **
+        return Page
         
 
     @commands.Cog.listener()
@@ -158,31 +178,22 @@ class EmbedPaginator(commands.Cog):
                 Page = await Channel.fetch_message(Reaction.message_id)
                 await Page.remove_reaction(Reaction.emoji, Reaction.member)
 
-                #** Check If Reaction Is One Of The Arrows **
-                if str(Reaction.emoji) == self.Emojis['Next'] or str(Reaction.emoji) == self.Emojis['Back']:
-                    
-                    #** Get Current Index **
-                    CurrentIndex = self.OpenPages[Reaction.message_id]['Current']
-                    
-                    #** Adjust Current Page Based On Reaction **
-                    if CurrentIndex == len(self.OpenPages[Reaction.message_id]['Embeds'])-1 and str(Reaction.emoji) == self.Emojis['Next']:
-                        CurrentIndex = 0
-                    elif CurrentIndex == 0 and str(Reaction.emoji) == self.Emojis['Back']:
-                        CurrentIndex = len(self.OpenPages[Reaction.message_id]['Embeds'])-1
-                    else:
-                        if str(Reaction.emoji) == self.Emojis['Next']:
-                            CurrentIndex += 1
-                        else:
-                            CurrentIndex -= 1
+                #** Check If Reaction Is Next & Get New Embed **
+                if str(Reaction.emoji) == self.Emojis['Next']:
+                    NewEmbed = await self.get_next(Reaction.message_id)
+                
+                #** Check If Reaction Is Back & Get New Embed **
+                elif str(Reaction.emoji) == self.Emojis['Back']:
+                    NewEmbed = await self.get_last(Reaction.message_id)
+                
+                #** If Reaction Isn't Next Or Back, Don't Get New Embed **
+                else:
+                    NewEmbed = None
 
-                    #** Get New Embed **
-                    NewPage = await self.format_embed(Reaction.message_id, CurrentIndex)
-                    
-                    #** Edit Current Page **
+                #** Format New Embed & Edit Current Page **
+                if NewEmbed != None:
+                    NewPage = await self.format_embed(NewEmbed)
                     await Page.edit(embed=NewPage)
-
-                    #** Save New Current Index **
-                    self.OpenPages[Reaction.message_id]['Current'] = CurrentIndex
 
 
 #!-------------------SETUP FUNCTION-------------------#

@@ -109,7 +109,10 @@ async def on_command_error(ctx, error):
 
 @client.command()
 async def reload(ctx, CogName):
-    client.reload_extension("Cogs."+CogName)
+    try:
+        client.reload_extension("Cogs."+CogName.title())
+    except:
+        print(CogName+" Not Found!")
     await ctx.message.delete()
 
 
