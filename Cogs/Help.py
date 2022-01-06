@@ -16,62 +16,15 @@ from discord.ext import commands
 
 #** Startup Sequence **
 print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Help")
-
-
-#!------------------------HELP COMMAND CLASS-----------------------#
-
-
-class HelpCommand(object):
-    
-    def __init__(self):
-        
-        #** Assign Class Objects **
-        self.activeCogs = {'Music': 'All music-related commands, including playing music.', 'Account': '', 'Utility': ''}         
-        print("Custom Help Command Initiated!\n")
-        
-    
-    def MainMenu(self):
-        
-        #** Create Help Embed Showing Command Catergories & Basic Info **
-        Embed = discord.Embed(title = "Using The Bot",
-                              description = "",
-                              colour=discord.Colour.orange())
-        
-        #** Return Embed Object **
-        return Embed
-    
-    
-    def Command(self, CommandName):
-        
-        #** Get Command Object **
-        Command = self.client.get_command(CommandName)
-        
-        #** Create Embed Description
-        Description = "\n*"+Command.description+"*"
-        if Command.aliases != []:
-            Description = "`Aliases: !"+(", !".join(Command.aliases))+"`\n"+Description
-        else:
-            Description = "`Aliases: None`"+Description
-            
-        #** Create Embed About Command **
-        Embed = discord.Embed(title = "Command: "+CommandName,
-                              description = Description,
-                              colour = discord.Colour.orange())
-        
-        #** Return Embed Object **
-        return Embed
+print("Name: Cogs.Help\n")
 
 
 #!-------------------------HELP COG-----------------------------#
 
 
-class HelpCog(commands.Cog, HelpCommand):
+class HelpCog(commands.Cog):
 
     def __init__(self, client):
-
-        #** Initialise Custom HelpCommand Class **
-        super(HelpCog, self).__init__()
         
         #** Assign Class Objects **
         self.client = client
@@ -97,9 +50,17 @@ class HelpCog(commands.Cog, HelpCommand):
     async def help(self, ctx, *args):
         
         input = " ".join(args)
-        print("'"+input+"'")
+        
         if input == "":
-            Embed = self.MainMenu()
+            
+            #** Create Help Embed Showing Command Categories & Basic Info **
+            MainMenu = discord.Embed(title = "Alto: Using The Discord Bot",
+                              description = "**- !help <catergory>:** *Specifying a catergory shown on this embed will show all "+
+                                            "commands within that catergory with a brief description of each.*\n**- !help <command>:"+
+                                            "** *For a more detailed description of a command, specify the exact command.*",
+                              colour=discord.Colour.blue())
+            
+            await ctx.send(embed=MainMenu)
             
         #**--------------COMMAND CATERGORY---------------**#
         
@@ -110,7 +71,7 @@ class HelpCog(commands.Cog, HelpCommand):
             
             #** Create Basic Embed **
             CategoryEmbed = discord.Embed(title = "Catergory: "+input.title(),
-                                colour=discord.Colour.orange())
+                                colour=discord.Colour.blue())
             
             #** Iterate Through Commands In Cog **
             PageData = []
@@ -162,7 +123,23 @@ class HelpCog(commands.Cog, HelpCommand):
         #**------------------SINGLE COMMAND------------------**#
                 
         elif input.lower() in self.activeCommands:
-            Embed = self.Command(input.lower())
+            
+            #** Get Command Object **
+            Command = self.client.get_command(input.lower())
+            
+            #** Create Embed Description
+            Description = "\n*"+Command.description+"*"
+            if Command.aliases != []:
+                Description = "`Aliases: !"+(", !".join(Command.aliases))+"`\n"+Description
+            else:
+                Description = "`Aliases: None`"+Description
+                
+            #** Create Embed About Command **
+            CommandEmbed = discord.Embed(title = "Command: "+input.title(),
+                                description = Description,
+                                colour = discord.Colour.blue())
+            
+            await ctx.send(embed=CommandEmbed)
         
 
 #!-------------------SETUP FUNCTION-------------------#

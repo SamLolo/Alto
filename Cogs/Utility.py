@@ -9,6 +9,7 @@ import string
 import asyncio
 from datetime import datetime
 from discord.ext import commands
+from dateutil.relativedelta import relativedelta
 
 
 #!------------------------------IMPORT CLASSES----------------------------------#
@@ -176,8 +177,10 @@ class UtilityCog(commands.Cog, name="Utility"):
 
     @commands.command(aliases=['up'], description="Displays the time since the bot last went down.")
     async def uptime(self, ctx):
-        print("N/A")
         
+        Uptime = relativedelta(datetime.strptime(datetime.now().strftime("%m-%d %H:%M"), "%m-%d %H:%M"), datetime.strptime(self.client.startup.strftime("%m-%d %H:%M"), "%m-%d %H:%M"))
+        await ctx.send("The bot has been online for:\n`"+str(Uptime.months)+" Months, "+str(Uptime.days)+" Days, "+str(Uptime.hours)+
+                       " Hours & "+str(Uptime.minutes)+" Minutes`")
     
     @commands.command(aliases=['inv'], description="Displays the bot's Discord invite link.")
     async def invite(self, ctx):

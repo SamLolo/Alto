@@ -27,7 +27,7 @@ from Classes.Utils import Utility
 #** Startup Sequence **
 print("-----------------------LOADING EXTENTION----------------------")
 print("Name: Cogs.Music")
-print("Modules Imported: ✓")
+print("Modules Imported: ✓", end="")
 
 
 #!------------------------INITIALISE CLASSES-------------------#
@@ -137,6 +137,7 @@ class MusicCog(commands.Cog, name="Music"):
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
             #** Get Channel & Print Out Now Playing Information When New Track Starts **
+            Timestamp = datetime.now()
             Channel = self.client.get_channel(int(event.player.fetch("Channel")))
             print(event.track["title"], event.track["uri"])
             
@@ -219,13 +220,18 @@ class MusicCog(commands.Cog, name="Music"):
             event.player.store('Users', UserList)
 
             #** For All Current Listeners, Add New Song To Their Song History **
+            URI = event.track['identifier'].split("/")
+            ID  = URI[4].split(":")[2]
+            TrackData = {ID: {"ListenedAt": Timestamp,
+                              "SpotifyID": None,
+                              "Name": event.track['title'],
+                              "Artists": event.track['author']}}
             for User in UserList:
                 if event.track.extra['spotify'] != {}:
-                    await User.incrementHistory("SP-"+event.track.extra['spotify']['ID'])
-                else:
-                    ID = event.track.uri.split("/")[4]
-                    await User.incrementHistory("SC-"+ID)
-
+                    TrackData[ID]['SpotifyID'] = event.track.extra['spotify']['ID']
+                    TrackData[ID]['Name'] = event.track.extra['spotify']['name']
+                    TrackData[ID]['Artists'] = event.track.extra['spotify']['artists']
+                await User.incrementHistory(TrackData)
 
     @commands.guild_only()
     @commands.command(aliases=['p'], description="Allows you to play music through a Discord Voice Channel from a variety of sources.")
@@ -620,12 +626,15 @@ class MusicCog(commands.Cog, name="Music"):
             
         elif Query.startswith("https://soundcloud.com/") or not(Query.startswith("https://")):
 
-            if not(Query.startswith("https://")):
+            if not(Query.startswith("https://")) or len(Query.split("/")) == 5:
                 
                 #** Get Track From Lavalink Player **
-                Results = await Player.node.get_tracks("scsearch:"+Query)
-                print(Results['tracks'][0])
-                if len(Results) > 0:
+                if not(Query.startswith("https://")):
+                    Results = await Player.node.get_tracks("scsearch:"+Query)
+                else:
+                    Results = await Player.node.get_tracks(Query)
+                print(Results)
+                if len(Results['tracks']) > 0:
                     URI = Results['tracks'][0]['info']['identifier'].split("/")
                     ID  = URI[4].split(":")[2]
                     print(ID)
@@ -641,9 +650,11 @@ class MusicCog(commands.Cog, name="Music"):
 
                         print(Song)
 
-            elif len(Query.split("//")) == 4:
+            elif len(Query.split("/")) == 6 and "/sets/" in Query:
 
-                print("Artist")
+                Results = await Player.node.get_tracks(Query)
+                print(Results)
+
 
     @commands.guild_only()
     @commands.command(aliases=['disconnect', 'dc'], description="Stops any currently playing audio in your voice channel.")
@@ -867,7 +878,7 @@ class MusicCog(commands.Cog, name="Music"):
         
         #** Set Author & Footer and Add Position Field **
         NowPlaying.set_author(name="Requested By "+str(Player.current.requester)+"", icon_url=Player.current.requester.avatar_url)
-        NowPlaying.add_field(name="Position:", value= await Utils.format_time(Player.position)+" / "+ await Utils.format_time(Player.current.duration))
+        NowPlaying.add_field(name="Position:", value = Utils.format_time(Player.position)+" / "+ Utils.format_time(Player.current.duration))
         if Player.queue == []:
             NowPlaying.set_footer(text="Up Next: Nothing")
         else:
@@ -875,7 +886,7 @@ class MusicCog(commands.Cog, name="Music"):
         
         #** If Track Has Spotify Info, Format List of Artists **
         if Player.current.extra['spotify'] != {}:
-            Artists = await Utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
+            Artists = Utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
 
             #** Set Descrition and Thumbnail & Add By Field Above Position Field **
             NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"+self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")"
@@ -1001,7 +1012,7 @@ class MusicCog(commands.Cog, name="Music"):
                         else:
                             await Page.remove_reaction(Reaction.emoji, Reaction.member)
         
-            #** Output Song Not Found If Music.GetSongDetails() Returns Song Not Found **
+            #** Output Song Not Found If SongData.GetSongDetails() Returns Song Not Found **
             else:
                 Error = True
         else:

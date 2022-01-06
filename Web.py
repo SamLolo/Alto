@@ -18,6 +18,10 @@ if connection.is_connected():
     record = cursor.fetchone()
     print("Connected To Database: "+record[0].title()+"\n")
 
+del Host
+del User
+del Password
+
 class Auth():
     def __init__(self):
         self.ID = os.environ["SPOTIFY_CLIENT"]

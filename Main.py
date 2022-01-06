@@ -15,18 +15,8 @@ from discord.ext import commands
 
 
 #** Startup Sequence **
-print("-----------------------STARTING UP----------------------")
-print("Startup Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
-
-
-#!-------------------------------FETCH CLASSES-----------------------------#
-
-
-from Classes.Database import UserData
-from Classes.Music import Music
-
-Database = UserData()
-SongData = Music()
+print("--------------------------STARTING UP-------------------------")
+print("Startup Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y")+"\n")
 
 
 #!--------------------------------DISCORD BOT-----------------------------------# 
@@ -51,6 +41,17 @@ Emojis["True"] = "✅"
 Emojis["False"] = "❌"
 
 
+#!--------------------------------COMMAND CHECKS-----------------------------------#
+
+
+def is_admin():
+    async def predicate(ctx):
+        if ctx.author.id in ["315237737538125836"]:
+            return True
+        return False
+    return commands.check(predicate)
+
+
 #!--------------------------------DISCORD EVENTS-----------------------------------# 
 
 
@@ -59,6 +60,7 @@ async def on_ready():
     print("Connection Established!")
     print("Preparing Internal Cache...")
     await client.wait_until_ready()
+    client.startup = datetime.now()
     print("Bot Is Now Online & Ready!\n")
 
 
@@ -108,6 +110,7 @@ async def on_command_error(ctx, error):
 
 
 @client.command()
+@is_admin()
 async def reload(ctx, CogName):
     try:
         client.reload_extension("Cogs."+CogName.title())
@@ -126,5 +129,5 @@ for Cog in Config['Active_Extensions']:
 #!--------------------------------DISCORD LOOP-----------------------------------# 
 
 #** Connecting To Discord **    
-print("--------------------CONNECTING TO DISCORD--------------------")
+print("---------------------CONNECTING TO DISCORD--------------------")
 client.run(os.environ["MUSICA_TOKEN"])

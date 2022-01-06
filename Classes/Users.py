@@ -17,14 +17,12 @@ from Classes.Music import Music
 
 class SpotifyUser(object):
     
-    def __init__(self):
+    def __init__(self, DiscordID):
 
-        super(SpotifyUser, self).__init__()
+        super(SpotifyUser, self).__init__(DiscordID)
 
         #** Set Database Class **
         self.Database = UserData()
-
-        DiscordID = self.userData['discordID']
 
         #** Get Spotify Details **
         self.SpotifyID = os.environ["SPOTIFY_CLIENT"]
@@ -36,23 +34,19 @@ class SpotifyUser(object):
         self.AuthHead = {"Content-Type": "application/x-www-form-urlencoded", 'Authorization': 'Basic {0}'.format(AuthStr)}
 
         #** Get Spotify Credentials From Database **
-        ID = self.userData['spotify']
-        if str(ID) != 'None':
-            Data = self.Database.GetSpotify(ID)
-            if Data != None:
+        Data = self.Database.GetSpotify(DiscordID)
+        if Data != None:
 
-                #** Assign Class Objects **
-                self.Refresh = Data[2]
-                self.Name = Data[3]
-                self.ID = Data[4]
-                self.Pic = Data[5]
-                self.Connected = True
+            #** Assign Class Objects **
+            self.Refresh = Data[2]
+            self.Name = Data[3]
+            self.ID = Data[4]
+            self.Pic = Data[5]
+            self.Connected = True
 
-                #** Get UserToken & User Header For New User **
-                self.RefreshUserToken()
+            #** Get UserToken & User Header For New User **
+            self.RefreshUserToken()
 
-            else:
-                self.Connected = False
         else:
             self.Connected = False
 
@@ -96,37 +90,30 @@ class SpotifyUser(object):
 
 class SongHistory(object):
     
-    def __init__(self):
+    def __init__(self, DiscordID):
 
         super(SongHistory, self).__init__()
 
         #** Fetch Last Queue Session From Database **
-        History = self.database.GetHistory(self.userData["history"])
+        self.History = self.database.GetHistory(DiscordID)
 
-        self.inpointer = History['inPointer']
-        self.outpointer = History['outPointer']
-        self.array = History['queue']
+        self.inpointer = 0
+        self.outpointer = 0
+        self.array = list(self.History.keys())
         self.maxsize = 49
+        self.full = False
 
         
     def check_empty(self):
         
-        #** Check If First Value Is None, and If True Return True **
-        if self.array[self.outpointer] == None:     
-            return True
-
-        #** If Not Return False **
-        return False
+        #** Check Queue Isn't Full & Pointers Aren't The Same **
+        return (not(self.full) and self.outpointer == self.inpointer)
         
         
     def check_full(self):
         
-        #** Check If Pointers Match & Queue Has Values Inside. If True Return True **
-        if self.inpointer == self.outpointer and self.array[self.maxsize] != None:
-            return True
-
-        #** If False Return False **
-        return False
+        #** Check If Queue Is Full & Pointers Are The Same **
+        return (self.full and self.inpointer == self.outpointer)
         
 
     def addSong(self, data):
@@ -135,7 +122,11 @@ class SongHistory(object):
         if not(self.check_full()):
             
             #** Add Value To Array & Increment In-Pointer **
-            self.array[self.inpointer] = data
+            if len(self.array) == self.maxsize:
+                self.array[self.inpointer] = list(data.keys())[0]
+            else:
+                self.array.append(list(data.keys())[0])
+            self.History.update(data)
             if self.inpointer == self.maxsize:
                 self.inpointer = 0
             else:
@@ -144,14 +135,20 @@ class SongHistory(object):
             print("\nIN")
             print(self.array)
             print(self.inpointer)
+
+            #** Set Full To True If Same As OutPointer **
+            if self.inpointer == self.outpointer and len(self.array) == self.maxsize:
+                self.full = True
         
+
     def clearSong(self):
         
         #** Check If Queue Is Empty **
         if not(self.check_empty()):
             
             #** Pop Data Point From Array & Increment Out Pointer **
-            Data = self.array[self.outpointer]
+            songID = self.array[self.outpointer]
+            Data = self.History.pop(songID)
             if self.outpointer == self.maxsize:
                 self.outpointer = 0
             else:
@@ -161,7 +158,9 @@ class SongHistory(object):
             print(self.array)
             print(self.outpointer)
 
-            #** Return Removed Data Point ** 
+            #** Set Full To False If Currently True & Return Removed Data Point **
+            if self.full:
+                self.full = False
             return Data
             
         #** Return None If No Value Removed **    
@@ -182,32 +181,19 @@ class Users(SpotifyUser, SongHistory):
         
         #** Get User Object **
         self.user = self.client.get_user(DiscordID)
-        self.userData = self.database.GetUser(DiscordID)
         
         #** Initialise SpotifyUser, Music & Listening History Classes **
-        super(Users, self).__init__()
+        super(Users, self).__init__(DiscordID)
         self.SongData = Music()
 
     
     async def save(self):
         
-        #** Format Queue Into MySQL Update String **
-        ToExecute = "UPDATE history SET ID = '"+str(self.userData["history"])+"'"
-        if self.inpointer != '0':
-            ToExecute += ", Pointer1 = '"+str(self.inpointer)+"'"
-        if self.outpointer != '0':
-            ToExecute += ", Pointer2 = '"+str(self.outpointer)+"'"
-        for i in range(50):
-            if self.array[i] != None:
-                ToExecute += ", Song"+str(i+1)+" = '"+str(self.array[i])+"'"
-        ToExecute += " WHERE ID = '"+str(self.userData["history"])+"'"
-
-        #** Write Song History Queue To MySQL Database **
-        self.database.cursor.execute(ToExecute)
-        self.database.connection.commit()
+        #** Send Data To Database To Be Saved **
+        self.database.AddSongHistory(self.user.id, self.History, self.outpointer)
         
     
-    async def incrementHistory(self, Song):
+    async def incrementHistory(self, TrackData):
         
         #** If Queue Is Currently Full, Clear Oldest Song From Queue **
         if self.check_full():
@@ -216,6 +202,6 @@ class Users(SpotifyUser, SongHistory):
         #Features = self.SongData.GetAudioFeatures()
          
         #** Add New Song To Queue **
-        self.addSong(Song)
+        self.addSong(TrackData)
         
         

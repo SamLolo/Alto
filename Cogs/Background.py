@@ -6,7 +6,6 @@ import json
 import discord
 import asyncio
 from discord.ext import tasks, commands
-from discord.utils import get
 
 
 #!--------------------------BACKGROUND CLASS------------------------#
@@ -31,7 +30,6 @@ class BackgroundTasks(commands.Cog):
         self.CurrentStatus = 0
         self.Status = list(Config['Status'].items())
         self.StatusTime = Config['StatusTime']
-        print(self.Status)
         
     
     def cog_unload(self):

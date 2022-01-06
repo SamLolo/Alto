@@ -14,8 +14,7 @@ from discord.utils import get
 
 #** Startup Sequence **
 print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Pagination")
-print()
+print("Name: Cogs.Pagination\n")
 
 
 #!-------------------------EMBED CLASS-----------------------!#

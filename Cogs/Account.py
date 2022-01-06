@@ -16,7 +16,6 @@ from discord.ext import commands
 from Classes.Users import Users
 from Classes.Database import UserData
 from Classes.Music import Music
-from Classes.Utils import Utility
 
 
 #!--------------------------------STARTUP-----------------------------------# 
@@ -33,7 +32,6 @@ print("Modules Imported: ✓\n")
 
 Database = UserData()
 SongData = Music()
-Utils = Utility()
 
 
 #!------------------------UTILITY COG-----------------------#
@@ -43,8 +41,9 @@ class AccountCog(commands.Cog, name="Account"):
 
     def __init__(self, client):
 
-        #** Assign Discord Bot Client As Class Object **
-        self.client = client 
+        #** Assign Discord Bot Client As Class Object & Get Pagination Cog**
+        self.client = client
+        self.Pagination = self.client.get_cog("EmbedPaginator")
 
         #** Load Config File **
         with open('Config.json') as ConfigFile:
@@ -55,10 +54,6 @@ class AccountCog(commands.Cog, name="Account"):
         self.Emojis = Config['Variables']['Emojis']
         self.Emojis["True"] = "✅"
         self.Emojis["False"] = "❌"
-
-        #** Get Pagination Cog **
-        self.Pagination = self.client.get_cog("EmbedPaginator")
-        print(self.Pagination)
 
 
     @commands.command(aliases=['r', 'recommend', 'suggest', 'songideas'])

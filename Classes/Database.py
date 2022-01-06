@@ -18,8 +18,9 @@ User = os.environ["DATABASE_USER"]
 Password = os.environ["DATABASE_PASS"]
 
 #** Connect To Database **
+print("--------------------CONNECTING TO DATABASE--------------------")
 connection = mysql.connector.connect(host = Host,
-                                    database = "Melody",
+                                    database = "discordmusic",
                                     user = User,
                                     password = Password)
 
@@ -28,6 +29,8 @@ if connection.is_connected():
     cursor = connection.cursor(buffered=True)
     cursor.execute("SELECT database();")
     print("Database Connection Established: "+datetime.now().strftime("%H:%M")+"\n")
+else:
+    print("Database Connection Failed: "+datetime.now().strftime("%H:%M")+"\n")
 
 #** Delete Connection Details **
 del Host
@@ -57,153 +60,120 @@ class UserData():
 
         #** Get Info About Discord User From Database **
         self.cursor.execute("SELECT * FROM users WHERE DiscordID = '"+str(discordID)+"';")
-        UserData = self.cursor.fetchone()
-
-        #** Format UserData To Dictionary **
-        Dict = {"discordID": UserData[0],
-                "stats": UserData[1],
-                "history": UserData[2],
-                "settings": UserData[3],
-                "spotify": UserData[4]}
-
-        #** Return Returned Row **
-        return Dict
-
-
-    def GetStats(self, ID):
-
-        #** Get Users Statistics From Database **
-        self.cursor.excute("SELECT * FROM user_stats WHERE ID = '"+str(ID)+"';")
-        Stats = self.cursor.fetchone()
-
-        #** Return Returned Row **
-        return Stats
-
-
-    def GetHistory(self, ID):
-
-        #** Get Users Listening History From Database **
-        self.cursor.execute("SELECT * FROM history WHERE ID = '"+str(ID)+"';")
-        History = self.cursor.fetchone()
-
-        #** Format History Into Dictionary **
-        Songs = []
-        for i in range(len(History)-3):
-            Songs.append(History[i+3])
-        Dict = {"inPointer": int(History[1]),
-                "outPointer": int(History[2]),
-                "queue": Songs}
-
-        #** Return Returned Row **
-        return Dict
-
-
-    def GetSpotify(self, ID):
-
-        #** Get Spotify Credentials From Database **
-        self.cursor.execute("SELECT * FROM spotify WHERE ID='"+str(ID[0])+"';")
         Data = self.cursor.fetchone()
 
-        #** Return Data **
-        return Data
+        #** Format UserData To Dictionary & Return Values **
+        if Data != None:
+            Dict = {"discordID": int(Data[0]),
+                    "name": Data[1],
+                    "discriminator": Data[2],
+                    "avatar": Data[3]}
+            return Dict
+        else:
+            return None
 
 
-    def AddUser(self, discordID):
+    def GetHistory(self, discordID):
 
-        #** Add Blank Listening History Row **
-        self.cursor.execute("INSERT INTO history () VALUES ();")
-        self.connection.commit()
+        #** Get Users Listening History From Database **
+        self.cursor.execute("SELECT history.SongID, history.ListenedAt, cache.SpotifyID, cache.Name, cache.Artists FROM history INNER JOIN cache WHERE DiscordID = '"+str(discordID)+"' ORDER BY ListenedAt ASC;")
+        History = self.cursor.fetchall()
+        print(History)
 
-        #** Get ID of Listening History **
-        self.cursor.execute("SELECT LAST_INSERT_ID();")
-        HistoryID = self.cursor.fetchone()[0]
+        Dict = {}
+        for Tuple in History:
+            Dict[Tuple[0]] = {"ListenedAt": Tuple[1],
+                              "Name": Tuple[3],
+                              "Artists": Tuple[4].replace("'", "").split(", "),
+                              "SpotifyID": Tuple[2]}
 
-        #** Add Blank Statistics Row **
-        self.cursor.execute("INSERT INTO user_stats () VALUES ();")
-        self.connection.commit()
+        #** Return List Of Ordered Song IDs **
+        return Dict
 
-        #** Get ID of User Statistics **
-        self.cursor.execute("SELECT LAST_INSERT_ID();")
-        StatsID = self.cursor.fetchone()[0]
+
+    def GetSpotify(self, discordID):
+
+        #** Get Spotify Data From Database & Return It **
+        self.cursor.execute("SELECT * FROM spotify WHERE DiscordID='"+str(discordID)+"';")
+        Data = self.cursor.fetchone()
+        
+        #** Format Spotify Data To Dictionary & Return Values **
+        if Data != None:
+            Dict = {"discordID": int(Data[1]),
+                    "spotifyID": Data[0],
+                    "name": Data[2],
+                    "avatar": Data[3],
+                    "followers": Data[4],
+                    "subscription": Data[5],
+                    "refresh": Data[6],
+                    "linked": Data[7]}
+            return Dict
+        else:
+            return None
+
+
+    def AddUser(self, Data):
 
         #** Write Data About User To Users Table **
-        Data = (discordID, str(StatsID), str(HistoryID), "None", "None")
         self.cursor.execute("INSERT INTO users VALUES "+str(Data)+";")
         self.connection.commit()
-
-        #** Return User Data Just Created **
-        return Data
     
 
-    def RemoveSpotify(self, DiscordID):
-        User = self.GetUser(DiscordID)
-        self.cursor.execute("DELETE FROM spotify WHERE ID='"+User[4]+"'")
-        self.cursor.execute("UPDATE users SET Spotify = 'None' WHERE DiscordID = '"+str(DiscordID)+"';")
+    def RemoveSpotify(self, discordID):
+        
+        #** Remove Row From Spotify With Specified Discord ID **
+        self.cursor.execute("DELETE FROM spotify WHERE DiscordID='"+str(discordID)+"'")
         self.connection.commit()
 
 
-    def AddSongHistory(self, ID, Song):
+    def AddSongHistory(self, discordID, SongDict, OutPointer):
 
-        #** Get Current History **
-        History = list(self.GetHistory(ID))
+        #** Separate SongDict Into 2 Lists **
+        SongIDs = list(SongDict.keys())
 
-        #** Add New Song To Stack **
-        try:
-            Index = History.index(None)
-            History.pop(Index)
-            History.insert(Index, Song)
-        except:
-            History.pop(0)
-            History.append(Song)
+        #** Delete All Rows Older Than Oldest Song In Song History & Get Amount Deleted**
+        Oldest = list(SongDict.values())[OutPointer]["ListenedAt"]
+        self.cursor.execute("DELETE FROM history WHERE ListenedAt < '"+str(Oldest)+"';")
+        DeletedRows = self.cursor.execute("SELECT ROW_COUNT();")
 
+        #** If No Rows Deleted, Set Deleted Rows To Length Of List So All Songs Are Added. Using REPLACE INTO Avoids Errors For Duplicates, **
+        #** As Columns With The Same Primary Key Are Just OverWritten **
+        if DeletedRows == None:
+            DeletedRows = len(SongIDs)
+            
         #** Format SQL Execute String **
-        ToExecute = "UPDATE history SET ID = '"+str(History[0])+"'"
-        for i in range(49):
-            if History[i+1] != None:
-                ToExecute += ", Song"+str(i+1)+" = '"+str(History[i+1])+"'"
-        ToExecute += " WHERE ID = '"+str(History[0])+"'"
-
+        for i in range(DeletedRows):
+            Data = (str(discordID), SongIDs[i], SongDict[SongIDs[i]]["ListenedAt"])
+            print(Data)
+            self.cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", Data)
+            
         #** Write Changes To Database **
-        self.cursor.execute(ToExecute)
         self.connection.commit()
 
 
-    def AddSongCache(self, SpotifyID, SoundcloudID, AudioData):
+    def AddPartialSongCache(self, Info):
 
-        #** Format Data to Be Added To Cache **
-        Columns = ['SpotifyID', 'SoundcloudID', 'Name', 'Artists', 'ArtistID', 'Album', 'AlbumID', 'Art', 'colour', 'Release', 'Popularity', 'Explicit', 'Preview']
-        Values = [SpotifyID, SoundcloudID]
-        for column in Columns[2:]:
-            if column in AudioData.keys():
-                value = AudioData[column]
-                if type(value) == list:
-                    value = ", ".join(value)
-                elif str(value) == "N/A":
-                    value = None
-                Values.append(value)
-            else:
-                Values.append(None)
-        print(Values)
-
-        #** Add Data To Database **
-        ToExecute = "INSERT INTO cache (SpotifyID, SoundcloudID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
-        Values = tuple(Values)
+        #** Create Tuple With Formatted Data Inside **
+        Values = (str(Info['SoundcloudID']), Info['SoundcloudURL'], Info['Name'], str(Info['Artists']).strip("[]"))
+        
+        #** Insert New Row Into Database. Only Called When New Row Is Needed **
+        ToExecute = "INSERT INTO cache (SoundcloudID, SoundcloudURL, Name, Artists) VALUES (%s, %s, %s, %s);"
         self.cursor.execute(ToExecute, Values)
         self.connection.commit()
-        print("Added To Cache")
+        print("Partial Data Added To Cache")
 
 
     def AddFullSongCache(self, Info):
 
         #** Create Tuple With Formatted Data Inside **
-        Values = (int(Info['SoundcloudID']), Info['SoundcloudURL'], Info['SpotifyID'], Info['Name'], str(Info['Artists']).strip("[]"), str(Info['ArtistID']).strip("[]"), 
+        Values = (str(Info['SoundcloudID']), Info['SoundcloudURL'], Info['SpotifyID'], Info['Name'], str(Info['Artists']).strip("[]"), str(Info['ArtistID']).strip("[]"), 
                   Info['Album'], Info['AlbumID'], Info['Art'], str(Info['Colour']), Info['Release'], Info['Popularity'], Info['Explicit'], Info['Preview'])
         
         #** Write Data To Database Cache Replacing Any Old Columns Of Data With Same Primary Key **
         ToExecute = "REPLACE INTO cache (SoundcloudID, SoundcloudURL, SpotifyID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
         self.cursor.execute(ToExecute, Values)
         self.connection.commit()
-        print("Added To Cache")
+        print("Full Data Added To Cache")
 
 
     def SearchCache(self, ID):
@@ -218,20 +188,28 @@ class UserData():
             self.cursor.execute("SELECT * FROM cache WHERE SoundcloudID = '"+str(ID)+"';")
             Song = self.cursor.fetchone()
 
+        #** Format Full Data Into A Dict To Return **
         if Song != None:
-            #** Format Returned Data Into A Dict To Return **
-            Song = {Song[2]: {"SoundcloudID": Song[0],
-                    "SoundcloudURL": Song[1],
-                    "Name": Song[3],
-                    "Artists": Song[4].replace("'", "").split(", "),
-                    "ArtistID": Song[5].replace("'", "").split(", "),
-                    "Album": Song[6],
-                    "AlbumID": Song[7],
-                    "Art": Song[8],
-                    "Colour": tuple(Song[9]),
-                    "Release": Song[10],
-                    "Popularity": Song[11],
-                    "Explicit": Song[12],
-                    "Preview": Song[13],
-                    "LastUpdated": Song[14]}}
+            if Song[2] != None:
+                RGBList = Song[9].strip("()").split(", ")
+                Song = {Song[2]: {"SoundcloudID": int(Song[0]),
+                        "SoundcloudURL": Song[1],
+                        "Name": Song[3],
+                        "Artists": Song[4].replace("'", "").split(", "),
+                        "ArtistID": Song[5].replace("'", "").split(", "),
+                        "Album": Song[6],
+                        "AlbumID": Song[7],
+                        "Art": Song[8],
+                        "Colour": (int(RGBList[0]), int(RGBList[1]), int(RGBList[2])),
+                        "Release": Song[10],
+                        "Popularity": Song[11],
+                        "Explicit": Song[12],
+                        "Preview": Song[13],
+                        "LastUpdated": Song[14]}}
+            
+            #** If Data Doesn't Have Spotify ID, Format Partial Data Into Dict To Return **
+            else:
+                Song = {Song[0]: {"SoundcloudURL": Song[1],
+                                "Name": Song[3],
+                                "Artists": Song[4].replace("'", "").split(", ")}}
         return Song
