@@ -41,17 +41,6 @@ Emojis["True"] = "✅"
 Emojis["False"] = "❌"
 
 
-#!--------------------------------COMMAND CHECKS-----------------------------------#
-
-
-def is_admin():
-    async def predicate(ctx):
-        if ctx.author.id in ["315237737538125836"]:
-            return True
-        return False
-    return commands.check(predicate)
-
-
 #!--------------------------------DISCORD EVENTS-----------------------------------# 
 
 
@@ -74,7 +63,7 @@ async def on_guild_join(Guild):
 
 @client.event
 async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
+    if isinstance(error, commands.CommandNotFound) or ctx.command.qualified_name in ['reload']:
         Temp = await ctx.message.channel.send("**Command Not Found!**\nFor a full list of commands, run `!help`")
         await asyncio.sleep(5)
         await ctx.message.delete()
@@ -97,13 +86,26 @@ async def on_command_error(ctx, error):
         elif str(error) == "NotPlaying":
             Temp = await ctx.message.channel.send("I'm Not Currently Playing Anything!")
         else:
-            raise error
+            Temp = await ctx.message.channel.send("You are not able to run this command!\n*If you believe this is an error, contact Lolo#6699.*")
         await asyncio.sleep(5)
         await ctx.message.delete()
         await Temp.delete()
         return
     else:
         raise error
+    
+
+#!--------------------------------COMMAND CHECKS-----------------------------------#
+
+
+def is_admin():
+    async def predicate(ctx):
+        print("checking...")
+        print(ctx.author.id)
+        if ctx.author.id in [315237737538125836]:
+            return True
+        return False
+    return commands.check(predicate)
 
 
 #!--------------------------------DISCORD COMMANDS-----------------------------------# 
@@ -114,9 +116,12 @@ async def on_command_error(ctx, error):
 async def reload(ctx, CogName):
     try:
         client.reload_extension("Cogs."+CogName.title())
+        Temp = await ctx.send(CogName+" Successfully Reloaded!")
     except:
-        print(CogName+" Not Found!")
+        Temp = await ctx.send(CogName+" Not Found!")
+    await asyncio.sleep(5)
     await ctx.message.delete()
+    await Temp.delete()
 
 
 #!-------------------------------LOAD COGS-------------------------------#

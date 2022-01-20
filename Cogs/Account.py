@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
+import math
 import discord
 import random
 import asyncio
@@ -16,6 +17,7 @@ from discord.ext import commands
 from Classes.Users import Users
 from Classes.Database import UserData
 from Classes.Music import Music
+from Classes.Utils import Utility
 
 
 #!--------------------------------STARTUP-----------------------------------# 
@@ -32,6 +34,7 @@ print("Modules Imported: ✓\n")
 
 Database = UserData()
 SongData = Music()
+Utils = Utility()
 
 
 #!------------------------UTILITY COG-----------------------#
@@ -54,9 +57,59 @@ class AccountCog(commands.Cog, name="Account"):
         self.Emojis = Config['Variables']['Emojis']
         self.Emojis["True"] = "✅"
         self.Emojis["False"] = "❌"
+        
+    
+    @commands.command(aliases=['account', 'a'], description="Displays information about your alto profile.")
+    async def profile(self, ctx):
+        
+        ProfileEmbed = discord.Embed(title=ctx.author.display_name+"'s Profile",
+                                     colour=ctx.author.colour)
+        ProfileEmbed.set_thumbnail(url=ctx.author.avatar_url)
+        
+        await ctx.send(embed=ProfileEmbed)
 
 
-    @commands.command(aliases=['r', 'recommend', 'suggest', 'songideas'])
+    @commands.command(aliases=['h', 'lastlistened'], description="Displays your 50 last listened to songs through the bot.")
+    async def history(self, ctx):
+        
+        # { !!!NEEDS TESTING!!! } #
+        
+        HistoryEmbed = discord.Embed(title=ctx.author.display_name+"'s Listening History",
+                                     colour=ctx.author.colour)
+        HistoryEmbed.set_thumbnail(url=ctx.author.avatar_url)
+        
+        CurrentUser = Users(self.client, ctx.author.id)
+        if len(CurrentUser.array) > 0:
+            History = iter(CurrentUser.array)
+            Description = ""
+            print(History)
+            Pages = []
+            
+            for Count in range(math.ceil(len(CurrentUser.array) / 10)):
+                print(Count)
+                for i in range(10):
+                    NextSong = next(History)
+                    if NextSong == None:
+                        break
+                    Values = list(NextSong.values())[0]
+                    FormattedArtists = Utils.format_artists(Values['Artists'])
+                    Description += Values['Name']+"\n"+FormattedArtists+"\n"
+                if math.ceil(len(CurrentUser.array) / 10) > 1:
+                    HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.array) / 10)))
+                
+                if Count == 0:
+                    Page = await ctx.send(embed=HistoryEmbed)
+            
+            if math.ceil(len(CurrentUser.array) / 10) > 1:
+                await Page.add_reaction(self.Emojis['Back'])
+                await Page.add_reaction(self.Emojis['Next'])
+                await self.Pagination.add_fields(Page.id, Pages)
+        
+        else:
+            await ctx.send("**You do not have any history to display!**\nGet listening today by joining a vc and running `!play`!")
+    
+
+    @commands.command(aliases=['r', 'recommend', 'suggestions'], description="Displays 10 random song recommendations based on your listening history.")
     async def recommendations(self, ctx):
 
         #** Add User To Database **
