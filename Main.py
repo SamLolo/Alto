@@ -9,6 +9,7 @@ import discord
 from datetime import datetime
 from discord.utils import get
 from discord.ext import commands
+from Classes.Users import Users
 
 
 #!--------------------------------STARTUP-----------------------------------# 
@@ -75,6 +76,12 @@ async def on_command_error(ctx, error):
         await ctx.message.delete()
         await Temp.delete()
         return
+    elif isinstance(error, commands.BadArgument):
+        Temp = await ctx.message.channel.send("**Oops, it seems that paramater is incorrect!**\nFor a full list of valid parameters, run `!help "+str(error)+"`")
+        await asyncio.sleep(5)
+        await ctx.message.delete()
+        await Temp.delete()
+        return
     elif isinstance(error, commands.CheckFailure):
         print(error)
         if str(error) == "UserVoice":
@@ -85,6 +92,12 @@ async def on_command_error(ctx, error):
             Temp = await ctx.message.channel.send("You must be in my Voice Channel to use this!")
         elif str(error) == "NotPlaying":
             Temp = await ctx.message.channel.send("I'm Not Currently Playing Anything!")
+        elif str(error) == "Spotify":
+            Temp = await ctx.send("**Spotify Not Connected!**\nTo run this command, first run `!link`.")
+        elif str(error) == "History":
+            Temp = await ctx.send("**You must have listened to some songs before you can run this command!**\nJoin a Voice Channel and run `!play <song>` to get listening.")
+        elif str(error) == "DM":
+            Temp = await ctx.message.channel.send("**DM Failed!**\nPlease turn on `Allow Server Direct Messages` in Discord settings in order to link your account")
         else:
             Temp = await ctx.message.channel.send("You are not able to run this command!\n*If you believe this is an error, contact Lolo#6699.*")
         await asyncio.sleep(5)
@@ -116,12 +129,17 @@ def is_admin():
 async def reload(ctx, CogName):
     try:
         client.reload_extension("Cogs."+CogName.title())
-        Temp = await ctx.send(CogName+" Successfully Reloaded!")
+        Temp = await ctx.send(CogName.title()+" Successfully Reloaded!")
     except:
-        Temp = await ctx.send(CogName+" Not Found!")
+        Temp = await ctx.send(CogName.title()+" Not Found!")
     await asyncio.sleep(5)
     await ctx.message.delete()
     await Temp.delete()
+
+
+@client.command()
+async def test(ctx):
+    User = Users(client, ctx.author.id)
 
 
 #!-------------------------------LOAD COGS-------------------------------#

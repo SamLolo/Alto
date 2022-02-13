@@ -88,10 +88,9 @@ class Spotify(object):
             SongData = SongData.json()
             Songs = {}
             for Song in SongData['tracks']['items']:
-                if Songs != []:
                 
-                    #** Get Formatted Data For Each Song **
-                    Songs.update(self.FormatSongData(Song['track']))
+                #** Get Formatted Data For Each Song **
+                Songs.update(self.FormatSongData(Song['track']))
             
             #** Return Filled Dictionary Of Songs **
             Songs = {'PlaylistInfo': {'Name': SongData['name'], 'Length': SongData['tracks']['total']}, 'Tracks': Songs}
@@ -141,12 +140,11 @@ class Spotify(object):
             AlbumData = AlbumData.json()
             Songs = {}
             for Song in AlbumData['tracks']['items']:
-                if Songs != []:
                 
-                    #** Get Formatted Data For Each Song **
-                    Song['album'] = {'name': AlbumData['name'], 'id': AlbumData['id'], 'images': [{'url': AlbumData['images'][0]['url']}], 'album_type': AlbumData['album_type'], 'release_date': AlbumData['release_date']}
-                    Song['popularity'] = AlbumData['popularity']
-                    Songs.update(self.FormatSongData(Song))
+                #** Get Formatted Data For Each Song **
+                Song['album'] = {'name': AlbumData['name'], 'id': AlbumData['id'], 'images': [{'url': AlbumData['images'][0]['url']}], 'album_type': AlbumData['album_type'], 'release_date': AlbumData['release_date']}
+                Song['popularity'] = AlbumData['popularity']
+                Songs.update(self.FormatSongData(Song))
             
             #** Return Filled Dictionary Of Songs **
             Songs = {'PlaylistInfo': {'Name': AlbumData['name'], 'Length': AlbumData['tracks']['total']}, 'Tracks': Songs}
@@ -366,6 +364,63 @@ class Spotify(object):
         #** Return "SongNotFound" If Request Body Is Empty (Shouldn't Happen) **
         else:
             return "SongNotFound"
+
+
+    def GetRecommendations(self, data):
+        
+        #** Requests Recommendations From Spotify With The Data Provided **
+        Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
+
+        #** Check If Request Was A Success **
+        while Recommendations.status_code != 200:
+            
+            #** Check if Bot Credentials Have Expired **
+            if 401 == Recommendations.status_code:
+                self.RefreshBotToken()
+                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
+                
+            #** Check If Rate Limit Has Been Applied **
+            elif 429 == Recommendations.status_code:
+                print("\n----------------------RATE LIMIT REACHED--------------------")
+                print("Location: Spotify -> GetRecommendations")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                Time = Recommendations.headers['Retry-After']
+                sleep(Time)
+                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
+                
+            #** Check If Recommendations Not Found, and Return "RecommendationsNotFound" **
+            elif 404 == Recommendations.status_code:
+                return "RecommendationsNotFound"
+            
+            #** If Other Error Occurs, Raise Error **
+            else:
+                print("\n----------------------UNEXPECTED ERROR--------------------")
+                print("Location: Spotify -> GetRecommendations")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                print("Error: Spotify Request Code "+str(Recommendations.status_code))
+                return "UnexpectedError"
+        
+        #** Iterate Through Each Song And Check Ignore If Empty **
+        if Recommendations != []:
+            Recommendations = Recommendations.json()
+
+            #** Check Spotify Actually Returned Tracks In Request **
+            if Recommendations['tracks'] != []:
+
+                #** Return List Of Recommended Songs **
+                Songs = {}
+                for Song in Recommendations['tracks']:
+                    Songs.update(self.FormatSongData(Song))
+                return Songs
+
+            #** "Return RecommendationsNotFound" If No Songs Returned **
+            else:
+                return "RecommendationsNotFound"
+
+        #** Return "RecommendationsNotFound" If Request Body Is Empty (Shouldn't Happen) **
+        else:
+            return "RecommendationsNotFound"
+
 
 
 #!---------------------------------YOUTUBE---------------------------------------#
@@ -671,7 +726,7 @@ class Music(Spotify, YoutubeAPI, SoundcloudAPI):
         Min = Dataframe.min()
         Avg = Dataframe.mean()
 
-        #** Assign Data and Request to Spotify for 50 Recomendations **
+        #** Assign Data and Call GetRecommendations Method **
         data = {'limit': 50, 'seed_genres': ",".join(list(UserGenres.keys())[:2]),
                 'min_acousticness': Min[4], 'target_acousticness': Avg[4], 'max_acousticness': Max[4], 
                 'min_danceability': Min[5], 'target_danceability': Avg[5], 'max_danceability': Max[5], 
@@ -682,15 +737,10 @@ class Music(Spotify, YoutubeAPI, SoundcloudAPI):
                 'min_speechiness': Min[10], 'target_speechiness': Avg[10], 'max_speechiness': Max[10], 
                 'min_valence': Min[11], 'target_valence': Avg[11], 'max_valence': Max[11],
                 'min_tempo': Min[12], 'target_tempo': Avg[12], 'max_tempo': Max[12]}
-        Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead).json()
-
-        #** If Error, Refresh Token and Try Again **
-        if 'error' in Recommendations.keys():
-            self.RefreshUserToken()
-            Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead).json()
-
-        #** Return List Of Recommended Songs **
-        return Recommendations['tracks']
+        Tracks = self.GetRecommendations(data)
+        
+        #** Return Track List **
+        return Tracks
 
 
     def GetLyrics(self, Query):

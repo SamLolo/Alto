@@ -59,15 +59,25 @@ class UserData():
     def GetUser(self, discordID):
 
         #** Get Info About Discord User From Database **
-        self.cursor.execute("SELECT * FROM users WHERE DiscordID = '"+str(discordID)+"';")
+        self.cursor.execute("SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '"+str(discordID)+"';")
         Data = self.cursor.fetchone()
+        print(Data)
 
         #** Format UserData To Dictionary & Return Values **
         if Data != None:
-            Dict = {"discordID": int(Data[0]),
-                    "name": Data[1],
-                    "discriminator": Data[2],
-                    "avatar": Data[3]}
+            Dict = {"data": {"discordID": int(Data[0]),
+                             "name": Data[1],
+                             "discriminator": Data[2],
+                             "avatar": Data[3]},
+                    "recommendations": {"Popularity": [Data[5], Data[6], Data[7]],
+                                        "Acoustic": [Data[8], Data[9], Data[10]],
+                                        "Dance": [Data[11], Data[12], Data[13]],
+                                        "Energy": [Data[14], Data[15], Data[16]],
+                                        "Instrument": [Data[17], Data[18], Data[19]],
+                                        "Live": [Data[20], Data[21], Data[22]],
+                                        "Loud": [Data[23], Data[24], Data[25]],
+                                        "Speech": [Data[26], Data[27], Data[28]],
+                                        "Valance": [Data[29], Data[30], Data[31]]}}
             return Dict
         else:
             return None
@@ -76,18 +86,20 @@ class UserData():
     def GetHistory(self, discordID):
 
         #** Get Users Listening History From Database **
-        self.cursor.execute("SELECT history.SongID, history.ListenedAt, cache.SpotifyID, cache.Name, cache.Artists FROM history INNER JOIN cache WHERE DiscordID = '"+str(discordID)+"' ORDER BY ListenedAt ASC;")
+        self.cursor.execute("SELECT history.SongID, history.ListenedAt, cache.SpotifyID, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity FROM history INNER JOIN cache ON history.SongID = cache.SoundcloudID WHERE DiscordID = '"+str(discordID)+"' ORDER BY ListenedAt ASC;")
         History = self.cursor.fetchall()
-        print(History)
 
         Dict = {}
         for Tuple in History:
-            Dict[Tuple[0]] = {"ListenedAt": Tuple[1],
-                              "Name": Tuple[3],
-                              "Artists": Tuple[4].replace("'", "").split(", "),
-                              "SpotifyID": Tuple[2]}
+            Dict[int(Tuple[0])] = {"ListenedAt": Tuple[1],
+                                   "SpotifyID": Tuple[2],
+                                   "Name": Tuple[3],
+                                   "Artists": Tuple[4].replace("'", "").split(", "),
+                                   "ArtistIDs": Tuple[5].replace("'", "").split(", "),
+                                   "Popularity": Tuple[6]}
 
         #** Return List Of Ordered Song IDs **
+        print(Dict)
         return Dict
 
 
@@ -112,10 +124,14 @@ class UserData():
             return None
 
 
-    def AddUser(self, Data):
+    def AddUser(self, UserData, Recommendations):
 
         #** Write Data About User To Users Table **
-        self.cursor.execute("INSERT INTO users VALUES "+str(Data)+";")
+        self.cursor.execute("INSERT INTO users VALUES "+str(UserData)+";")
+        self.connection.commit()
+
+        #** Write Data About User Recommendation Data To Recommendations Table **
+        self.cursor.execute("INSERT INTO recommendations VALUES "+str(Recommendations)+";")
         self.connection.commit()
     
 
@@ -205,11 +221,13 @@ class UserData():
                         "Popularity": Song[11],
                         "Explicit": Song[12],
                         "Preview": Song[13],
-                        "LastUpdated": Song[14]}}
+                        "LastUpdated": Song[14],
+                        "PartialCache": False}}
             
             #** If Data Doesn't Have Spotify ID, Format Partial Data Into Dict To Return **
             else:
                 Song = {Song[0]: {"SoundcloudURL": Song[1],
                                 "Name": Song[3],
-                                "Artists": Song[4].replace("'", "").split(", ")}}
+                                "Artists": Song[4].replace("'", "").split(", "),
+                                "PartialCache": True}}
         return Song

@@ -23,11 +23,11 @@ DROP TABLE IF EXISTS `spotify`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `spotify` (
-  `SpotifyID` int NOT NULL,
-  `DiscordID` int NOT NULL,
-  `Name` varchar(64) DEFAULT NULL,
-  `Avatar` varchar(32) DEFAULT NULL,
-  `Followers` varchar(45) DEFAULT NULL,
+  `SpotifyID` varchar(32) NOT NULL,
+  `DiscordID` varchar(32) NOT NULL,
+  `Name` varchar(128) DEFAULT NULL,
+  `Avatar` varchar(128) DEFAULT NULL,
+  `Followers` varchar(16) DEFAULT NULL,
   `Subscription` tinyint DEFAULT NULL,
   `Refresh` varchar(64) DEFAULT NULL,
   `State` varchar(16) DEFAULT NULL,
@@ -54,4 +54,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-12-15  8:07:36
+-- Dump completed on 2022-02-03  8:18:01

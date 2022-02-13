@@ -1,66 +1,223 @@
-import requests
-import json
-import os
-import base64
-import mysql.connector
-from flask import Flask, request, render_template
 
+#! -------------------- IMPORT MODULES --------------------- !#
+
+
+import os
+import json
+import string
+import random
+import base64
+import requests
+import mysql.connector
+from time import sleep
+from datetime import datetime
+from flask import Flask, request, render_template, redirect
+
+
+#! -------------------- DATABASE CONNECTION --------------------- !#
+
+
+#** Get Connection Details **
 Host = os.environ["DATABASE_HOST"]
 User = os.environ["DATABASE_USER"]
 Password = os.environ["DATABASE_PASS"]
-connection = mysql.connector.connect(host = Host,
-                                     database = "Melody",
-                                     user = User,
-                                     password = Password)
-if connection.is_connected():
-    cursor = connection.cursor()
-    cursor.execute("select database();")
-    record = cursor.fetchone()
-    print("Connected To Database: "+record[0].title()+"\n")
 
+#** Connect To Database **
+print("--------------------CONNECTING TO DATABASE--------------------")
+connection = mysql.connector.connect(host = Host,
+                                    database = "discordmusic",
+                                    user = User,
+                                    password = Password)
+
+#** Setup Cursor and Output Successful Connection **                  
+if connection.is_connected():
+    cursor = connection.cursor(buffered=True)
+    cursor.execute("SELECT database();")
+    print("Database Connection Established: "+datetime.now().strftime("%H:%M")+"\n")
+else:
+    print("Database Connection Failed: "+datetime.now().strftime("%H:%M")+"\n")
+
+#** Delete Connection Details **
 del Host
 del User
 del Password
 
+
+#! -------------------- AUTH CLASS --------------------- !#
+
+
 class Auth():
+
     def __init__(self):
+
+        #** Get Spotify Details From Environment Variables **
         self.ID = os.environ["SPOTIFY_CLIENT"]
         self.Secret = os.environ["SPOTIFY_SECRET"]
 
+        #** Setup Auth Header For Requests & Dictionary Of Active States **
         ClientData = self.ID+":"+self.Secret
         AuthStr =  base64.urlsafe_b64encode(ClientData.encode()).decode()
         self.AuthHead = {"Content-Type": "application/x-www-form-urlencoded", 'Authorization': 'Basic {0}'.format(AuthStr)}
 
+
+    def NewClientAuth(self, discordID):
+
+        #** Set DiscordID As Class Object **
+        self.discordID = discordID
+
+         #** Generate Random State and Make Sure It Isn't Active **
+        while True:
+            NewState = []
+            for i in range(10):
+                NewState.append(random.choice(string.ascii_letters))
+            self.State = "".join(NewState)
+            if not(self.State in ActiveStates.keys()):
+                ActiveStates[self.State] = self.discordID
+                break
+        
+        #** Return State (None If Could Create Client) **
+        return self.State
+
+    
+    def UserCleanup(self):
+
+        print(self.State)
+
+
     def AuthenticateUser(self, Code):
+        
+        #** Request For An Access Token To Connected User Account Via Spotify Web API **
         data = {'grant_type': "authorization_code", 'code': str(Code), 'redirect_uri': 'http://82.22.157.214:5000/', 'client_id': self.ID, 'client_secret': self.Secret}
         AuthData = requests.post("https://accounts.spotify.com/api/token", data, self.AuthHead)
-        print(AuthData)
-        print(AuthData.json())
+
+        #** Check If Request Was A Success **
+        while AuthData.status_code != 200:
+            
+            #** Check if Bot Credentials Have Expired **
+            if 401 == AuthData.status_code:
+                self.RefreshBotToken()
+                AuthData = requests.post("https://accounts.spotify.com/api/token", data, self.AuthHead)
+                
+            #** Check If Rate Limit Has Been Applied **
+            elif 429 == AuthData.status_code:
+                print("\n----------------------RATE LIMIT REACHED--------------------")
+                print("Function: AuthenticateUser")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                Time = AuthData.headers['Retry-After']
+                sleep(Time)
+                AuthData = requests.post("https://accounts.spotify.com/api/token", data, self.AuthHead)
+            
+            #** If Other Error Occurs, Raise Error **
+            else:
+                print("\n----------------------UNEXPECTED ERROR--------------------")
+                print("Function: AuthenticateUser")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                print("Error: Spotify Request Code "+str(AuthData.status_code))
+                return "UnexpectedError"
+    
+        #** Get Json Body Of Request & Set Token, Refresh & UserHeader For Requests **
         AuthData = AuthData.json()
         self.UserToken = AuthData['access_token']
         self.UserRefresh = AuthData['refresh_token']
         self.UserHead = {'Accept': "application/json", 'Content-Type': "application/json", 'Authorization': "Bearer "+self.UserToken}
+        
+        #** Carry Out Request To Get Further Details **
         self.GetUserDetails()
 
+
     def GetUserDetails(self):
+        
         UserData = requests.get("https://api.spotify.com/v1/me", headers = self.UserHead).json()
+        print(UserData)
         self.Name = UserData['display_name']
         self.UserID = UserData['id']
         self.ProfilePic = UserData['images'][0]['url']
         self.URL = UserData['external_urls']['spotify']
 
+    
+    def AddToDatabase(self):
+
+        cursor.execute("INSERT INTO Spotify (Token, Refresh, Name, SpotifyID, Pic) VALUES (%s, %s, %s, %s, %s, %s)", params=(self.UserToken, self.UserRefresh, self.Name, self.UserID, self.ProfilePic))
+        connection.commit()
+
+
+
+#** Setup Flask Service & Instantiate Auth Class **
 Web = Flask(__name__)
-Authenticate = Auth()
+ActiveStates = {}
+
+
+#! -------------------- WEB PAGES --------------------- !#
+
 
 @Web.route("/")
-def home():
+def PostSpotify():
+    
+    #** Get Code & State Passed In As Params In URL **
     Code = request.args.get('code')
     State = request.args.get('state')
     print("\n"+str(Code)+"\n"+str(State)+"\n")
-    Authenticate.AuthenticateUser(Code)
-    cursor.execute("INSERT INTO Spotify (Token, Refresh, Name, SpotifyID, Pic, State) VALUES (%s, %s, %s, %s, %s, %s)", params=(Authenticate.UserToken, Authenticate.UserRefresh, Authenticate.Name, Authenticate.UserID, Authenticate.ProfilePic, str(State)))
-    connection.commit()
-    return render_template('Success.html', Name=str(Authenticate.Name), Link=str(Authenticate.URL))
     
+    #** Check State Is An Active State & Get Corresponding Auth Class **
+    if State in list(ActiveStates.keys()):
+        
+        #** Get Auth Class For State & Check Code Was Returned (User Didn't Reject Auth) **
+        Auth = ActiveStates[State]
+        if Code != None:
+
+            #** Get Credentials & User Information From Spotify Web API & If No Error, Add Data To Database & Render Success Template **
+            Error = Auth.AuthenticateUser(Code)
+            if Error == None:
+                Auth.AddToDatabase()
+                return render_template('Success.html', Name=str(Auth.Name), Link=str(Auth.URL))
+
+            #** If Error Occurs Whilst Requesting Data From Spotify, Cleanup User From Database and ActiveStates & Render Error Template **
+            else:
+                Auth.UserCleanup()
+                ActiveStates.pop(State)
+                return render_template('Error.html')
+            
+        #** If User Rejected Request To Link, Cleanup User From Database and ActiveStates & Render Failure Template **
+        else:
+            Auth.UserCleanup()
+            ActiveStates.pop(State)
+            return render_template('Failure.html')
+
+    #** If State Is Invalid, Render Error Template **
+    else:
+        return render_template('Error.html')
+
+
+@Web.route("/link")
+def PreSpotify():
+
+    #** Get DiscordID Passed Through In URL & Check It's Valid **
+    discordID = str(request.args.get('discord'))
+    print(discordID)
+    if discordID.isdecimal() and len(discordID) == 18:
+        
+        #** Setup Auth Class For New User & Attempt To Initialise DiscordID **
+        User = Auth()
+        State = User.NewClientAuth(int(discordID))
+        
+        #** Check State Isn't None, ie, The DiscordID Had Requested To Link Via Discord First & Add To Dict Of Active States **
+        if State != None:
+            ActiveStates[State] = User
+            
+            #** Redirect User To Spotify Auth URL **
+            AuthURL = "https://accounts.spotify.com/authorize?client_id=710b5d6211ee479bb370e289ed1cda3d&response_type=code&redirect_uri=http%3A%2F%2F82.22.157.214:5000%2F&scope=playlist-read-private%20playlist-read-collaborative%20user-read-private&state="+State
+            return redirect(AuthURL)
+
+        #** Render Error Template If Something Isn't Right With The Request **
+        else:
+            return render_template('Error.html')
+    else:
+        return render_template('Error.html')
+
+
+#! -------------------- START WEBSERVICE --------------------- !#
+
+
+#** Startup The Web Service **
 if __name__ == "__main__":
     Web.run(host='0.0.0.0', debug=True)

@@ -82,18 +82,22 @@ class AccountCog(commands.Cog, name="Account"):
         if len(CurrentUser.array) > 0:
             History = iter(CurrentUser.array)
             Description = ""
-            print(History)
             Pages = []
             
             for Count in range(math.ceil(len(CurrentUser.array) / 10)):
-                print(Count)
                 for i in range(10):
-                    NextSong = next(History)
+                    NextSong = next(History, None)
                     if NextSong == None:
                         break
-                    Values = list(NextSong.values())[0]
-                    FormattedArtists = Utils.format_artists(Values['Artists'])
-                    Description += Values['Name']+"\n"+FormattedArtists+"\n"
+                    Values = CurrentUser.History[NextSong]
+                    if Values['SpotifyID'] is not None:
+                        FormattedArtists = Utils.format_artists(Values['Artists'], Values['ArtistIDs'])
+                        Description += self.Emojis['Spotify']+"**"+Values['Name']+"**\n"+FormattedArtists+"\n"
+                    else:
+                        Description += self.Emojis['Soundcloud']+"**"+Values['Name']+"**\n"+Values['Artists'][0]+"\n"
+                
+                HistoryEmbed.description = Description
+                Description = ""
                 if math.ceil(len(CurrentUser.array) / 10) > 1:
                     HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.array) / 10)))
                 
@@ -110,86 +114,108 @@ class AccountCog(commands.Cog, name="Account"):
     
 
     @commands.command(aliases=['r', 'recommend', 'suggestions'], description="Displays 10 random song recommendations based on your listening history.")
-    async def recommendations(self, ctx):
-
-        #** Add User To Database **
-        User = Users(self.client, ctx.author.id)
-        if User.Connected:
-            print("User Found")
-
-            #** Send Initial Waiting Message To User **
-            Page = await ctx.send("**Analysing Your Spotify History...**")
+    async def recommendations(self, ctx, *args):
+        
+        #** Check Input Is Valid & If So Get User **
+        Input = "".join(args)
+        if Input.lower() in ["", "history", "spotify"]:
+            User = Users(self.client, ctx.author.id)
             
-            #** Get User Playlists & Songs In Those Playlists **
-            Playlists = User.GetUserPlaylists()
-            print("Got Playlists")
-            Songs = {}
-            for PlaylistID in Playlists.keys():
-                Songs.update(SongData.GetPlaylistSongs(PlaylistID)['Tracks'])
-            print("Got Songs")
+            if Input.lower() in ["", "history"]:
+                
+                #** Check User Actually Has Listening History To Analyse & If Not Raise Error **
+                if len(User.array) > 0:
+
+                    #** Send Processing Message To User & Get Recommendations From Spotify API Through User Class**
+                    Page = await ctx.send("**Analysing Your Listening History...**")
+                    Tracks = User.getRecommendations()
+                
+                else:
+                    raise commands.CheckFailure(message="History")
+
+            elif Input.lower() == "spotify":    
+                if User.Connected:
+                    print("User Found")
+
+                    #** Send Initial Waiting Message To User **
+                    Page = await ctx.send("**Collecting Your Spotify History...**")
+                    
+                    #** Get User Playlists & Songs In Those Playlists **
+                    Playlists = User.GetUserPlaylists()
+                    print("Got Playlists")
+                    Songs = {}
+                    for PlaylistID in Playlists.keys():
+                        Songs.update(SongData.GetPlaylistSongs(PlaylistID)['Tracks'])
+                    print("Got Songs")
+                    
+                    #** Update User On Progress **
+                    await Page.edit(content="**Analysing Your Spotify History...**")
+
+                    #** Get Recommendations From Returned Songs **
+                    Tracks = SongData.Recommend(Songs)
+                    print("Got Recomendations")
+                                
+                #** Let User Know If They've Not Connected Their Spotify **
+                else:
+                    raise commands.CheckFailure(message="Spotify")
+
+            #** Check Tracks We're Fetched Correctly From Spotify API **
+            print(Tracks)
+            if not(Tracks in ["RecommendationsNotFound", "UnexpectedError"]):
+
+                #** Randomly Choose 10 Songs From 50 Recomendations **
+                Recommendations = {}
+                for i in range(10):
+                    SpotifyID = random.choice(list(Tracks.keys()))
+                    while SpotifyID in Recommendations.keys():
+                        SpotifyID = random.choice(list(Tracks.keys()))
+                    Recommendations.update({SpotifyID: Tracks[SpotifyID]})
+
+                #** Loop Through Data & Create Dictionary Of Embed Pages **
+                Pages = []
+                Count = 0
+                for SpotifyID, SongData in Recommendations.items():
+
+                    #** Format Embed Sections **
+                    Song = SongData['Name']+"\nBy: "+Utils.format_artists(SongData['Artists'], SongData['ArtistID'])
+                    Links = self.Emojis['Spotify']+" Song: [Spotify](https://open.spotify.com/track/"+SpotifyID+")\n"
+                    if SongData['Preview'] != None:
+                        Links += self.Emojis['Preview']+" Song: [Preview]("+SongData['Preview']+")\n"
+                    Links += self.Emojis['Album']+" Album: ["+SongData['Album']+"](https://open.spotify.com/album/"+SongData['AlbumID']+")"
+
+                    #** Create New Embed **
+                    NewPage = discord.Embed(
+                        title = ctx.author.display_name+"'s Recommendations")
+                    NewPage.set_thumbnail(url=SongData['Art'])
+                    NewPage.add_field(name="Song "+str(Count+1)+":", value=Song, inline=False)
+                    NewPage.add_field(name="Links:", value=Links, inline=False)
+                    NewPage.set_footer(text="("+str(Count+1)+"/10) React To See More Recommendations!")
+
+                    #** Display First Recomendation To User **
+                    if Count == 0:
+                        await Page.edit(content=None, embed=NewPage)
+                        await Page.add_reaction(self.Emojis['Back'])
+                        await Page.add_reaction(self.Emojis['Next'])
+                        print("Sent!")
+
+                    #** Convert Embed To Dictionary and Add To Data Dictionary & Increment Counter **
+                    Pages.append(NewPage.to_dict())
+                    Count += 1
+
+                #** Add Embed To Active Pages In Pagination Cog **
+                await self.Pagination.add_pages(Page.id, Pages)
+                print("All Pages Created!")
             
-            #** Update User On Progress **
-            await Page.edit(content="**Adding The Finishing Touches...**")
+            #** Return Error To User If Failed To Get Recommendations **
+            else:
+                await Page.edit(content="**An Error Occurred Whilst Fetching Recommendations**!\nIf this error persists, contact Lolo#6699.")
+                await asyncio.sleep(5)
+                await ctx.message.delete()
+                await Page.delete()
 
-            #** Get Recommendations From Returned Songs **
-            NewSongs = SongData.Recommend(Songs)
-            print("Got Recomendations")
-            
-            #** Randomly Choose 10 Songs From 50 Recomendations **
-            Recommendations = []
-            Description = ""
-            for i in range(10):
-                Song = random.choice(NewSongs)
-                while Song in Recommendations:
-                    Song = random.choice(NewSongs)
-                Recommendations.append(Song)
-
-            #** Loop Through Data & Create Dictionary Of Embed Pages **
-            Data = []
-            for i in range(len(Recommendations)):
-
-                #** Format Embed Sections **
-                Song = Recommendations[i]['name']+"\nBy: "
-                for j in range(len(Recommendations[i]['artists'])):
-                    if j == 0:
-                        Song += "["+Recommendations[i]['artists'][j]['name']+"]("+Recommendations[i]['artists'][j]['external_urls']['spotify']+")"
-                    elif j != len(Recommendations[i]['artists'])-1:
-                        Song += ", ["+Recommendations[i]['artists'][j]['name']+"]("+Recommendations[i]['artists'][j]['external_urls']['spotify']+")"
-                    else:
-                        Song += " & ["+Recommendations[i]['artists'][j]['name']+"]("+Recommendations[i]['artists'][j]['external_urls']['spotify']+")"
-                Links = self.Emojis['Spotify']+" Song: [Spotify]("+Recommendations[i]['external_urls']['spotify']+")\n"
-                if Recommendations[i]['preview_url'] != None:
-                    Links += self.Emojis['Preview']+" Song: [Preview]("+Recommendations[i]['preview_url']+")\n"
-                Links += self.Emojis['Album']+" Album: ["+Recommendations[i]['album']['name']+"]("+Recommendations[i]['album']['external_urls']['spotify']+")"
-
-                #** Create New Embed **
-                NewPage = discord.Embed(
-                    title = "Your Recommendations")
-                NewPage.set_thumbnail(url=Recommendations[i]['album']['images'][0]['url'])
-                NewPage.add_field(name="Song "+str(i+1)+":", value=Song, inline=False)
-                NewPage.add_field(name="Links:", value=Links, inline=False)
-                NewPage.set_footer(text="("+str(i+1)+"/10) React To See More Recommendations!")
-
-                #** Display First Recomendation To User **
-                if i == 0:
-                    await Page.edit(content=None, embed=NewPage)
-                    await Page.add_reaction(self.Emojis['Back'])
-                    await Page.add_reaction(self.Emojis['Next'])
-                    print("Sent!")
-
-                #** Convert Embed To Dictionary and Add To Data Dictionary **
-                Data.append(NewPage.to_dict())
-
-            #** Add Embed To Active Pages In Pagination Cog **
-            await self.Pagination.add_page(Page.id, Data)
-            print("All Pages Created!")
-                        
-        #** Let User Know If They've Not Connected Their Spotify **
+        #** Raise Error If Command Doesn't Have A Valid Input **
         else:
-            Temp = await ctx.send("**Spotify Not Connected!**\nTo run this command, first run `!link`")
-            await asyncio.sleep(5)
-            await ctx.message.delete()
-            await Temp.delete()
+            raise commands.BadArgument(message="recommendations")
 
 
 #!-------------------SETUP FUNCTION-------------------#

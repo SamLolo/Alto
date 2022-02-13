@@ -5,6 +5,7 @@
 import os
 import json
 import base64
+import random
 from discord.ext.commands.converter import IDConverter
 import requests
 from datetime import datetime
@@ -38,23 +39,20 @@ class SpotifyUser(object):
         if Data != None:
 
             #** Assign Class Objects **
-            self.Refresh = Data[2]
-            self.Name = Data[3]
-            self.ID = Data[4]
-            self.Pic = Data[5]
-            self.Connected = True
+            self.SpotifyData = Data
+            self.SpotifyConnected = True
 
             #** Get UserToken & User Header For New User **
             self.RefreshUserToken()
 
         else:
-            self.Connected = False
+            self.SpotifyConnected = False
 
 
     def RefreshUserToken(self):
 
         #** Request New User Token From Spotify **
-        data = {'grant_type': "refresh_token", 'refresh_token': self.Refresh, 'client_id': self.SpotifyID, 'client_secret': self.Secret}
+        data = {'grant_type': "refresh_token", 'refresh_token': self.SpotifyData['refresh'], 'client_id': self.SpotifyID, 'client_secret': self.Secret}
         AuthData = requests.post("https://accounts.spotify.com/api/token", data, self.AuthHead).json()
 
         #** Update Token and User Header **
@@ -78,7 +76,7 @@ class SpotifyUser(object):
             #** Sort User Playlists into a dictionary **
             NextURL = UserData['next']
             for Playlist in UserData['items']:
-                if Playlist['owner']['id'] == self.ID:
+                if Playlist['owner']['id'] == self.SpotifyData['spotifyID']:
                     Playlists[Playlist['id']] = Playlist['name']
         
         #** Return Filled Dict Of Playlists **
@@ -94,14 +92,19 @@ class SongHistory(object):
 
         super(SongHistory, self).__init__()
 
-        #** Fetch Last Queue Session From Database **
+        #** Fetch Last Queue Session From Database, Returns Dict Of SongIDs & Data **
         self.History = self.database.GetHistory(DiscordID)
 
+        #** Setup Pointers & Array, Defining The MaxSize & Setting Full To False
         self.inpointer = 0
         self.outpointer = 0
         self.array = list(self.History.keys())
+        print(self.array)
         self.maxsize = 49
-        self.full = False
+        if len(self.array) == 50:
+            self.full = True
+        else:
+            self.full = False
 
         
     def check_empty(self):
@@ -180,13 +183,28 @@ class Users(SpotifyUser, SongHistory):
         self.database = UserData()
         
         #** Get User Object **
-        self.user = self.client.get_user(DiscordID)
+        self.user = self.database.GetUser(DiscordID)
+        if self.user == None:
+            self.discordUser = self.client.get_user(DiscordID)
+            self.user = {"data": {"discordID": int(self.discordUser.id),
+                                  "name": self.discordUser.name,
+                                  "discriminator": self.discordUser.discriminator,
+                                  "avatar": self.discordUser.avatar_url},
+                        "recommendations": {"Popularity": [0, 50, 100],
+                                            "Acoustic": [0.0018, 0.223396, 0.8350],
+                                            "Dance": [0.3080, 0.684500, 0.9560],
+                                            "Energy": [0.2860, 0.644640, 0.8970],
+                                            "Instrument": [0, 0.001568, 0.0542],
+                                            "Live": [0.0264, 0.163196, 0.4610],
+                                            "Loud": [-11.8810, -6.250840, -2.7240],
+                                            "Speech": [0.0282, 0.106186, 0.4020],
+                                            "Valance": [0.0386, 0.521244, 0.9420]}}
         
         #** Initialise SpotifyUser, Music & Listening History Classes **
         super(Users, self).__init__(DiscordID)
         self.SongData = Music()
 
-    
+
     async def save(self):
         
         #** Send Data To Database To Be Saved **
@@ -203,5 +221,33 @@ class Users(SpotifyUser, SongHistory):
          
         #** Add New Song To Queue **
         self.addSong(TrackData)
+
+    
+    def getRecommendations(self):
+
+        TrackIDs = []
+        for songID in self.array:
+            if self.History[songID]['SpotifyID'] is not None:
+                TrackIDs.append(self.History[songID]['SpotifyID'])
+ 
+        while len(TrackIDs) > 3:
+            TrackIDs.pop(random.randint(0, len(TrackIDs)-1))
+
+        Figures = self.user['recommendations']
+        data = {'limit': 50, 'seed_tracks': ",".join(TrackIDs),
+                'min_acousticness': Figures['Acoustic'][0], 'target_acousticness': Figures['Acoustic'][1], 'max_acousticness': Figures['Acoustic'][2], 
+                'min_danceability': Figures['Dance'][1], 'target_danceability': Figures['Dance'][1], 'max_danceability': Figures['Dance'][2], 
+                'min_energy': Figures['Energy'][0], 'target_energy': Figures['Energy'][1], 'max_energy': Figures['Energy'][2], 
+                'min_instrumentalness': Figures['Instrument'][0], 'target_instrumentalness': Figures['Instrument'][1], 'max_instrumentalness': Figures['Instrument'][2], 
+                'min_liveness': Figures['Live'][0], 'target_liveness': Figures['Live'][1], 'max_liveness': Figures['Live'][2], 
+                'min_loudness': Figures['Loud'][0], 'target_loudness': Figures['Loud'][1], 'max_loudness': Figures['Loud'][2],
+                'min_speechiness': Figures['Speech'][0], 'target_speechiness': Figures['Speech'][1], 'max_speechiness': Figures['Speech'][2], 
+                'min_valence': Figures['Valance'][0], 'target_valence': Figures['Valance'][1], 'max_valence': Figures['Valance'][2],
+                'min_popularity': Figures['Popularity'][0], 'target_popularity': Figures['Popularity'][1], 'max_popularity': Figures['Popularity'][2]}
         
+        print(data)
         
+        Tracks = self.SongData.GetRecommendations(data)
+        print(Tracks)
+
+        return Tracks

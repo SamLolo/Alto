@@ -135,6 +135,14 @@ class MusicCog(commands.Cog, name="Music"):
             OldMessage = event.player.fetch('NowPlaying')
             await OldMessage.delete()
             event.player.delete('NowPlaying')
+
+            #** Save All Current Users Stored In Player To Database **
+            UserList = event.player.fetch('Users')
+            for User in UserList:
+                await User.save()
+
+            #** Remove Player From Cache **
+            self.client.lavalink.player_manager.remove(Guild.id)
             
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
@@ -143,30 +151,31 @@ class MusicCog(commands.Cog, name="Music"):
             Channel = self.client.get_channel(int(event.player.fetch("Channel")))
             print(event.track["title"], event.track["uri"])
             
-            #** If Track Has Spotify Info, Configure List of Artists **
+            #** Create Now Playing Embed **
+            NowPlaying = discord.Embed(title = "Now Playing:")
+            
+            #** Set Author & Footer and Add Position Field **
+            NowPlaying.set_author(name="Requested By "+str(event.track.requester)+"", icon_url=event.track.requester.avatar_url)
+            NowPlaying.add_field(name="Position:", value = Utils.format_time(event.player.position)+" / "+ Utils.format_time(event.track.duration))
+            if event.player.queue == []:
+                NowPlaying.set_footer(text="Up Next: Nothing")
+            else:
+                NowPlaying.set_footer(text="Up Next: "+event.player.queue[0]["title"])
+            
+            #** If Track Has Spotify Info, Format List of Artists **
             if event.track.extra['spotify'] != {}:
-                Artists = ""
-                for i in range(len(event.track.extra['spotify']['artists'])):
-                    if i == 0:
-                        Artists += "["+event.track.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+event.track.extra['spotify']['artistID'][i]+")"
-                    elif i != len(event.track.extra['spotify']['artists'])-1:
-                        Artists += ", ["+event.track.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+event.track.extra['spotify']['artistID'][i]+")"
-                    else:
-                        Artists += " & ["+event.track.extra['spotify']['artists'][i]+"](https://open.spotify.com/artist/"+event.track.extra['spotify']['artistID'][i]+")"
-                
-                #** Create Now Playing Embed **
-                NowPlaying = discord.Embed(
-                    title = "Now Playing:",
-                    description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")\n"
-                                +self.Emojis['Spotify']+" ["+event.track.extra['spotify']['name']+"]("+event.track.extra['spotify']['URI']+")")
+                Artists = Utils.format_artists(event.track.extra['spotify']['artists'], event.track.extra['spotify']['artistID'])
+
+                #** Set Descrition and Thumbnail & Add By Field Above Position Field **
+                NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")\n"+self.Emojis['Spotify']+" ["+event.track.extra['spotify']['name']+"]("+event.track.extra['spotify']['URI']+")"
                 NowPlaying.set_thumbnail(url=event.track.extra['spotify']['art'])
-                NowPlaying.add_field(name="By:", value=Artists)
+                NowPlaying.insert_field_at(0, name="By:", value=Artists)
 
             #** If No Spotify Info, Create Basic Now Playing Embed **
             else:
-                NowPlaying = discord.Embed(
-                    title = "Now Playing:",
-                    description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")")
+                #** Set Descrition and Thumbnail & Add By Field Above Position Field **
+                NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")"
+                NowPlaying.insert_field_at(0, name="By:", value="["+event.track.author+"]("+event.track.extra["artistURI"]+")")
 
             #** Send Embed To Channel Where First Play Cmd Was Ran & Add Reactions**
             Message = await Channel.send(embed=NowPlaying)
@@ -274,7 +283,7 @@ class MusicCog(commands.Cog, name="Music"):
                 if SongInfo == "PlaylistNotFound":
                     raise commands.UserInputError(message="Bad URL")
 
-                PlaylistInfo = SongInfo[SpotifyID]
+                PlaylistInfo = SongInfo['PlaylistInfo']
                 SongInfo = SongInfo['Tracks']
                 Type = "Playlist"
 
@@ -287,7 +296,8 @@ class MusicCog(commands.Cog, name="Music"):
                 if SongInfo == "PlaylistNotFound":
                     raise commands.UserInputError(message="Bad URL")
 
-                PlaylistInfo = SongInfo[SpotifyID]
+                print(SongInfo)
+                PlaylistInfo = SongInfo['PlaylistInfo']
                 SongInfo = SongInfo['Tracks']
                 Type = "Album"
 
@@ -303,7 +313,8 @@ class MusicCog(commands.Cog, name="Music"):
 
                 #** Create Track Object **
                 if len(Results) > 0:
-                    Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, IgnoreHistory=False,
+                    ArtistURI = "/".join(Results['tracks'][0]['info']['uri'].split("/")[:4])
+                    Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, IgnoreHistory=False, artistURI=ArtistURI,
                             spotify={'name': Info['Name'],
                                      'ID': SpotifyID,
                                      'artists': Info['Artists'],
@@ -373,15 +384,26 @@ class MusicCog(commands.Cog, name="Music"):
 
             #**---------------SEARCH CACHE------------**#
 
-            #** Check If Results Found & Itterate Through Results **
+            #** Check If Results Found & Iterate Through Results **
             if len(Results['tracks']) > 0:
                 for ResultTrack in Results['tracks']:
                     URI = ResultTrack['info']['identifier'].split("/")
                     ID  = URI[4].split(":")[2]
+                    ArtistURI = "/".join(ResultTrack['info']['uri'].split("/")[:4])
+                    Cached = False
                     print(ID)
 
-                    #** Check If Song Is In Cache **
+                    #** Check If Song Is In Cache & Set Cache To True If Data Found **
                     Spotify = Database.SearchCache(ID)
+                    if Spotify != None:
+                        SpotifyID = list(Spotify.keys())[0]
+                        Spotify = Spotify[SpotifyID]
+                        if Spotify['PartialCache']:
+                            print("PartialCache")
+                            Spotify = None
+                        Cached = True
+                    
+                    #** Try To Get Spotify Info From Spotify Web API If None Found In Cache **
                     if Spotify == None:
                         Spotify = SongData.SearchSpotify(ResultTrack['info']['title'], ResultTrack['info']['author'])
 
@@ -391,12 +413,16 @@ class MusicCog(commands.Cog, name="Music"):
                         else:
                             SpotifyID = list(Spotify.keys())[0]
                             Spotify = Spotify[SpotifyID]
+                            #** Set Cached To False If New Spotify Data Found For Partially/None Cached Song **
+                            Cached = False
+                    else:
+                        Cached = True
 
                     #**-----------QUEUE SONGS--------------**#
 
                     #** Setup Track Objects For Track With Spotify Data If Available **
                     if Spotify != None:
-                        Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, recommended=True, IgnoreHistory=False, 
+                        Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, recommended=True, IgnoreHistory=False, artistURI=ArtistURI,
                                 spotify={'name': Spotify['Name'],
                                          'ID': SpotifyID,
                                          'artists': Spotify['Artists'],
@@ -410,9 +436,14 @@ class MusicCog(commands.Cog, name="Music"):
                                          'explicit': Spotify['Explicit'],
                                          'preview': Spotify['Preview']})
                     else:
-                        Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, recommended=True, IgnoreHistory=False, spotify={})
+                        Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, recommended=True, IgnoreHistory=False, artistURI=ArtistURI, spotify={})
                     print(Track)
                     print(Track.duration)
+                    print(Track.extra['artistURI'])
+
+                    #** If Track Duration = 30s, Inform It's Only A Preview **
+                    if Track.duration == 3000:
+                        await ctx.send("We could only fetch a preview for the requested song!")
 
                     #** Send Queued Embed If First Track In List **
                     if Results['tracks'].index(ResultTrack) == 0:
@@ -436,6 +467,18 @@ class MusicCog(commands.Cog, name="Music"):
                         await Player.play()
                         
                     #**-----------------ADD TO CACHE----------------**#
+
+                    if not(Cached):
+                        if Spotify != None:
+                            RGB = Utils.get_colour(Spotify['Art'])
+                            ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
+                            ToCache.update(Spotify)
+                            if ToCache['Explicit'] == 'N/A':
+                                ToCache['Explicit'] = None
+                            Database.AddFullSongCache(ToCache)
+                        else:
+                            ToCache = {'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Name': Track.title, 'Artists': [Track.author]}
+                            Database.AddPartialSongCache(ToCache)
 
 
     @commands.guild_only()
@@ -549,14 +592,30 @@ class MusicCog(commands.Cog, name="Music"):
 
         #** Format Queue List Into String **
         if Player.queue != []:
-            Queue = ""
-            for i in range(len(Player.queue)):
-                Queue += str(i+1)+") ["+Player.queue[i]["title"]+"]("+Player.queue[i]["uri"]+")\n"
+            Queue = "__**NOW PLAYING:**__\n"
+            for i in range(-1, len(Player.queue)):
+                if i == -1:
+                    if Player.current.extra['spotify'] != {}:
+                        Spotify = Player.current.extra['spotify']
+                        Artists = Utils.format_artists(Spotify['artists'], Spotify['artistID'])
+                        Queue += self.Emojis['Spotify']+"["+Spotify['name']+"]("+Spotify['URI']+")\nBy: "+Artists+"\n"
+                    else:
+                        Queue += self.Emojis['Soundcloud']+" ["+Player.current['title']+"]("+Player.current['uri']+")\nBy: "+Player.current['author']+"\n"
+                    Queue += "--------------------\n__**UP NEXT:**__\n"
+                else:
+                    if Player.queue[i].extra['spotify'] != {}:
+                        Spotify = Player.queue[i].extra['spotify']
+                        Artists = Utils.format_artists(Spotify['artists'], Spotify['artistID'])
+                        Queue += self.Emojis['Spotify']+" **"+str(i+1)+": **["+Spotify['name']+"]("+Spotify['URI']+")\nBy: "+Artists+"\n"
+                    else:
+                        Queue += self.Emojis['Soundcloud']+" **"+str(i+1)+": **["+Player.queue[i]['title']+"]("+Player.queue[i]['uri']+")\nBy: ["+Player.queue[i]['author']+"]("+Player.queue[i].extra['artistURI']+")\n"
 
             #** Format Queue Into Embed & Send Into Discord **
             UpNext = discord.Embed(
-                title = "Up Next:",
-                description = Queue)
+                title = "Queue For "+ctx.author.voice.channel.name+":",
+                description = Queue,
+                colour = discord.Colour.blue())
+            UpNext.set_thumbnail(url=ctx.message.guild.icon_url)
             UpNext.set_footer(text="Shuffle: "+self.Emojis[str(Player.shuffle)]+"  Loop: "+self.Emojis[str(Player.repeat)])
             await ctx.send(embed=UpNext)
         
@@ -656,14 +715,9 @@ class MusicCog(commands.Cog, name="Music"):
         #** If No Spotify Info, Create Basic Now Playing Embed **
         else:
             
-            #** Get Info From Youtube URL **
-            VideoID = Player.current.uri.split("=")[1]
-            VideoInfo = SongData.GetVideoInfo(Player.current)[VideoID]
-            
             #** Set Descrition and Thumbnail & Add By Field Above Position Field **
             NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
-            NowPlaying.set_thumbnail(url=VideoInfo['Thumbnail'])
-            NowPlaying.insert_field_at(0, name="By:", value="["+Player.current.author+"](https://www.youtube.com/channel/"+VideoInfo['ChannelID']+")")
+            NowPlaying.insert_field_at(0, name="By:", value="["+Player.current.author+"]("+Player.current.extra['artistURI']+")")
             
         #** Send Embed To Channel Where First Play Cmd Was Ran & Add Reactions**
         Message = await ctx.send(embed=NowPlaying)
