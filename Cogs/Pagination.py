@@ -4,7 +4,6 @@
 
 import json
 import discord
-import asyncio
 from discord.ext import commands
 from discord.utils import get
 
@@ -14,7 +13,8 @@ from discord.utils import get
 
 #** Startup Sequence **
 print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Pagination\n")
+print("Name: Cogs.Pagination")
+print("Modules Imported: ✓\n")
 
 
 #!-------------------------EMBED CLASS-----------------------!#
@@ -24,22 +24,26 @@ class EmbedQueue():
     
     def __init__(self, size):
         
+        #** Setup List & InPointers & Set MaxSize To Passed In Size **
         self.pages = []
         self.inPointer = 0
         self.outPointer = 0
         self.maxSize = size
         self.full = False
         
+    
     def check_empty(self):
         
         #** Check Queue Isn't Full & Pointers Aren't The Same **
         return (not(self.full) and self.outPointer == self.inPointer)
         
+
     def check_full(self):
         
         #** Check If Queue Is Full & Pointers Are The Same **
         return (self.full and self.inPointer == self.outPointer)
         
+
     def enqueue(self, page):
         
         #** Check Queue Isn't Full & Add Page **
@@ -172,27 +176,30 @@ class EmbedPaginator(commands.Cog):
             #** Check If Reaction Added **
             if Reaction.event_type == 'REACTION_ADD':
 
-                #** Get Channel & Page To Remove Reaction Just Added **
+                #** Get Channel & Check It Was Found Correctly **
                 Channel = get(self.client.get_all_channels(), guild__id=Reaction.guild_id, id=Reaction.channel_id)
-                Page = await Channel.fetch_message(Reaction.message_id)
-                await Page.remove_reaction(Reaction.emoji, Reaction.member)
+                if Channel != None:
 
-                #** Check If Reaction Is Next & Get New Embed **
-                if str(Reaction.emoji) == self.Emojis['Next']:
-                    NewEmbed = await self.get_next(Reaction.message_id)
-                
-                #** Check If Reaction Is Back & Get New Embed **
-                elif str(Reaction.emoji) == self.Emojis['Back']:
-                    NewEmbed = await self.get_last(Reaction.message_id)
-                
-                #** If Reaction Isn't Next Or Back, Don't Get New Embed **
-                else:
-                    NewEmbed = None
+                    #** Get Page And Remove Reaction Just Added **
+                    Page = await Channel.fetch_message(Reaction.message_id)
+                    await Page.remove_reaction(Reaction.emoji, Reaction.member)
 
-                #** Format New Embed & Edit Current Page **
-                if NewEmbed != None:
-                    NewPage = await self.format_embed(NewEmbed)
-                    await Page.edit(embed=NewPage)
+                    #** Check If Reaction Is Next & Get New Embed **
+                    if str(Reaction.emoji) == self.Emojis['Next']:
+                        NewEmbed = await self.get_next(Reaction.message_id)
+                    
+                    #** Check If Reaction Is Back & Get New Embed **
+                    elif str(Reaction.emoji) == self.Emojis['Back']:
+                        NewEmbed = await self.get_last(Reaction.message_id)
+                    
+                    #** If Reaction Isn't Next Or Back, Don't Get New Embed **
+                    else:
+                        NewEmbed = None
+
+                    #** Format New Embed & Edit Current Page **
+                    if NewEmbed != None:
+                        NewPage = await self.format_embed(NewEmbed)
+                        await Page.edit(embed=NewPage)
 
 
 #!-------------------SETUP FUNCTION-------------------#

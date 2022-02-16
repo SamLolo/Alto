@@ -2,7 +2,6 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
-import os
 import json
 import copy
 import discord

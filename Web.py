@@ -11,6 +11,7 @@ import requests
 import mysql.connector
 from time import sleep
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from flask import Flask, request, render_template, redirect
 
 
@@ -65,23 +66,46 @@ class Auth():
         #** Set DiscordID As Class Object **
         self.discordID = discordID
 
-         #** Generate Random State and Make Sure It Isn't Active **
-        while True:
-            NewState = []
-            for i in range(10):
-                NewState.append(random.choice(string.ascii_letters))
-            self.State = "".join(NewState)
-            if not(self.State in ActiveStates.keys()):
-                ActiveStates[self.State] = self.discordID
-                break
+        #** Get Row With DiscordID From Database **
+        cursor.execute("SELECT * FROM spotify WHERE DiscordID = '"+str(discordID)+"';")
+        Verification = cursor.fetchone()
+        connection.commit()
+        print(Verification)
+
+        #** Check Row Was Found & If Not None, Calculate Time Difference From When Request Was Made In Discord **
+        if Verification != None:
+            TimeDiff = Uptime = relativedelta(datetime.now(), Verification[7])
+            print(TimeDiff.seconds)
+            print(TimeDiff.minutes)
+
+            #** Check If Time Difference Is Within 10 Mins (Auth Hasn't Timed Out) & Cleanup User From Database If So **
+            if TimeDiff.minutes >= 10:
+                self.UserCleanup()
+                return "Timeout"
+
+            #** Generate Random State and Make Sure It Isn't Active **
+            while True:
+                NewState = []
+                for i in range(10):
+                    NewState.append(random.choice(string.ascii_letters))
+                self.State = "".join(NewState)
+                if not(self.State in ActiveStates.keys()):
+                    ActiveStates[self.State] = self.discordID
+                    break
         
-        #** Return State (None If Could Create Client) **
-        return self.State
+            #** Return State (None If Could Create Client) **
+            return self.State
+
+        #** Return None If User Not In Table, ie, Not Linked Through Bot **
+        else:
+            return None
 
     
     def UserCleanup(self):
 
-        print(self.State)
+        #** Remove Row From Spotify With Specified Discord ID **
+        cursor.execute("DELETE FROM spotify WHERE DiscordID = '"+str(self.discordID)+"'")
+        connection.commit()
 
 
     def AuthenticateUser(self, Code):
@@ -92,14 +116,9 @@ class Auth():
 
         #** Check If Request Was A Success **
         while AuthData.status_code != 200:
-            
-            #** Check if Bot Credentials Have Expired **
-            if 401 == AuthData.status_code:
-                self.RefreshBotToken()
-                AuthData = requests.post("https://accounts.spotify.com/api/token", data, self.AuthHead)
                 
             #** Check If Rate Limit Has Been Applied **
-            elif 429 == AuthData.status_code:
+            if 429 == AuthData.status_code:
                 print("\n----------------------RATE LIMIT REACHED--------------------")
                 print("Function: AuthenticateUser")
                 print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
@@ -119,25 +138,60 @@ class Auth():
         AuthData = AuthData.json()
         self.UserToken = AuthData['access_token']
         self.UserRefresh = AuthData['refresh_token']
+        print(len(self.UserRefresh))
         self.UserHead = {'Accept': "application/json", 'Content-Type': "application/json", 'Authorization': "Bearer "+self.UserToken}
         
         #** Carry Out Request To Get Further Details **
-        self.GetUserDetails()
+        Result = self.GetUserDetails()
+        return Result
 
 
     def GetUserDetails(self):
         
-        UserData = requests.get("https://api.spotify.com/v1/me", headers = self.UserHead).json()
-        print(UserData)
+        #** Request User Profile From Spotify & Check If Request Was A Success **
+        UserData = requests.get("https://api.spotify.com/v1/me", headers = self.UserHead)
+        while UserData.status_code != 200:
+                
+            #** Check If Rate Limit Has Been Applied **
+            if 429 == UserData.status_code:
+                print("\n----------------------RATE LIMIT REACHED--------------------")
+                print("Function: GetUserDetails")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                Time = UserData.headers['Retry-After']
+                sleep(Time)
+                UserData = requests.get("https://api.spotify.com/v1/me", headers = self.UserHead)
+            
+            #** If Other Error Occurs, Raise Error **
+            else:
+                print("\n----------------------UNEXPECTED ERROR--------------------")
+                print("Function: GetUserDetails")
+                print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
+                print("Error: Spotify Request Code "+str(UserData.status_code))
+                return "UnexpectedError"
+
+        #** Get Request JSON Data & Set Class Objects Of Important Information From Request **
+        UserData = UserData.json()
         self.Name = UserData['display_name']
         self.UserID = UserData['id']
-        self.ProfilePic = UserData['images'][0]['url']
-        self.URL = UserData['external_urls']['spotify']
+        self.Avatar = UserData['images'][0]['url']
+        self.Followers = UserData['followers']['total']
+        if UserData['product'] in ["open", "free"]:
+            self.Subscription = False
+        else:
+            self.Subscription = True
+        return "Success"
 
-    
+
     def AddToDatabase(self):
 
-        cursor.execute("INSERT INTO Spotify (Token, Refresh, Name, SpotifyID, Pic) VALUES (%s, %s, %s, %s, %s, %s)", params=(self.UserToken, self.UserRefresh, self.Name, self.UserID, self.ProfilePic))
+        #** Update Row In Spotify Table In Database With User Details & Refresh Token **
+        cursor.execute("UPDATE Spotify SET SpotifyID = '"+self.UserID+"',"+
+                                          "Name = '"+self.Name+"',"+
+                                          "Avatar = '"+self.Avatar+"',"+
+                                          "Followers = "+str(self.Followers)+","+
+                                          "Subscription = "+str(self.Subscription)+","+
+                                          "Refresh = '"+str(self.UserRefresh)+"'"+
+                       "WHERE DiscordID = '"+str(self.discordID)+"';")
         connection.commit()
 
 
@@ -166,10 +220,10 @@ def PostSpotify():
         if Code != None:
 
             #** Get Credentials & User Information From Spotify Web API & If No Error, Add Data To Database & Render Success Template **
-            Error = Auth.AuthenticateUser(Code)
-            if Error == None:
+            Result = Auth.AuthenticateUser(Code)
+            if Result == "Success":
                 Auth.AddToDatabase()
-                return render_template('Success.html', Name=str(Auth.Name), Link=str(Auth.URL))
+                return render_template('Success.html', Name=str(Auth.Name), Link=str("https://api.spotify.com/v1/users/"+str(Auth.UserID)))
 
             #** If Error Occurs Whilst Requesting Data From Spotify, Cleanup User From Database and ActiveStates & Render Error Template **
             else:
@@ -200,11 +254,15 @@ def PreSpotify():
         User = Auth()
         State = User.NewClientAuth(int(discordID))
         
-        #** Check State Isn't None, ie, The DiscordID Had Requested To Link Via Discord First & Add To Dict Of Active States **
+        #** Check State Isn't None, ie, The DiscordID Had Requested To Link Via Discord First **
         if State != None:
-            ActiveStates[State] = User
+
+            #** If Auth Request Has Timed Out, Render Timeout Template **
+            if State == "Timeout":
+                return render_template('Timeout.html')
             
-            #** Redirect User To Spotify Auth URL **
+            #** Add To Dict Of Active States & Redirect User To Spotify Auth URL **
+            ActiveStates[State] = User
             AuthURL = "https://accounts.spotify.com/authorize?client_id=710b5d6211ee479bb370e289ed1cda3d&response_type=code&redirect_uri=http%3A%2F%2F82.22.157.214:5000%2F&scope=playlist-read-private%20playlist-read-collaborative%20user-read-private&state="+State
             return redirect(AuthURL)
 

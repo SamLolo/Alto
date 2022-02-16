@@ -61,6 +61,7 @@ class UserData():
         #** Get Info About Discord User From Database **
         self.cursor.execute("SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '"+str(discordID)+"';")
         Data = self.cursor.fetchone()
+        self.connection.commit()
         print(Data)
 
         #** Format UserData To Dictionary & Return Values **
@@ -88,6 +89,7 @@ class UserData():
         #** Get Users Listening History From Database **
         self.cursor.execute("SELECT history.SongID, history.ListenedAt, cache.SpotifyID, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity FROM history INNER JOIN cache ON history.SongID = cache.SoundcloudID WHERE DiscordID = '"+str(discordID)+"' ORDER BY ListenedAt ASC;")
         History = self.cursor.fetchall()
+        self.connection.commit()
 
         Dict = {}
         for Tuple in History:
@@ -108,6 +110,7 @@ class UserData():
         #** Get Spotify Data From Database & Return It **
         self.cursor.execute("SELECT * FROM spotify WHERE DiscordID='"+str(discordID)+"';")
         Data = self.cursor.fetchone()
+        self.connection.commit()
         
         #** Format Spotify Data To Dictionary & Return Values **
         if Data != None:
@@ -132,6 +135,13 @@ class UserData():
 
         #** Write Data About User Recommendation Data To Recommendations Table **
         self.cursor.execute("INSERT INTO recommendations VALUES "+str(Recommendations)+";")
+        self.connection.commit()
+
+    
+    def PrepareLink(self, discordID):
+
+        #** Write Empty Row With DiscordID Into Spotify Table **
+        self.cursor.execute("REPLACE INTO spotify (DiscordID) VALUES ("+str(discordID)+");")
         self.connection.commit()
     
 
@@ -204,7 +214,8 @@ class UserData():
             self.cursor.execute("SELECT * FROM cache WHERE SoundcloudID = '"+str(ID)+"';")
             Song = self.cursor.fetchone()
 
-        #** Format Full Data Into A Dict To Return **
+        #** Commit To Refresh Connection & Format Full Data Into A Dict To Return **
+        self.connection.commit()
         if Song != None:
             if Song[2] != None:
                 RGBList = Song[9].strip("()").split(", ")

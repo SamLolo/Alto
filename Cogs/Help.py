@@ -6,7 +6,6 @@ import math
 import json
 import copy
 import discord
-import asyncio
 from datetime import datetime
 from discord.ext import commands
 

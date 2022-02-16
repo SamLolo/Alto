@@ -47,6 +47,8 @@ Emojis["False"] = "❌"
 
 @client.event
 async def on_ready():
+
+    #** Make Sure Client Waits Until Fully Connected & Record Startup Time **
     print("Connection Established!")
     print("Preparing Internal Cache...")
     await client.wait_until_ready()
@@ -137,14 +139,10 @@ async def reload(ctx, CogName):
     await Temp.delete()
 
 
-@client.command()
-async def test(ctx):
-    User = Users(client, ctx.author.id)
-
-
 #!-------------------------------LOAD COGS-------------------------------#
 
 
+#** Work Through List Of Active Cog Names In Config File, Loading Each One As You Go **
 for Cog in Config['Active_Extensions']:
     client.load_extension(Cog)
 

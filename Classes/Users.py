@@ -6,9 +6,13 @@ import os
 import json
 import base64
 import random
-from discord.ext.commands.converter import IDConverter
 import requests
 from datetime import datetime
+
+
+#!--------------------------IMPORT CLASSES-------------------------!#
+
+
 from Classes.Database import UserData
 from Classes.Music import Music
 
@@ -38,13 +42,19 @@ class SpotifyUser(object):
         Data = self.Database.GetSpotify(DiscordID)
         if Data != None:
 
-            #** Assign Class Objects **
-            self.SpotifyData = Data
-            self.SpotifyConnected = True
+            #** Check SpotifyID Is Actually Present (Account Isn't Half Linked)
+            if Data['spotifyID'] != None:
 
-            #** Get UserToken & User Header For New User **
-            self.RefreshUserToken()
+                #** Assign Class Objects **
+                self.SpotifyData = Data
+                self.SpotifyConnected = True
 
+                #** Get UserToken & User Header For New User **
+                self.RefreshUserToken()
+
+            #** Set SpotifyConnected To False If A Connection Couldn't Be Made **
+            else:
+                self.SpotifyConnected = False
         else:
             self.SpotifyConnected = False
 
@@ -225,14 +235,17 @@ class Users(SpotifyUser, SongHistory):
     
     def getRecommendations(self):
 
+        #** Create Lists Of Listened To Spotify Track ID's And Artists From Listening History **
         TrackIDs = []
         for songID in self.array:
             if self.History[songID]['SpotifyID'] is not None:
                 TrackIDs.append(self.History[songID]['SpotifyID'])
- 
+
+        #** Select 3 Track ID's and 2 Artist ID's At Random From The Two Lists **
         while len(TrackIDs) > 3:
             TrackIDs.pop(random.randint(0, len(TrackIDs)-1))
 
+        #** Create Recommendations Data To Send Off To Spotify Web API **
         Figures = self.user['recommendations']
         data = {'limit': 50, 'seed_tracks': ",".join(TrackIDs),
                 'min_acousticness': Figures['Acoustic'][0], 'target_acousticness': Figures['Acoustic'][1], 'max_acousticness': Figures['Acoustic'][2], 
@@ -245,9 +258,6 @@ class Users(SpotifyUser, SongHistory):
                 'min_valence': Figures['Valance'][0], 'target_valence': Figures['Valance'][1], 'max_valence': Figures['Valance'][2],
                 'min_popularity': Figures['Popularity'][0], 'target_popularity': Figures['Popularity'][1], 'max_popularity': Figures['Popularity'][2]}
         
-        print(data)
-        
+        #** Get Set Of Track Recommendations From Spotify Web API & Return Tracks **
         Tracks = self.SongData.GetRecommendations(data)
-        print(Tracks)
-
         return Tracks

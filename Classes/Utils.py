@@ -2,11 +2,8 @@
 #!-------------------------IMPORT MODULES-----------------------!#
 
 
-import os
-import json
 import requests
 import lavalink
-from datetime import datetime
 from colorthief import ColorThief
 
 
@@ -14,12 +11,7 @@ from colorthief import ColorThief
 
 
 class Utility():
-    
-    def __init__(self):
         
-        print()
-        
-    
     def get_colour(self, URL):
         
         #** Get Contents Of Image URL **

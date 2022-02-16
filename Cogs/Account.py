@@ -26,7 +26,7 @@ from Classes.Utils import Utility
 #** Startup Sequence **
 print("-----------------------LOADING EXTENTION----------------------")
 print("Name: Cogs.Account")
-print("Modules Imported: ✓\n")
+print("Modules Imported: ✓")
 
 
 #!------------------------INITIALISE CLASSES-------------------#
@@ -134,7 +134,7 @@ class AccountCog(commands.Cog, name="Account"):
                     raise commands.CheckFailure(message="History")
 
             elif Input.lower() == "spotify":    
-                if User.Connected:
+                if User.SpotifyConnected:
                     print("User Found")
 
                     #** Send Initial Waiting Message To User **
@@ -174,19 +174,19 @@ class AccountCog(commands.Cog, name="Account"):
                 #** Loop Through Data & Create Dictionary Of Embed Pages **
                 Pages = []
                 Count = 0
-                for SpotifyID, SongData in Recommendations.items():
+                for SpotifyID, Data in Recommendations.items():
 
                     #** Format Embed Sections **
-                    Song = SongData['Name']+"\nBy: "+Utils.format_artists(SongData['Artists'], SongData['ArtistID'])
+                    Song = Data['Name']+"\nBy: "+Utils.format_artists(Data['Artists'], Data['ArtistID'])
                     Links = self.Emojis['Spotify']+" Song: [Spotify](https://open.spotify.com/track/"+SpotifyID+")\n"
-                    if SongData['Preview'] != None:
-                        Links += self.Emojis['Preview']+" Song: [Preview]("+SongData['Preview']+")\n"
-                    Links += self.Emojis['Album']+" Album: ["+SongData['Album']+"](https://open.spotify.com/album/"+SongData['AlbumID']+")"
+                    if Data['Preview'] != None:
+                        Links += self.Emojis['Preview']+" Song: [Preview]("+Data['Preview']+")\n"
+                    Links += self.Emojis['Album']+" Album: ["+Data['Album']+"](https://open.spotify.com/album/"+Data['AlbumID']+")"
 
                     #** Create New Embed **
                     NewPage = discord.Embed(
                         title = ctx.author.display_name+"'s Recommendations")
-                    NewPage.set_thumbnail(url=SongData['Art'])
+                    NewPage.set_thumbnail(url=Data['Art'])
                     NewPage.add_field(name="Song "+str(Count+1)+":", value=Song, inline=False)
                     NewPage.add_field(name="Links:", value=Links, inline=False)
                     NewPage.set_footer(text="("+str(Count+1)+"/10) React To See More Recommendations!")
@@ -216,6 +216,74 @@ class AccountCog(commands.Cog, name="Account"):
         #** Raise Error If Command Doesn't Have A Valid Input **
         else:
             raise commands.BadArgument(message="recommendations")
+
+
+    @commands.command(aliases=['l', 'connect'], description="Allows you to link your spotify with your account on the bot.")
+    async def link(self, ctx):
+    
+        #** Check if User Already Has A Linked Account **
+        User = Users(self.client, ctx.author.id)
+        if User.SpotifyConnected == False:
+
+            #** Add DiscordID To Spotify Table In Database **
+            Database.PrepareLink(ctx.author.id)
+
+            #** Send Embed With Auth URL Into User's DMs And Notify User **
+            AuthURL = "http://82.22.157.214:5000/link?discord="+str(ctx.author.id)
+            LinkEmbed = discord.Embed(
+                title = "Connect Your Spotify With Discord!",
+                description = "To link your spotify account, [Click Here]("+AuthURL+")!",
+                colour = discord.Colour.dark_green())
+            LinkEmbed.add_field(name="What To Do Now:", value="\n**1)** *Visit the link above, and after a few seconds, you will be redirected to Spotify and asked to grant access to the bot.*"
+                                                                       +"\n**2)** *Once authorised, you'll be redirected again and should receive a confirmation on the webpage if successful.*"
+                                                                       +"\n**3)** *You will also get a DM confirmation below here in Discord up to 2 minutes afterwards!*")
+            LinkEmbed.set_footer(text="Authentication Will Time Out After 10 Minutes")
+
+            #** Create DM Channel With User If One Doesn't Already Exist **
+            if ctx.message.author.dm_channel == None:
+                await ctx.message.author.create_dm()
+            
+            #** Try To Send Embed To User **
+            try:
+                await ctx.message.author.dm_channel.send(embed=LinkEmbed)
+                await ctx.send("I've sent you a DM!")
+
+            #** Raise Error If Can't Send Messages To DM Channel **
+            except :
+                raise commands.CheckFailure(message="DM")
+                
+        else:
+            #** Send Embed Asking User If They'd Like To Unlink Into DMs **
+            UnlinkEmbed = discord.Embed(
+                title = "Your Spotify Is Already Linked!",
+                description = "**Account:**\n["+User.SpotifyData['name']+"](https://open.spotify.com/user/"+User.SpotifyData['spotifyID']+")\n\nIf You'd Like To Unlink Your Account, Please:\n`React To The Tick Below`",
+                colour = discord.Colour.dark_green())
+
+            #** Create DM Channel With User If One Doesn't Already Exist **
+            if ctx.message.author.dm_channel == None:
+                await ctx.message.author.create_dm()
+            
+            #** Try To Send Embed To User **
+            try:
+                Unlink = await ctx.message.author.dm_channel.send(embed=UnlinkEmbed)
+                await ctx.send("I've sent you a DM!")
+            
+            #** Raise Error If Can't Send Messages To DM Channel **
+            except :
+                raise commands.CheckFailure(message="DM")
+            
+            #** Check Function To Be Called When Checking If Correct Reaction Has Taken Place **
+            def ReactionAdd(Reaction):
+                return (Reaction.message_id == Unlink.id) and (Reaction.user_id != 803939964092940308)
+
+            #** Watches For Reactions, Checks Them And Then Acts Accordingly **
+            await Unlink.add_reaction(self.Emojis['Tick'])
+            while True:
+                Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
+                if Reaction.event_type == 'REACTION_ADD':
+                    if str(Reaction.emoji) == self.Emojis['Tick']:
+                        Database.RemoveSpotify(ctx.author.id)
+                        await ctx.message.author.dm_channel.send("**Spotify Account Unlinked!**\nIf you need to relink at any time, simply run `!link`.")
 
 
 #!-------------------SETUP FUNCTION-------------------#
