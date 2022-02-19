@@ -37,14 +37,14 @@ class UtilityCog(commands.Cog, name="Utility"):
         self.Emojis = Config['Variables']['Emojis']
 
 
-    @commands.command(aliases=['pg'], description="Displays the bot's current ping to Discord in milliseconds.")
+    @commands.command(aliases=['pg'], description="Displays the bot's current latency to Discord in milliseconds.")
     async def ping(self, ctx):
 
         #** Return Client Latency in ms **
         await ctx.send("Pong! "+str(round(self.client.latency * 1000))+"ms")
     
 
-    @commands.command(aliases=['up'], description="Displays the time since the bot last went down.")
+    @commands.command(aliases=['up', 'runtime'], description="Displays the time since the bot last went down.")
     async def uptime(self, ctx):
         
         #** Calculate Time Difference Between DateTime Stored At Startup & Datetime Now **
@@ -60,10 +60,11 @@ class UtilityCog(commands.Cog, name="Utility"):
         
         #** Create Embed With Invite Information **
         Invite = discord.Embed(
-            title="Invite Flare To Your Discord Server!",
-            colour=discord.Colour.orange(),
-            description="A whole new way to listen to music awaits you:\n🎶 [Flare | Discord Music](https://discord.com/api/oauth2/authorize?client_id=803939964092940308&permissions=139921845328&scope=bot) 🎶")
-        
+            title="Invite Alto To Your Discord Server!",
+            colour=discord.Colour.blue(),
+            description="A whole new way to listen to music awaits you:\n🎶 [Alto | Discord Music](https://discord.com/api/oauth2/authorize?client_id=803939964092940308&permissions=139921845328&scope=bot) 🎶")
+        Invite.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
+
         #** Send Embed To Discord **
         await ctx.send(embed=Invite)
         

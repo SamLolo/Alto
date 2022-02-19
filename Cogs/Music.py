@@ -27,7 +27,7 @@ from Classes.Utils import Utility
 #** Startup Sequence **
 print("-----------------------LOADING EXTENTION----------------------")
 print("Name: Cogs.Music")
-print("Modules Imported: ✓", end="")
+print("Modules Imported: ✓")
 
 
 #!------------------------INITIALISE CLASSES-------------------#
@@ -78,13 +78,14 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     async def ensure_voice(self, ctx):
+
+        #** If Command Needs User To Be In VC, Check if Author is in Voice Channel **
+        if not(ctx.command.name in ['queue', 'nowplaying']):
+            if not(ctx.author.voice) or not(ctx.author.voice.channel):
+                raise commands.CheckFailure(message="UserVoice")
         
         #** Return a Player If One Exists, Otherwise Create One **
         Player = self.client.lavalink.player_manager.create(ctx.guild.id, endpoint=str(ctx.guild.region))
-
-        #** Check if Author is in Voice Channel **
-        if not(ctx.author.voice) or not(ctx.author.voice.channel):
-            raise commands.CheckFailure(message="UserVoice")
 
         #** Check If Bot If Is Connected & Needs to Connect to VC **
         if not(Player.is_connected):
@@ -108,7 +109,7 @@ class MusicCog(commands.Cog, name="Music"):
                 await ctx.guild.change_voice_state(channel=ctx.author.voice.channel)
                 
             #** If Bot Doesn't Need To Connect, Raise Error **
-            elif ctx.command.name in ['stop', 'pause', 'skip', 'queue']:
+            elif ctx.command.name in ['stop', 'pause', 'skip', 'queue', 'seek']:
                 raise commands.CheckFailure("BotVoice")
                 
         else:
@@ -155,7 +156,7 @@ class MusicCog(commands.Cog, name="Music"):
             
             #** Set Author & Footer and Add Position Field **
             NowPlaying.set_author(name="Requested By "+str(event.track.requester)+"", icon_url=event.track.requester.avatar_url)
-            NowPlaying.add_field(name="Position:", value = Utils.format_time(event.player.position)+" / "+ Utils.format_time(event.track.duration))
+            NowPlaying.add_field(name="Position:", value = "0:00 / "+ Utils.format_time(event.track.duration))
             if event.player.queue == []:
                 NowPlaying.set_footer(text="Up Next: Nothing")
             else:
@@ -176,12 +177,8 @@ class MusicCog(commands.Cog, name="Music"):
                 NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")"
                 NowPlaying.insert_field_at(0, name="By:", value="["+event.track.author+"]("+event.track.extra["artistURI"]+")")
 
-            #** Send Embed To Channel Where First Play Cmd Was Ran & Add Reactions**
+            #** Send Embed To Channel Where First Play Cmd Was Ran **
             Message = await Channel.send(embed=NowPlaying)
-            await Message.add_reaction(self.Emojis['SkipBack'])
-            await Message.add_reaction(self.Emojis['Play'])
-            await Message.add_reaction(self.Emojis['Pause'])
-            await Message.add_reaction(self.Emojis['SkipForwards'])
 
             #** Fetch Previous Now Playing Message & Store New Now Playing Message In Player **
             OldMessage = event.player.fetch('NowPlaying')
@@ -235,7 +232,12 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['p'], description="Allows you to play music through a Discord Voice Channel from a variety of sources.")
+    @commands.command(aliases=['p'], 
+                      description="Allows you to play music through a Discord Voice Channel from a variety of sources.", 
+                      usage="!play <song>", 
+                      brief="You must be in a voice channel to use this command!",
+                      help="`Possible Inputs For <song>:`\n- Text Search For Song\n- Soundcloud Track URL\n- Soundcloud Playlist URL\n- Spotify Track URL\n"+
+                           "- Spotify Playlist URL**\* **\n- Spotify Album URL\n- HTTP Audio Stream URL\n**\* ** *Private playlists require linking Spotify to Discord using `!link` first!*")
     async def play(self, ctx, *, Query):
 
         #** Ensure Voice To Make Sure Client Is Good To Run **
@@ -481,7 +483,9 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['disconnect', 'dc'], description="Stops any currently playing audio in your voice channel.")
+    @commands.command(aliases=['disconnect', 'dc'], 
+                      description="Stops any currently playing audio in your voice channel.",
+                      brief="You must be in a voice channel to use this command!")
     async def stop(self, ctx):
 
         #** Ensure Voice To Make Sure Client Is Good To Run & Get Guild Player**
@@ -515,7 +519,11 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['v', 'loudness'], description="Adjusts the volume of the audio player between 0% and 100%.")
+    @commands.command(aliases=['v', 'loudness'], 
+                      description="Adjusts the volume of the audio player between 0% and 100%.",
+                      usage="!volume <percentage>",
+                      brief="You must be in a voice channel to use this command!",
+                      help="`Possible Inputs For <percentage>:`\n- Default: None *(shows current volume level)*\n- Integer value between 0 and 100")
     async def volume(self, ctx, *args):
 
         #** Ensure Voice To Make Sure Client Is Good To Run & Get Player **
@@ -545,7 +553,9 @@ class MusicCog(commands.Cog, name="Music"):
 
     
     @commands.guild_only()
-    @commands.command(aliases=['unpause'], description="Pauses or unpauses the audio player.")
+    @commands.command(aliases=['unpause'], 
+                      description="Pauses or unpauses the audio player.",
+                      brief="You must be in a voice channel to use this command!")
     async def pause(self, ctx):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -557,7 +567,6 @@ class MusicCog(commands.Cog, name="Music"):
 
         #** If Connected & Playing Skip Song & Confirm Track Skipped **
         else:
-            print(Player.paused)
             await Player.set_pause(not(Player.paused))
             if Player.paused:
                 await ctx.send("Player Paused!")
@@ -566,7 +575,9 @@ class MusicCog(commands.Cog, name="Music"):
 
     
     @commands.guild_only()
-    @commands.command(aliases=['s' ,'forceskip', 'fs', 'next'], description="Skips the currently playing song and plays the next song in th queue.")
+    @commands.command(aliases=['s' ,'forceskip', 'fs', 'next'], 
+                      description="Skips the currently playing song and plays the next song in the queue.",
+                      brief="You must be in a voice channel to use this command!")
     async def skip(self, ctx):
 
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -583,7 +594,8 @@ class MusicCog(commands.Cog, name="Music"):
     
     
     @commands.guild_only()
-    @commands.command(aliases=['q'], description="Displays the bots current queue of songs.")
+    @commands.command(aliases=['q', 'upnext'], 
+                      description="Displays the server's current queue of songs.")
     async def queue(self, ctx):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -624,7 +636,9 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['m', 'mix', 'mixup'], description="Shuffles the playback of songs in the queue.")
+    @commands.command(aliases=['m', 'mix', 'mixup'], 
+                      description="Shuffles & un-shuffles the playback of songs in the queue.",
+                      brief="You must be in a voice channel to use this command!")
     async def shuffle(self, ctx):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -639,7 +653,9 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['repeat'], description="Loops the current song until the command is ran again.")
+    @commands.command(aliases=['repeat'], 
+                      description="Loops the current song until the command is ran again.",
+                      brief="You must be in a voice channel to use this command!")
     async def loop(self, ctx):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -654,7 +670,13 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @commands.guild_only()
-    @commands.command(aliases=['timeskip'], description="Skips forward or backwards in time in the currently playing song.")
+    @commands.command(aliases=['ts', 'timeskip'], 
+                      description="Skips forward or backwards in time in the currently playing song.",
+                      usage="!seek <time>",
+                      brief="You must be in a voice channel to use this command!",
+                      help="`Possible Inputs For <time>:`\n- Positive time in seconds less than remaining duration\n    *(skips forward specified time in song)*\n"+
+                           "- Positive time in seconds greater than remaining duration\n    *(skips onto next song in queue)*\n"+
+                           "- Negative time in seconds\n    *(skips backwards specified time in song/to start of song)*")
     async def seek(self, ctx, time):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
@@ -663,21 +685,52 @@ class MusicCog(commands.Cog, name="Music"):
         #** Check If Track Seeable **
         if Player.current.is_seekable:
 
-            #** Check If Seek Time Is Within Current Track **
-            if int(time)*1000 < int(Player.current.duration - Player.position):
+            #** Check Specified Time Is Positive Or Negative & Check It Is A Decimal Value **
+            Negative = False
+            if time.startswith("-"):
+                Negative = True
+            time = time.replace("-", "").replace("+", "")
+            if time.isdecimal():
 
-                #** Seek Forward Specified Time in ms **
-                await Player.seek(Player.position + float(int(time)*1000))
+                #** Check Integer Is Greater Than 0 (Skip Forwards) or Not **
+                if not(Negative):
 
-                #** Let User Know How Much Time Has Been Skipped **
-                await ctx.send("Skipped Forwards "+time+" Seconds!")
+                    #** Check If Seek Time Is Within Current Track **
+                    if (float(time) * 1000) < (Player.current.duration - Player.position):
 
-            #** Otherwise Skip Track**
+                        #** Seek Forward Specified Time in ms **
+                        await Player.seek(Player.position + (float(time) * 1000))
+
+                        #** Let User Know How Much Time Has Been Skipped **
+                        await ctx.send("Skipped Forwards "+time+" Seconds!")
+
+                    #** Otherwise Skip Track**
+                    else:
+                        await Player.skip()
+
+                        #** Let User Know Track Has Been Skipped **
+                        await ctx.send("Current Track Skipped!")
+                
+                else:
+                    #** If Time Is Less Than Start, seek back in song specified amount of time **
+                    if (float(time) * 1000) < Player.position:
+
+                        #** Seek Backwards Specified Time in ms **
+                        await Player.seek(Player.position - (float(time) * 1000))
+
+                        #** Let User Know How Much Time Has Been Skipped **
+                        await ctx.send("Skipped Backwards "+time+" Seconds!")
+                    
+                    #** Seek back to start if greater than current position **
+                    else:
+                        await Player.seek(0)
+
+                        #** Let User Know How Much Time Has Been Skipped **
+                        await ctx.send("Skipped Back To Start Of Song!")
+
+            #** Raise Bad Argument Error If Input Wasn't A Number **
             else:
-                await Player.skip()
-
-                #** Let User Know Track Has Been Skipped **
-                await ctx.send("Current Track Skipped!")
+                raise commands.BadArgument(message="info")
 
         #** Let User Know Audio Isn't Seekable **
         else:
@@ -685,7 +738,8 @@ class MusicCog(commands.Cog, name="Music"):
     
 
     @commands.guild_only()
-    @commands.command(aliases=['np', 'now'], description="Displays information about the currently playing song.")
+    @commands.command(aliases=['np', 'now', 'currentsong', 'current'], 
+                      description="Displays information about the currently playing song.")
     async def nowplaying(self, ctx):
         
         #** Ensure Cmd Is Good To Run & Get Player **
@@ -718,55 +772,29 @@ class MusicCog(commands.Cog, name="Music"):
             NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
             NowPlaying.insert_field_at(0, name="By:", value="["+Player.current.author+"]("+Player.current.extra['artistURI']+")")
             
-        #** Send Embed To Channel Where First Play Cmd Was Ran & Add Reactions**
+        #** Send Embed To Channel Where First Play Cmd Was Ran **
         Message = await ctx.send(embed=NowPlaying)
-        for emoji in ['SkipBack', 'Play', 'Pause', 'SkipForwards']:
-            await Message.add_reaction(self.Emojis[emoji])
 
 
-    @commands.command(aliases=['words'], description="Displays a specified songs lyrics.")
-    async def lyrics(self, ctx, *args):
-        
-        #** Get Lyrics For Requested Song **
-        Lyrics = SongData.GetLyrics(" ".join(args))
-        
-        #** Get Most Dominant Colour In Album Art **
-        RGB = Utils.GetColour(Lyrics['Meta']['Art'])
-        Colour = discord.Colour.from_rgb(RGB[0], RGB[1], RGB[2])
-        
-        #** Create Lyric Embed **
-        LyricEmbed = discord.Embed(
-            title = Lyrics['Meta']['Title'],
-            description = "**By: **["+Lyrics['Meta']['Artist']+"](https://open.spotify.com/track/"+Lyrics['Spotify']['ArtistID'][0]+")\n\n"+Lyrics['Lyrics'],
-            colour = Colour)
-        LyricEmbed.set_thumbnail(url=Lyrics['Meta']['Art'])
-        
-        #** Get Embed Length (Max 6000) For Test Purposes **
-        print(len(LyricEmbed))
-        
-        #** Return Lyrics To User **
-        await ctx.send(embed=LyricEmbed)
-
-
-    @commands.command(aliases=['song', 'i', 'songinfo'], description="Displays both basic and more in-depth information about a specified song.")
-    async def info(self, ctx, SpotifyID):
+    @commands.command(aliases=['i', 'song', 'songinfo'], 
+                      description="Displays both basic and more in-depth information about a specified song.",
+                      usage= "!info <spotifyURL>",
+                      help="`Possible Inputs For <spotifyURL>:`\n- Spotify Track URL")
+    async def info(self, ctx, SpotifyURL):
 
         #** Format Input Data and Check To Make Sure It's A Valid ID **
-        print(ctx.author.name)
-        print(SpotifyID)
-        Error = False
-        if SpotifyID.startswith("https://open.spotify.com/track/"):
-            SpotifyID = (SpotifyID.split("/"))[4].split("?")[0]
+        if SpotifyURL.startswith("https://open.spotify.com/track/"):
+            SpotifyID = (SpotifyURL.split("/"))[4].split("?")[0]
         if len(SpotifyID) == 22:
 
             #** Get Song Details And Check If Song Is Found **
             SongInfo = SongData.GetSongDetails(SpotifyID)
-            if SongInfo != "SongNotFound":
+            if not(SongData in ["SongNotFound", "UnexpectedError"]):
 
                 #** Format Returned Data Ready To Be Put Into The Embeds **
                 SongInfo = SongInfo[SpotifyID]
                 Description = "**By: **" + Utils.format_artists(SongInfo['Artists'], SongInfo['ArtistID'])
-                Links = self.Emojis['Spotify']+" Song: [Spotify](https://open.spotify.com/track/"+SpotifyID+")\n"
+                Links = self.Emojis['Spotify']+" Song: [Spotify]("+SpotifyURL+")\n"
                 if SongInfo['Preview'] != None:
                     Links += self.Emojis['Preview']+" Song: [Preview]("+SongInfo['Preview']+")\n"
                 if SongInfo['AlbumID'] != None:
@@ -804,18 +832,11 @@ class MusicCog(commands.Cog, name="Music"):
                 await Page.add_reaction(self.Emojis['Next'])
                 await self.Pagination.add_pages(Page.id, [Basic, Advanced])
         
-            #** Output Song Not Found If SongData.GetSongDetails() Returns Song Not Found **
+            #** Raise Bad Argument Error If SpotifyID From Link Doesn't Work **
             else:
-                Error = True
+                raise commands.BadArgument(message="info")
         else:
-            Error = True
-
-        #** Output Error To User **
-        if Error == True:
-            Temp = await ctx.send("**Invalid SongID!**\nFor help with this command, run `!help info`")
-            await asyncio.sleep(5)
-            await ctx.message.delete()
-            await Temp.delete()
+            raise commands.BadArgument(message="info")
 
 
 #!-------------------SETUP FUNCTION-------------------#

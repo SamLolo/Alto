@@ -15,7 +15,8 @@ from discord.ext import commands
 
 #** Startup Sequence **
 print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Help\n")
+print("Name: Cogs.Help")
+print("Modules Imported: ✓\n")
 
 
 #!-------------------------HELP COG-----------------------------#
@@ -58,6 +59,7 @@ class HelpCog(commands.Cog):
                                             "commands within that catergory with a brief description of each.*\n**- !help <command>:"+
                                             "** *For a more detailed description of a command, specify the exact command.*",
                               colour=discord.Colour.blue())
+            MainMenu.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
             
             await ctx.send(embed=MainMenu)
             
@@ -71,14 +73,15 @@ class HelpCog(commands.Cog):
             #** Create Basic Embed **
             CategoryEmbed = discord.Embed(title = "Catergory: "+input.title(),
                                 colour=discord.Colour.blue())
+            CategoryEmbed.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
             
             #** Iterate Through Commands In Cog **
             PageData = []
             for CommandNo, command in enumerate(Cog.walk_commands()):
                 
                 #** If 10 Commands Reached, Add To Embed Page Number & Create Pagination Object. **
-                if (CommandNo % 10) == 0 and CommandNo != 0:
-                    CategoryEmbed.set_footer(text="Page "+str(CommandNo // 10))
+                if (CommandNo % 6) == 0 and CommandNo != 0:
+                    CategoryEmbed.set_footer(text="Page "+str(CommandNo // 6))
                     PageDict = copy.deepcopy(CategoryEmbed.to_dict())
                     PageData.append(PageDict)
                     print("[PAGE]\n")
@@ -86,7 +89,7 @@ class HelpCog(commands.Cog):
                     print()
                     
                     #** If First Page, Send Embed & Add Reactions **#
-                    if (CommandNo / 10) == 1:
+                    if (CommandNo / 6) == 1:
                         Page = await ctx.send(embed=CategoryEmbed)
                         await Page.add_reaction(self.Emojis['Back'])
                         await Page.add_reaction(self.Emojis['Next'])
@@ -105,14 +108,14 @@ class HelpCog(commands.Cog):
                 #** Add Field About Command To Embed **
                 CategoryEmbed.add_field(name="**__"+command.name.title()+"__**", value=Value, inline=False)
             
-            if len(list(Cog.walk_commands())) > 10 and (CommandNo % 10) != 0:
-                CategoryEmbed.set_footer(text="Page "+str(int(math.ceil(CommandNo / 10))))
+            if len(list(Cog.walk_commands())) > 6 and (CommandNo % 6) != 0:
+                CategoryEmbed.set_footer(text="Page "+str(int(math.ceil(CommandNo / 6))))
                 PageData.append(CategoryEmbed.to_dict())
                 print("[PAGE]\n")
                 print(PageData)
                 print()
                 
-            #** Send Embed if less than 10 commands otherwise Create Pagination For Embed **
+            #** Send Embed if less than 6 commands otherwise Create Pagination For Embed **
             if PageData == []:
                 await ctx.send(embed=CategoryEmbed)
             else:
@@ -129,7 +132,7 @@ class HelpCog(commands.Cog):
             #** Create Embed Description
             Description = "\n*"+Command.description+"*"
             if Command.aliases != []:
-                Description = "`Aliases: !"+(", !".join(Command.aliases))+"`\n"+Description
+                Description = "`Aliases: !"+(", !".join(Command.aliases))+"`"+Description
             else:
                 Description = "`Aliases: None`"+Description
                 
@@ -137,7 +140,22 @@ class HelpCog(commands.Cog):
             CommandEmbed = discord.Embed(title = "Command: "+input.title(),
                                 description = Description,
                                 colour = discord.Colour.blue())
+            CommandEmbed.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
             
+            #** Add Usage Field **
+            if Command.usage != None:
+                Usage = "`"+Command.usage+"`"
+            else:
+                Usage = "`!"+input.lower()+"`"
+            if Command.brief != None:
+                Usage += "\n*"+Command.brief+"*"
+            CommandEmbed.add_field(name="Usage:", value=Usage, inline=False)
+
+            #** Add Paramaters Field **
+            if Command.help != None:
+                CommandEmbed.add_field(name="Paramters:", value=Command.help, inline=False)
+            
+            #** Send Embed To Discord **
             await ctx.send(embed=CommandEmbed)
         
 

@@ -18,12 +18,12 @@ class Utility():
         Image = requests.get(URL)
 
         #** Write Image To Temp PNG File **
-        File = open("temp.png", "wb")
+        File = open("ColourCheck.png", "wb")
         File.write(Image.content)
         File.close()
         
         #** Get Most Dominant Colour In Image **
-        Colour = ColorThief('temp.png').get_color(quality=1)
+        Colour = ColorThief('ColourCheck.png').get_color(quality=1)
         
         #** Return RGB Colour Tuple **
         return Colour

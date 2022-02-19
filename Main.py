@@ -73,13 +73,13 @@ async def on_command_error(ctx, error):
         await Temp.delete()
         return
     elif isinstance(error, commands.MissingRequiredArgument):
-        Temp = await ctx.message.channel.send("**Missing Paramater `"+str(error.param)+"`!**\nFor a full list of commands & their parameters, run `!help`")
+        Temp = await ctx.message.channel.send("**Missing Parameter `"+str(error.param)+"`!**\nFor a full list of commands & their parameters, run `!help`")
         await asyncio.sleep(5)
         await ctx.message.delete()
         await Temp.delete()
         return
     elif isinstance(error, commands.BadArgument):
-        Temp = await ctx.message.channel.send("**Oops, it seems that paramater is incorrect!**\nFor a full list of valid parameters, run `!help "+str(error)+"`")
+        Temp = await ctx.message.channel.send("**Oops, it seems the argument you gave was invalid!**\nFor a full list of valid arguments, run `!help "+str(error)+"`")
         await asyncio.sleep(5)
         await ctx.message.delete()
         await Temp.delete()

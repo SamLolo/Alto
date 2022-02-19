@@ -218,7 +218,7 @@ class Users(SpotifyUser, SongHistory):
     async def save(self):
         
         #** Send Data To Database To Be Saved **
-        self.database.AddSongHistory(self.user.id, self.History, self.outpointer)
+        self.database.AddSongHistory(self.user['data']['discordID'], self.History, self.outpointer)
         
     
     async def incrementHistory(self, TrackData):

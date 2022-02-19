@@ -26,7 +26,7 @@ from Classes.Utils import Utility
 #** Startup Sequence **
 print("-----------------------LOADING EXTENTION----------------------")
 print("Name: Cogs.Account")
-print("Modules Imported: ✓")
+print("Modules Imported: ✓\n")
 
 
 #!------------------------INITIALISE CLASSES-------------------#
@@ -59,7 +59,8 @@ class AccountCog(commands.Cog, name="Account"):
         self.Emojis["False"] = "❌"
         
     
-    @commands.command(aliases=['account', 'a'], description="Displays information about your alto profile.")
+    @commands.command(aliases=['account', 'a'], 
+                      description="Displays information about your alto profile.")
     async def profile(self, ctx):
         
         ProfileEmbed = discord.Embed(title=ctx.author.display_name+"'s Profile",
@@ -69,7 +70,8 @@ class AccountCog(commands.Cog, name="Account"):
         await ctx.send(embed=ProfileEmbed)
 
 
-    @commands.command(aliases=['h', 'lastlistened'], description="Displays your 50 last listened to songs through the bot.")
+    @commands.command(aliases=['h', 'lastlistened'], 
+                      description="Displays your 50 last listened to songs through the bot.")
     async def history(self, ctx):
         
         # { !!!NEEDS TESTING!!! } #
@@ -113,7 +115,12 @@ class AccountCog(commands.Cog, name="Account"):
             await ctx.send("**You do not have any history to display!**\nGet listening today by joining a vc and running `!play`!")
     
 
-    @commands.command(aliases=['r', 'recommend', 'suggestions'], description="Displays 10 random song recommendations based on your listening history.")
+    @commands.command(aliases=['r', 'recommend', 'suggestions'], 
+                      description="Displays 10 random song recommendations based on your listening history.",
+                      usage="!recommendations <type>",
+                      brief="Requires you to have some listening history or a connected Spotify account!",
+                      help="`Possible Inputs For <type>:`\n- Default: None *(uses listening history)*\n- History *(uses listening history)*\n"+
+                           "- Spotify *(uses Spotify playlists)*")
     async def recommendations(self, ctx, *args):
         
         #** Check Input Is Valid & If So Get User **
@@ -121,6 +128,7 @@ class AccountCog(commands.Cog, name="Account"):
         if Input.lower() in ["", "history", "spotify"]:
             User = Users(self.client, ctx.author.id)
             
+            #** Check If User Has Requested Recommendations From Their History **
             if Input.lower() in ["", "history"]:
                 
                 #** Check User Actually Has Listening History To Analyse & If Not Raise Error **
@@ -133,6 +141,7 @@ class AccountCog(commands.Cog, name="Account"):
                 else:
                     raise commands.CheckFailure(message="History")
 
+            #** Check If User Has Requested To Use Spotify & Make Sure User Has Spotify Connected **
             elif Input.lower() == "spotify":    
                 if User.SpotifyConnected:
                     print("User Found")
@@ -218,7 +227,8 @@ class AccountCog(commands.Cog, name="Account"):
             raise commands.BadArgument(message="recommendations")
 
 
-    @commands.command(aliases=['l', 'connect'], description="Allows you to link your spotify with your account on the bot.")
+    @commands.command(aliases=['l', 'connect'], 
+                      description="Allows you to link your spotify with your account on the bot.")
     async def link(self, ctx):
     
         #** Check if User Already Has A Linked Account **
@@ -233,7 +243,8 @@ class AccountCog(commands.Cog, name="Account"):
             LinkEmbed = discord.Embed(
                 title = "Connect Your Spotify With Discord!",
                 description = "To link your spotify account, [Click Here]("+AuthURL+")!",
-                colour = discord.Colour.dark_green())
+                colour = discord.Colour.blue())
+            LinkEmbed.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
             LinkEmbed.add_field(name="What To Do Now:", value="\n**1)** *Visit the link above, and after a few seconds, you will be redirected to Spotify and asked to grant access to the bot.*"
                                                                        +"\n**2)** *Once authorised, you'll be redirected again and should receive a confirmation on the webpage if successful.*"
                                                                        +"\n**3)** *You will also get a DM confirmation below here in Discord up to 2 minutes afterwards!*")
@@ -257,7 +268,8 @@ class AccountCog(commands.Cog, name="Account"):
             UnlinkEmbed = discord.Embed(
                 title = "Your Spotify Is Already Linked!",
                 description = "**Account:**\n["+User.SpotifyData['name']+"](https://open.spotify.com/user/"+User.SpotifyData['spotifyID']+")\n\nIf You'd Like To Unlink Your Account, Please:\n`React To The Tick Below`",
-                colour = discord.Colour.dark_green())
+                colour = discord.Colour.blue())
+            UnlinkEmbed.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
 
             #** Create DM Channel With User If One Doesn't Already Exist **
             if ctx.message.author.dm_channel == None:

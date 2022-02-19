@@ -115,14 +115,15 @@ class BackgroundTasks(commands.Cog):
 
                     #** Format Successful Link Embed & Try To Send To User **
                     try:
-                        Embed = discord.Embed(title = "Spotify Account Connected!",
-                                colour = discord.Colour.dark_green())
-                        Embed.set_thumbnail(url=Update[3])
-                        Embed.add_field(name="Username", value="["+Update[2]+"](https://open.spotify.com/user/"+Update[0]+")")
-                        Embed.add_field(name="What To Do Next?", value="- Start playing some of your private playlists through the bot using `!play`\n"
+                        SuccessEmbed = discord.Embed(title = "Spotify Account Connected!",
+                                colour = discord.Colour.blue())
+                        SuccessEmbed.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
+                        SuccessEmbed.set_thumbnail(url=Update[3])
+                        SuccessEmbed.add_field(name="Username", value="["+Update[2]+"](https://open.spotify.com/user/"+Update[0]+")")
+                        SuccessEmbed.add_field(name="What To Do Next?", value="- Start playing some of your private playlists through the bot using `!play`\n"
                                                                     +"- Get song recommendations using your Spotify playlists using `!recommendations spotify`\n"
                                                                     +"- Run `!profile` and check out your updated user profile", inline=False)
-                        await User.dm_channel.send(embed=Embed)
+                        await User.dm_channel.send(embed=SuccessEmbed)
 
                     #** Print Error If Sending Embed Fails **
                     except:
