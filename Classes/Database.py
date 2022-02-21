@@ -3,8 +3,6 @@
 
 
 import os
-import json
-import requests
 from datetime import datetime
 import mysql.connector
 
@@ -69,16 +67,18 @@ class UserData():
             Dict = {"data": {"discordID": int(Data[0]),
                              "name": Data[1],
                              "discriminator": Data[2],
-                             "avatar": Data[3]},
-                    "recommendations": {"Popularity": [Data[5], Data[6], Data[7]],
-                                        "Acoustic": [Data[8], Data[9], Data[10]],
-                                        "Dance": [Data[11], Data[12], Data[13]],
-                                        "Energy": [Data[14], Data[15], Data[16]],
-                                        "Instrument": [Data[17], Data[18], Data[19]],
-                                        "Live": [Data[20], Data[21], Data[22]],
-                                        "Loud": [Data[23], Data[24], Data[25]],
-                                        "Speech": [Data[26], Data[27], Data[28]],
-                                        "Valance": [Data[29], Data[30], Data[31]]}}
+                             "avatar": Data[3],
+                             "joined": Data[4],
+                             "songcount": Data[6]},
+                    "recommendations": {"Popularity": [Data[7], Data[8], Data[9]],
+                                        "Acoustic": [Data[10], Data[11], Data[12]],
+                                        "Dance": [Data[13], Data[14], Data[15]],
+                                        "Energy": [Data[16], Data[17], Data[18]],
+                                        "Instrument": [Data[19], Data[20], Data[21]],
+                                        "Live": [Data[22], Data[23], Data[24]],
+                                        "Loud": [Data[25], Data[26], Data[27]],
+                                        "Speech": [Data[28], Data[29], Data[30]],
+                                        "Valance": [Data[31], Data[32], Data[33]]}}
             return Dict
         else:
             return None
@@ -87,18 +87,21 @@ class UserData():
     def GetHistory(self, discordID):
 
         #** Get Users Listening History From Database **
-        self.cursor.execute("SELECT history.SongID, history.ListenedAt, cache.SpotifyID, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity FROM history INNER JOIN cache ON history.SongID = cache.SoundcloudID WHERE DiscordID = '"+str(discordID)+"' ORDER BY ListenedAt ASC;")
+        self.cursor.execute("SELECT history.SongID, history.ListenedAt, cache.SoundcloudURL, cache.SpotifyID, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity FROM history INNER JOIN cache ON history.SongID = cache.SoundcloudID WHERE DiscordID = '"+str(discordID)+"' ORDER BY ListenedAt ASC;")
         History = self.cursor.fetchall()
         self.connection.commit()
 
         Dict = {}
         for Tuple in History:
-            Dict[int(Tuple[0])] = {"ListenedAt": Tuple[1],
-                                   "SpotifyID": Tuple[2],
-                                   "Name": Tuple[3],
-                                   "Artists": Tuple[4].replace("'", "").split(", "),
-                                   "ArtistIDs": Tuple[5].replace("'", "").split(", "),
-                                   "Popularity": Tuple[6]}
+            ID = int(Tuple[0])
+            Dict[ID] = {"ListenedAt": Tuple[1],
+                                   "SpotifyID": Tuple[3],
+                                   "Name": Tuple[4],
+                                   "Artists": Tuple[5].replace("'", "").split(", "),
+                                   "URI": Tuple[2]}
+            if Tuple[3] != None:
+                Dict[ID]['ArtistIDs'] = Tuple[6].replace("'", "").split(", ")
+                Dict[ID]['Popularity'] = Tuple[7]
 
         #** Return List Of Ordered Song IDs **
         print(Dict)
@@ -127,14 +130,25 @@ class UserData():
             return None
 
 
-    def AddUser(self, UserData, Recommendations):
+    def SaveUserDetails(self, User):
 
-        #** Write Data About User To Users Table **
-        self.cursor.execute("INSERT INTO users VALUES "+str(UserData)+";")
+        #** Write Data About User To Users Table / Update Row If Already Exists **
+        Data = [User['data']['discordID'], User['data']['name'], User['data']['discriminator'], User['data']['avatar'], User['data']['joined']]
+        self.cursor.execute("REPLACE INTO users VALUES "+str(Data)+";")
         self.connection.commit()
 
         #** Write Data About User Recommendation Data To Recommendations Table **
-        self.cursor.execute("INSERT INTO recommendations VALUES "+str(Recommendations)+";")
+        Data = [User['data']['discordID'], User['data']['songcount'], 
+                User['recommendations']['Popularity'][0], User['recommendations']['Popularity'][1], User['recommendations']['Popularity'][2],
+                User['recommendations']['Acoustic'][0], User['recommendations']['Acoustic'][1], User['recommendations']['Acoustic'][2],
+                User['recommendations']['Dance'][0], User['recommendations']['Dance'][1], User['recommendations']['Dance'][2],
+                User['recommendations']['Energy'][0], User['recommendations']['Energy'][1], User['recommendations']['Energy'][2],
+                User['recommendations']['Instrument'][0], User['recommendations']['Instrument'][1], User['recommendations']['Instrument'][2],
+                User['recommendations']['Live'][0], User['recommendations']['Live'][1], User['recommendations']['Live'][2],
+                User['recommendations']['Live'][0], User['recommendations']['Loud'][1], User['recommendations']['Loud'][2],
+                User['recommendations']['Speech'][0], User['recommendations']['Speech'][1], User['recommendations']['Speech'][2],
+                User['recommendations']['Valance'][0], User['recommendations']['Valance'][1], User['recommendations']['Valance'][2]]
+        self.cursor.execute("REPLACE INTO recommendations VALUES "+str(Data)+";")
         self.connection.commit()
 
     
@@ -145,10 +159,11 @@ class UserData():
         self.connection.commit()
     
 
-    def RemoveSpotify(self, discordID):
+    def RemoveData(self, discordID, Tables):
         
-        #** Remove Row From Spotify With Specified Discord ID **
-        self.cursor.execute("DELETE FROM spotify WHERE DiscordID='"+str(discordID)+"'")
+        #** Remove Row From Each Specified Table With Specified Discord ID **
+        for Table in Tables:
+            self.cursor.execute("DELETE FROM "+Table+" WHERE DiscordID='"+str(discordID)+"'")
         self.connection.commit()
 
 

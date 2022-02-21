@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES-----------------------!#
 
 
+import json
 import requests
 import lavalink
 from colorthief import ColorThief
@@ -11,6 +12,17 @@ from colorthief import ColorThief
 
 
 class Utility():
+
+    def __init__(self):
+
+        #** Load Config File **
+        with open('Config.json') as ConfigFile:
+            Config = json.load(ConfigFile)
+            ConfigFile.close()
+            
+        #** Setup Emojis **
+        self.Emojis = Config['Variables']['Emojis']
+
         
     def get_colour(self, URL):
         
@@ -61,3 +73,19 @@ class Utility():
             return str(int(Time[2]))+":"+str(int(Time[3])).zfill(2)
         else:
             return str(int(Time[1]))+":"+str(int(Time[2])).zfill(2)+":"+str(int(Time[3])).zfill(2)
+
+        
+    def format_song(self, SongData):
+
+        #** If Spotify Song, Format Artists & Create Create String With Spotify Emoji **
+        if SongData['SpotifyID'] is not None:
+            FormattedArtists = self.format_artists(SongData['Artists'], SongData['ArtistIDs'])
+            FormattedSong = self.Emojis['Spotify']+" ["+SongData['Name']+"](https://open.spotify.com/track/"+SongData['SpotifyID']+")\nBy: "+FormattedArtists+""
+        
+        #** If Soundcloud, Format Song Title & Add Single Artist With Link From Song Data **
+        else:
+            FormattedSong = self.Emojis['Soundcloud']+" ["+SongData['Name']+"]("+SongData['URI']+")\n"
+            FormattedSong += "By: ["+SongData['Artists'][0]+"]("+("/".join(SongData['URI'].split("/")[:4]))+")"
+
+        #** Return Formatted String **
+        return FormattedSong

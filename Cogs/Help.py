@@ -29,7 +29,9 @@ class HelpCog(commands.Cog):
         #** Assign Class Objects **
         self.client = client
         self.Pagination = self.client.get_cog("EmbedPaginator")
-        self.activeCogs = {'Music': 'All music-related commands, including playing music.', 'Account': '', 'Utility': ''}
+        self.activeCogs = {'Music': 'All music-related commands, including controlling the audio player and finding out information about songs.', 
+                           'Account': 'Commands involving your Alto account, such as getting information about your account, and managing spotify connections.', 
+                           'Utility': 'Miscellaneous and utility commands, such as information about the bot and it\'s operation.'}
         
         #** Load Config File **
         with open('Config.json') as ConfigFile:
@@ -55,10 +57,12 @@ class HelpCog(commands.Cog):
             
             #** Create Help Embed Showing Command Categories & Basic Info **
             MainMenu = discord.Embed(title = "Alto: Using The Discord Bot",
-                              description = "**- !help <catergory>:** *Specifying a catergory shown on this embed will show all "+
-                                            "commands within that catergory with a brief description of each.*\n**- !help <command>:"+
-                                            "** *For a more detailed description of a command, specify the exact command.*",
+                              description = "**- !help <catergory>:** *Shows all "+
+                                            "commands within specified catergory from below with a brief description of each.*\n**- !help <command>:"+
+                                            "** *Shows a more detailed description on how to use the specified command.*\n\n__**Categories:**__",
                               colour=discord.Colour.blue())
+            for Name, Description in self.activeCogs.items():
+                MainMenu.add_field(name=Name, value="`!help "+Name+"`\n*"+Description+"*")
             MainMenu.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
             
             await ctx.send(embed=MainMenu)

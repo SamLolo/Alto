@@ -103,7 +103,7 @@ class MusicCog(commands.Cog, name="Music"):
                 Player.store('Voice', ctx.author.voice.channel)
 
                 #** Create Empty Users List **
-                Player.store('Users', [])
+                Player.store('Users', {})
 
                 #** Join Voice Channel **
                 await ctx.guild.change_voice_state(channel=ctx.author.voice.channel)
@@ -137,12 +137,9 @@ class MusicCog(commands.Cog, name="Music"):
             event.player.delete('NowPlaying')
 
             #** Save All Current Users Stored In Player To Database **
-            UserList = event.player.fetch('Users')
-            for User in UserList:
+            UserDict = event.player.fetch('Users')
+            for User in UserDict.values():
                 await User.save()
-
-            #** Remove Player From Cache **
-            self.client.lavalink.player_manager.remove(Guild.id)
             
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
@@ -203,18 +200,18 @@ class MusicCog(commands.Cog, name="Music"):
                         UserIDs.append(Member.id)
 
                 #** Check Old Users Stored In Players Are Still Listening, If Not Teardown User Object **
-                UserList = event.player.fetch('Users')
-                for User in UserList:
-                    if not(int(User.userData['discordID']) in UserIDs):
+                UserDict = event.player.fetch('Users')
+                for DiscordID, User in UserDict.items():
+                    if not(int(DiscordID) in UserIDs):
                         await User.save()
-                        UserList.remove(User)
+                        UserDict.remove(User)
                     else:
-                        UserIDs.remove(int(User.userData['discordID']))
+                        UserIDs.remove(int(DiscordID))
                 
-                #** Add New User Objects For Newly Joined Listeners & Store New User List Back In Player **
+                #** Add New User Objects For Newly Joined Listeners & Store New User Dict Back In Player **
                 for DiscordID in UserIDs:
-                    UserList.append(Users(self.client, DiscordID))
-                event.player.store('Users', UserList)
+                    UserDict[str(DiscordID)] = Users(self.client, DiscordID)
+                event.player.store('Users', UserDict)
 
                 #** For All Current Listeners, Add New Song To Their Song History **
                 URI = event.track['identifier'].split("/")
@@ -222,12 +219,15 @@ class MusicCog(commands.Cog, name="Music"):
                 TrackData = {ID: {"ListenedAt": Timestamp,
                                 "SpotifyID": None,
                                 "Name": event.track['title'],
-                                "Artists": event.track['author']}}
-                for User in UserList:
+                                "Artists": [event.track['author']],
+                                "URI": event.track['uri']}}
+                for User in UserDict.values():
                     if event.track.extra['spotify'] != {}:
                         TrackData[ID]['SpotifyID'] = event.track.extra['spotify']['ID']
                         TrackData[ID]['Name'] = event.track.extra['spotify']['name']
                         TrackData[ID]['Artists'] = event.track.extra['spotify']['artists']
+                        TrackData[ID]['ArtistIDs'] = event.track.extra['spotify']['artistID']
+                        TrackData[ID]['Popularity'] = event.track.extra['spotify']['popularity']
                     await User.incrementHistory(TrackData)
 
 
@@ -247,6 +247,7 @@ class MusicCog(commands.Cog, name="Music"):
         Player = self.client.lavalink.player_manager.get(ctx.guild.id)
         Query = Query.strip('<>')
 
+        #** Check If Query Is A Spotify URL **
         if Query.startswith("https://open.spotify.com/"):
 
             #** Strip ID From URL **
@@ -297,7 +298,6 @@ class MusicCog(commands.Cog, name="Music"):
                 if SongInfo == "PlaylistNotFound":
                     raise commands.UserInputError(message="Bad URL")
 
-                print(SongInfo)
                 PlaylistInfo = SongInfo['PlaylistInfo']
                 SongInfo = SongInfo['Tracks']
                 Type = "Album"
@@ -312,7 +312,7 @@ class MusicCog(commands.Cog, name="Music"):
                 Search = "scsearch:"+Info['Artists'][0]+" "+Info['Name']
                 Results = await Player.node.get_tracks(Search)
 
-                #** Create Track Object **
+                #** Create Track Object If Results Found **
                 if len(Results) > 0:
                     ArtistURI = "/".join(Results['tracks'][0]['info']['uri'].split("/")[:4])
                     Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, IgnoreHistory=False, artistURI=ArtistURI,
@@ -328,14 +328,12 @@ class MusicCog(commands.Cog, name="Music"):
                                      'popularity': Info['Popularity'],
                                      'explicit': Info['Explicit'],
                                      'preview': Info['Preview']})
-                    print(Track)
-                    print(Track.duration)
                 
-                #** If Track Duration = 30s, Inform It's Only A Preview **
+                #** If Track Duration = 3000ms(30s), Inform It's Only A Preview **
                 if Track.duration == 3000:
                     await ctx.send("We could only fetch a preview for the requested song!")
 
-                #** Send Queued Embed **
+                #** Format & Send Queued Embed If First Song In List To Queue **
                 if list(SongInfo.keys()).index(SpotifyID) == 0:
                     if PlaylistInfo == None:
                         Artists = Utils.format_artists(Info['Artists'], Info['ArtistID'])
@@ -348,7 +346,6 @@ class MusicCog(commands.Cog, name="Music"):
                             description = "["+PlaylistInfo['Name']+"]("+Query+") - "+str(PlaylistInfo['Length'])+" Tracks")
                     Queued.set_footer(text="Requested By "+ctx.author.display_name+"#"+str(ctx.author.discriminator))
                     await ctx.send(embed=Queued)
-                    await ctx.message.delete()
 
                 #**-----------------PLAY / ADD TO QUEUE--------------**#
 
@@ -359,18 +356,22 @@ class MusicCog(commands.Cog, name="Music"):
 
                 #**-----------------ADD TO CACHE----------------**#
 
+                #** Check If Data Needs To Be Cached **
                 if not(Cached):
+                    
                     #** Get SoundcloudID & Primary Colour Of Album Art **
                     URI = Track.identifier.split("/")
                     ID  = URI[4].split(":")[2]
                     RGB = Utils.get_colour(Info['Art'])
+                    
                     #** Create Song Info Dict With Formatted Data & Send To Database **
                     ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
                     ToCache.update(Info)
                     if ToCache['Explicit'] == 'N/A':
                         ToCache['Explicit'] = None
                     Database.AddFullSongCache(ToCache)
-            
+        
+        #** If Query Is From Soundcloud Or Is A Plain Text Input **
         elif Query.startswith("https://soundcloud.com/") or not(Query.startswith("https://")):
 
              #**------------INPUT: TEXT, TRACK OR PLAYLIST---------------**#
@@ -381,7 +382,6 @@ class MusicCog(commands.Cog, name="Music"):
                 Results['tracks'] = [Results['tracks'][0]]
             else:
                 Results = await Player.node.get_tracks(Query)
-            print(Results)
 
             #**---------------SEARCH CACHE------------**#
 
@@ -392,7 +392,6 @@ class MusicCog(commands.Cog, name="Music"):
                     ID  = URI[4].split(":")[2]
                     ArtistURI = "/".join(ResultTrack['info']['uri'].split("/")[:4])
                     Cached = False
-                    print(ID)
 
                     #** Check If Song Is In Cache & Set Cache To True If Data Found **
                     Spotify = Database.SearchCache(ID)
@@ -438,27 +437,23 @@ class MusicCog(commands.Cog, name="Music"):
                                          'preview': Spotify['Preview']})
                     else:
                         Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, recommended=True, IgnoreHistory=False, artistURI=ArtistURI, spotify={})
-                    print(Track)
-                    print(Track.duration)
-                    print(Track.extra['artistURI'])
 
-                    #** If Track Duration = 30s, Inform It's Only A Preview **
+                    #** If Track Duration = 3000ms(30s), Inform It's Only A Preview **
                     if Track.duration == 3000:
                         await ctx.send("We could only fetch a preview for the requested song!")
 
-                    #** Send Queued Embed If First Track In List **
+                    #** Format & Send Queued Embed If First Track In List **
                     if Results['tracks'].index(ResultTrack) == 0:
                         if Results['playlistInfo'] == {}:
                             Queued = discord.Embed(
                                 title = self.Emojis["Soundcloud"]+" Track Added To Queue!",
-                                description = "["+ResultTrack['info']['title']+"]("+ResultTrack['info']['uri']+") \nBy: *"+ResultTrack['info']['author']+"*")
+                                description = "["+ResultTrack['info']['title']+"]("+ResultTrack['info']['uri']+") \nBy: ["+ResultTrack['info']['author']+"]("+ArtistURI+")")
                         else:
                             Queued = discord.Embed(
                                 title = self.Emojis["Soundcloud"]+" Playlist Added To Queue!",
                                 description = "["+Results['playlistInfo']['name']+"]("+Query+") - "+str(len(Results['tracks']))+" Tracks")
                         Queued.set_footer(text="Requested By "+ctx.author.display_name+"#"+str(ctx.author.discriminator))
                         await ctx.send(embed=Queued)
-                        await ctx.message.delete()
 
                     #**-----------------PLAY / ADD TO QUEUE--------------**#
 
@@ -469,17 +464,28 @@ class MusicCog(commands.Cog, name="Music"):
                         
                     #**-----------------ADD TO CACHE----------------**#
 
+                    #** Check If Data Needs To Be Cached **
                     if not(Cached):
+
+                        #** If Spotify Data Available, Add Soundcloud Info & Get Colour **
                         if Spotify != None:
                             RGB = Utils.get_colour(Spotify['Art'])
                             ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
                             ToCache.update(Spotify)
+
+                            #** Format Explicit Column & Add Full Song Using Database Class **
                             if ToCache['Explicit'] == 'N/A':
                                 ToCache['Explicit'] = None
                             Database.AddFullSongCache(ToCache)
+
+                        #** Add Partial Class With Just Soundcloud Data If No Spotify Data Available **
                         else:
                             ToCache = {'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Name': Track.title, 'Artists': [Track.author]}
                             Database.AddPartialSongCache(ToCache)
+
+        #** If Input Isn't One Of Above Possible Categories, Raise Bad Argument Error **
+        else:
+            raise commands.BadArgument(message="play")
 
 
     @commands.guild_only()
@@ -506,12 +512,9 @@ class MusicCog(commands.Cog, name="Music"):
             Player.delete('NowPlaying')
 
             #** Save All Current Users Stored In Player To Database **
-            UserList = Player.fetch('Users')
-            for User in UserList:
+            UserDict = Player.fetch('Users')
+            for User in UserDict.values():
                 await User.save()
-
-            #** Remove Player From Cache **
-            self.client.lavalink.player_manager.remove(ctx.guild.id)
             
         #** If Music Not Playing, Raise Error **
         else:

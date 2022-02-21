@@ -3,14 +3,15 @@
 
 
 import os
+import math
 import json
 import base64
+import random
 import requests
 import pandas as pd
 from time import sleep
 from sklearn import tree
 from datetime import datetime
-from Classes.Database import UserData
 
 
 #!--------------------------------SPOTIFY-----------------------------------#
@@ -20,7 +21,7 @@ class Spotify(object):
     
     def __init__(self):
 
-        #** Get Spotify Details **
+        #** Get Spotify Tokens From Environment Variables **
         self.ID = os.environ["SPOTIFY_CLIENT"]
         self.Secret = os.environ["SPOTIFY_SECRET"]
 
@@ -29,11 +30,8 @@ class Spotify(object):
         AuthStr =  base64.urlsafe_b64encode(ClientData.encode()).decode()
         self.AuthHead = {"Content-Type": "application/x-www-form-urlencoded", 'Authorization': 'Basic {0}'.format(AuthStr)}
 
-        #** Get A Bot Token For API Calls **
+        #** Get An Initial Bot Token For API Calls **
         self.RefreshBotToken()
-
-        #** Setup Database **
-        self.Database = UserData()
 
 
     def RefreshBotToken(self):
@@ -427,7 +425,7 @@ class Music(Spotify):
     
     def __init__(self):
 
-        #** Initialise Youtube, Soundcloud & Spotify API Classes **
+        #** Initialise Spotify API Class **
         super().__init__()
 
         #** Assign Class Objects **
@@ -494,44 +492,128 @@ class Music(Spotify):
         return Prediction
 
 
-    def Recommend(self, Songs):
+    def RecommendFromTracks(self, Tracks):
 
-        #** Assign Variables **
-        Data = {'duration_ms': [], 'key': [], 'mode': [], 'time_signature': [], 'acousticness': [], 'danceability': [], 'energy': [], 'instrumentalness': [], 'liveness': [], 'loudness': [], 'speechiness': [], 'valence': [], 'tempo': []}
+        #** Create Dictionaries Used To Sort Data **
+        Data = {'duration_ms': [], 'key': [], 'mode': [], 'time_signature': [], 'acousticness': [], 'danceability': [], 'energy': [], 'instrumentalness': [], 'liveness': [], 'loudness': [], 'speechiness': [], 'valence': [], 'tempo': [], 'popularity': []}
         UserGenres = {'dance': 0, 'pop': 0, 'house': 0, 'alternative': 0, 'country': 0, 'classical': 0, 'electronic': 0, 'folk': 0, 'hip-hop': 0, 'rock': 0, 'heavy-metal': 0, 'indie': 0, 'jazz': 0, 'reggae': 0, 'rnb': 0}
         
-        #** Sort All Song ID's Into Groups Of 100 and Get Audio Features For Each Group Of Song IDs **
+        #** Form 2 Lists Of SongIDs and ArtistIDs & Add Popularity Of Songs To Data Dict **
         SongIDs = []
-        for ID in Songs.keys():
+        ArtistIDs = []
+        for ID, Info in Tracks.items():
             SongIDs.append(ID)
-        SongIDs = [SongIDs[x:x+100] for x in range(0, len(SongIDs), 100)]
-        for List in SongIDs:
-            Features = self.GetAudioFeatures(List)
+            if Info['Popularity'] != 'N/A':
+                Data['popularity'].append(Info['Popularity'])
+            else:
+                Data['popularity'].append(None)
+            for Artist in Info['ArtistID']:
+                ArtistIDs.append(Artist)
 
-            #** Sort Audio Features Into Groups Based On Feature **
+        #** Split SongIDs List Up Into Lists Of Max 100 Length **
+        SplitSongs = []
+        if len(SongIDs) > 100:
+            while SongIDs != []:
+                TempList = []
+                for i in range(100):
+                    if SongIDs != []:
+                        TempList.append(SongIDs[0])
+                        SongIDs.pop(0)
+                    else:
+                        break
+                SplitSongs.append(TempList)
+        else:
+            SplitSongs = SongIDs
+            SongIDs = []
+
+        #** Get Audio Features For Each List Of Songs **
+        for TrackSet in SplitSongs:
+            Features = self.GetAudioFeatures(TrackSet)
+
+            #** Sort Audio Features Into Data Dict Based On Key Ignoring Popularity **
             for Song in Features:
                 for Key in Data.keys():
-                    List = Data[Key]
-                    List.append(Song[Key])
-                    Data[Key] = List
+                    if Key != "popularity":
+                        Data[Key].append(Song[Key])
 
-                #** Get Genre For Songs and Add To Collective List **
+            #** Predict Genre For All 100 Songs Using List Of Song Features Returned Above and Add To UserGenres Dict **
             Genres = self.PredictGenre(Features)
-            print(len(Genres))
             for Genre in Genres:
                 UserGenres[Genre] += 1
-                
-        UserGenres = {key:value for key, value in sorted(UserGenres.items(), key=lambda item: item[1], reverse=True)} #! Replace with
-                                                                                                                      #! Sorting Algorithm
+        
+        #** Setup Lists Of Values To Sort & Their Keys and Get Length Of Data To Sort **
+        ToSort = [list(UserGenres.values())]
+        Genres = [list(UserGenres.keys())]
+        ArrayNum = len(ToSort[0])
+            
+        #** Split To Sort Into Individual Subsets **
+        while len(ToSort) < ArrayNum:
+            for i in range(len(ToSort)):
+                if len(ToSort[i]) > 1:
 
-        #**Construct Pandas Dataframe and Get Averages and Max / Min of Data **
-        Dataframe = pd.DataFrame(Data, columns = ['duration_ms', 'key', 'mode', 'time_signature', 'acousticness', 'danceability', 'energy', 'instrumentalness', 'liveness', 'loudness', 'speechiness', 'valence', 'tempo'])
+                    #** Sort To Sort **
+                    Array = ToSort.pop(i)
+                    ToSort.insert(i, Array[(len(Array) // 2):])
+                    ToSort.insert(i, Array[:(len(Array) // 2)])
+
+                    #** Sort Genres **
+                    Array = Genres.pop(i)
+                    Genres.insert(i, Array[(len(Array) // 2):])
+                    Genres.insert(i, Array[:(len(Array) // 2)])
+
+        #** While To Sort Isn't One Complete List Again **
+        while len(ToSort) > 1:
+
+            #** Loop Through Rounded-Up Half Of The Length Of To Sort, ie Two Subsets At A Time **
+            for i in range(math.ceil(len(ToSort) / 2)):
+                
+                #** Check Second Subset Isn't Outside Range Of List **
+                if i+1 < len(ToSort):
+
+                    #** For Value In Second Subset, Compare Against Each Value In The First Subset From Left To Right **
+                    for k in range(len(ToSort[i+1])):
+                        for j in range(len(ToSort[i])):
+
+                            #** If Value Smaller Than Value In Subset, Insert Value From Second Subset Before Value In First Subset **
+                            if ToSort[i][j] < ToSort[i+1][k]:
+                                ToSort[i].insert(j, ToSort[i+1][k])
+                                Genres[i].insert(j, Genres[i+1][k])
+                                break
+
+                        #** If Bigger Than All Values In Subset, Append To End Of First Subset **
+                        if not(ToSort[i+1][k] in ToSort[i]):
+                            ToSort[i].append(ToSort[i+1][k])
+                            Genres[i].append(Genres[i+1][k])
+                    
+                    #** Remove Second Subset From To Sort List **
+                    ToSort.pop(i+1)
+                    Genres.pop(i+1)
+        
+        #** Set Ordered Genres Lists For Use When Generating Recommendations **
+        OrderedGenres = Genres[0]
+
+        #** Construct Pandas Dataframe With Data and Get Averages and Max / Min of Data **
+        Dataframe = pd.DataFrame(Data, columns = ['duration_ms', 'key', 'mode', 'time_signature', 'acousticness', 'danceability', 'energy', 'instrumentalness', 'liveness', 'loudness', 'speechiness', 'valence', 'tempo', 'popularity'])
         Max = Dataframe.max()
         Min = Dataframe.min()
         Avg = Dataframe.mean()
 
-        #** Assign Data and Call GetRecommendations Method **
-        data = {'limit': 50, 'seed_genres': ",".join(list(UserGenres.keys())[:2]),
+        #** Recreate List Of SongIDs To Pick From **
+        for List in SplitSongs:
+            SongIDs.extend(List)
+
+        #** Select 2 Random Tracks & Artists As Seeds **
+        Seeds = {"tracks": [], "artists": []}
+        for Type, ChoiceList in Seeds.items():
+            while len(ChoiceList) < 2:
+                Choice = random.choice(SongIDs)
+                if not(Choice in ChoiceList):
+                    ChoiceList.append(Choice)
+                Seeds[Type] = ChoiceList
+
+        #** Assign Data and Call GetRecommendations Method With Data Dict **
+        data = {'limit': 50, 'seed_genres': str(OrderedGenres[0]), 
+                'seed_tracks': ",".join(Seeds['tracks']), 'seed_artists': ",".join(Seeds['artists']),
                 'min_acousticness': Min[4], 'target_acousticness': Avg[4], 'max_acousticness': Max[4], 
                 'min_danceability': Min[5], 'target_danceability': Avg[5], 'max_danceability': Max[5], 
                 'min_energy': Min[6], 'target_energy': Avg[6], 'max_energy': Max[6], 
@@ -540,7 +622,8 @@ class Music(Spotify):
                 'min_loudness': Min[9], 'target_loudness': Avg[9], 'max_loudness': Max[9],
                 'min_speechiness': Min[10], 'target_speechiness': Avg[10], 'max_speechiness': Max[10], 
                 'min_valence': Min[11], 'target_valence': Avg[11], 'max_valence': Max[11],
-                'min_tempo': Min[12], 'target_tempo': Avg[12], 'max_tempo': Max[12]}
+                'min_tempo': Min[12], 'target_tempo': Avg[12], 'max_tempo': Max[12],
+                'min_popularity': int(Min[13]), 'target_popularity': int(Avg[13]), 'max_popularity': int(Max[13])}
         Tracks = self.GetRecommendations(data)
         
         #** Return Track List **

@@ -26,9 +26,6 @@ class SpotifyUser(object):
 
         super(SpotifyUser, self).__init__(DiscordID)
 
-        #** Set Database Class **
-        self.Database = UserData()
-
         #** Get Spotify Details **
         self.SpotifyID = os.environ["SPOTIFY_CLIENT"]
         self.Secret = os.environ["SPOTIFY_SECRET"]
@@ -103,15 +100,15 @@ class SongHistory(object):
         super(SongHistory, self).__init__()
 
         #** Fetch Last Queue Session From Database, Returns Dict Of SongIDs & Data **
-        self.History = self.database.GetHistory(DiscordID)
+        self.History = self.Database.GetHistory(DiscordID)
 
         #** Setup Pointers & Array, Defining The MaxSize & Setting Full To False
         self.inpointer = 0
         self.outpointer = 0
         self.array = list(self.History.keys())
         print(self.array)
-        self.maxsize = 49
-        if len(self.array) == 50:
+        self.maxsize = 19
+        if len(self.array) == 20:
             self.full = True
         else:
             self.full = False
@@ -188,18 +185,24 @@ class Users(SpotifyUser, SongHistory):
     
     def __init__(self, client, DiscordID):
         
-        #** Setup Discord Client object **
+        #** Setup Discord Client object & Instantiate Music & Database Modules **
         self.client = client
-        self.database = UserData()
+        self.SongData = Music()
+        self.Database = UserData()
+
+        #** Initialise SpotifyUser, & Listening History Classes **
+        super(Users, self).__init__(DiscordID)
         
         #** Get User Object **
-        self.user = self.database.GetUser(DiscordID)
+        self.user = self.Database.GetUser(DiscordID)
         if self.user == None:
-            self.discordUser = self.client.get_user(DiscordID)
-            self.user = {"data": {"discordID": int(self.discordUser.id),
-                                  "name": self.discordUser.name,
-                                  "discriminator": self.discordUser.discriminator,
-                                  "avatar": self.discordUser.avatar_url},
+            discordUser = self.client.get_user(DiscordID)
+            self.user = {"data": {"discordID": int(discordUser.id),
+                                  "name": discordUser.name,
+                                  "discriminator": discordUser.discriminator,
+                                  "avatar": str(discordUser.avatar_url),
+                                  "joined": datetime.now(),
+                                  "songcount": 0},
                         "recommendations": {"Popularity": [0, 50, 100],
                                             "Acoustic": [0.0018, 0.223396, 0.8350],
                                             "Dance": [0.3080, 0.684500, 0.9560],
@@ -209,16 +212,13 @@ class Users(SpotifyUser, SongHistory):
                                             "Loud": [-11.8810, -6.250840, -2.7240],
                                             "Speech": [0.0282, 0.106186, 0.4020],
                                             "Valance": [0.0386, 0.521244, 0.9420]}}
-        
-        #** Initialise SpotifyUser, Music & Listening History Classes **
-        super(Users, self).__init__(DiscordID)
-        self.SongData = Music()
 
 
     async def save(self):
         
         #** Send Data To Database To Be Saved **
-        self.database.AddSongHistory(self.user['data']['discordID'], self.History, self.outpointer)
+        self.Database.AddSongHistory(self.user['data']['discordID'], self.History, self.outpointer)
+        self.Database.SaveUserDetails(self.user)
         
     
     async def incrementHistory(self, TrackData):
@@ -226,8 +226,9 @@ class Users(SpotifyUser, SongHistory):
         #** If Queue Is Currently Full, Clear Oldest Song From Queue **
         if self.check_full():
             OldSong = self.clearSong()
-        
-        #Features = self.SongData.GetAudioFeatures()
+            
+            if OldSong['spotifyID'] != None:
+                Features = self.SongData.GetAudioFeatures(OldSong['spotifyID'])
          
         #** Add New Song To Queue **
         self.addSong(TrackData)

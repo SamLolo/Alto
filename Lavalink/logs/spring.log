@@ -119,3 +119,4 @@
 2022-02-19 19:18:38.818  INFO 7852 --- [XNIO-1 task-9] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py
 2022-02-19 19:18:38.819  INFO 7852 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "configureResuming", "key": "default-node", "timeout": 60}
 2022-02-19 19:21:19.701  INFO 7852 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:52846 with status CloseStatus[code=1006, reason=] -- Session can be resumed within the next 60 seconds with key default-node
+2022-02-19 19:22:19.702  INFO 7852 --- [pool-3-thread-1] lavalink.server.io.SocketContext         : Shutting down 0 playing players.

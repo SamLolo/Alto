@@ -3,12 +3,13 @@
 
 
 import math
-import discord
+import json
 import random
 import asyncio
-import json
+import discord
 from datetime import datetime
 from discord.ext import commands
+from dateutil.relativedelta import relativedelta
 
 
 #!------------------------------IMPORT CLASSES----------------------------------#
@@ -63,54 +64,145 @@ class AccountCog(commands.Cog, name="Account"):
                       description="Displays information about your alto profile.")
     async def profile(self, ctx):
         
+        #** Setup Base Profile Embed With Title & User's Colour **
         ProfileEmbed = discord.Embed(title=ctx.author.display_name+"'s Profile",
                                      colour=ctx.author.colour)
-        ProfileEmbed.set_thumbnail(url=ctx.author.avatar_url)
+
+        #** If User Not In VC, Create New User Object **
+        if not(ctx.author.voice) or not(ctx.author.voice.channel):
+            CurrentUser = Users(self.client, ctx.author.id)
         
+        #** If In VC, Check If Player Active & If Not, Create New User Object **
+        else:
+            Player = self.client.lavalink.player_manager.get(ctx.author.voice.channel.guild.id)
+            if Player == None:
+                CurrentUser = Users(self.client, ctx.author.id)
+            
+            #** If Player Active, Fetch Users Dict & Check If User In Dictionary Otherwise Create New User Object **
+            else:
+                UserDict = Player.fetch('Users')
+                try:
+                    CurrentUser = UserDict[str(ctx.author.id)]
+                except:
+                    CurrentUser = Users(self.client, ctx.author.id)
+
+        #** Get Last SongID & It's Matching Song Data **
+        LastSong = CurrentUser.array[len(CurrentUser.array) - 1]
+        LastSongData = CurrentUser.History[LastSong]
+
+        #** Format Data For Song & Add Last Listened To Song To Embed As Field **
+        FormattedSong = Utils.format_song(LastSongData)
+        ProfileEmbed.add_field(name="Last Listened To:", value=FormattedSong, inline=False)
+
+        #** Calculate Time Difference And Check What To Display **
+        TimeDiff = Uptime = relativedelta(datetime.now(), LastSongData['ListenedAt'])
+        if TimeDiff.years > 1:
+            ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.years)+" years ago")
+        elif TimeDiff.years == 1:
+            ProfileEmbed.add_field(name="Last Listening Session:", value="Over a year ago")
+        elif TimeDiff.months > 1:
+            ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.months)+" months ago")
+        elif TimeDiff.months == 1:
+            ProfileEmbed.add_field(name="Last Listening Session:", value="Over a month ago")
+        elif TimeDiff.days > 1:
+            ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.days)+" days ago")
+        elif TimeDiff.days == 1:
+            ProfileEmbed.add_field(name="Last Listening Session:", value="A day ago")
+        elif TimeDiff.hours > 1:
+            ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.hours)+" hours ago")
+        elif TimeDiff.hours == 1:
+            ProfileEmbed.add_field(name="Last Listening Session:", value="An hour ago")
+        else:
+            ProfileEmbed.add_field(name="Last Listening Session:", value="Less than an hour ago")
+
+        #** Calculate Total Song Count & Add As Field To Embed **
+        SongTotal = int(CurrentUser.user['data']['songcount']) + len(CurrentUser.array)
+        ProfileEmbed.add_field(name="Lifetime Song Count:", value=str(SongTotal)+" Songs")
+
+        #** Add Spotify Section If One Available, Otherwise Set Thumbnail To Discord Profile Pic **
+        if not(CurrentUser.SpotifyConnected):
+            ProfileEmbed.set_thumbnail(url=ctx.author.avatar_url)
+        else:
+
+            #** Create And Insert Spotify Section At Top Of Embed **
+            ProfileEmbed.description = "**Spotify:**"
+            Spotify = CurrentUser.SpotifyData
+            ProfileEmbed.set_thumbnail(url=Spotify['avatar'])
+            ProfileEmbed.insert_field_at(0, name="Username:", value="["+Spotify['name']+"](https://open.spotify.com/user/"+Spotify['spotifyID']+")")
+            ProfileEmbed.insert_field_at(1, name="Spotify Followers:", value=str(Spotify['followers']))
+        
+        #** Send Profile Embed To User **
         await ctx.send(embed=ProfileEmbed)
 
 
     @commands.command(aliases=['h', 'lastlistened'], 
-                      description="Displays your 50 last listened to songs through the bot.")
+                      description="Displays your 20 last listened to songs through the bot.")
     async def history(self, ctx):
         
-        # { !!!NEEDS TESTING!!! } #
-        
+        #** Setup Base History Embed With Title, User's Colour & Profile Picture **
         HistoryEmbed = discord.Embed(title=ctx.author.display_name+"'s Listening History",
                                      colour=ctx.author.colour)
         HistoryEmbed.set_thumbnail(url=ctx.author.avatar_url)
         
-        CurrentUser = Users(self.client, ctx.author.id)
+        #** If User Not In VC, Create New User Object **
+        if not(ctx.author.voice) or not(ctx.author.voice.channel):
+            CurrentUser = Users(self.client, ctx.author.id)
+        
+        #** If In VC, Check If Player Active & If Not, Create New User Object **
+        else:
+            Player = self.client.lavalink.player_manager.get(ctx.author.voice.channel.guild.id)
+            if Player == None:
+                CurrentUser = Users(self.client, ctx.author.id)
+            
+            #** If Player Active, Fetch Users Dict & Check If User In Dictionary Otherwise Create New User Object **
+            else:
+                UserDict = Player.fetch('Users')
+                try:
+                    CurrentUser = UserDict[str(ctx.author.id)]
+                except:
+                    CurrentUser = Users(self.client, ctx.author.id)
+
+        #** Check User Has Listened To Some Songs & Create Iteration Object Through History & Empty Pages List **
         if len(CurrentUser.array) > 0:
             History = iter(CurrentUser.array)
-            Description = ""
             Pages = []
             
-            for Count in range(math.ceil(len(CurrentUser.array) / 10)):
-                for i in range(10):
+            #** For Upper Bound Of Length Of History Divided By 5 Representing The Amount Of Pages Needed **
+            for Count in range(math.ceil(len(CurrentUser.array) / 5)):
+
+                #** Set Empty Description String & Get Next ID In History. If Returns None, Break Loop As Run Out Of Songs **
+                Description = ""
+                for i in range(5):
                     NextSong = next(History, None)
                     if NextSong == None:
                         break
+
+                    #** Get Values Corresponding To SoundCloudID In NextSong **
                     Values = CurrentUser.History[NextSong]
-                    if Values['SpotifyID'] is not None:
-                        FormattedArtists = Utils.format_artists(Values['Artists'], Values['ArtistIDs'])
-                        Description += self.Emojis['Spotify']+"**"+Values['Name']+"**\n"+FormattedArtists+"\n"
-                    else:
-                        Description += self.Emojis['Soundcloud']+"**"+Values['Name']+"**\n"+Values['Artists'][0]+"\n"
+
+                    #** Format Song & Add Listened To Stat & Divisor **
+                    Description += Utils.format_song(Values)
+                    Description += "\n*Listened on "+Values['ListenedAt'].strftime('%d/%m/%y')+" at "+Values['ListenedAt'].strftime('%H:%M')+"*"
+                    Description += "\n--------------------\n"
                 
+                #** Set Embed Description To String Created Above **
                 HistoryEmbed.description = Description
-                Description = ""
-                if math.ceil(len(CurrentUser.array) / 10) > 1:
-                    HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.array) / 10)))
+
+                #** Set Page Number If More Than One Page Needed **
+                if math.ceil(len(CurrentUser.array) / 5) > 1:
+                    HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.array) / 5)))
                 
+                #** Send First Embed Page On First Loop Through Count **
                 if Count == 0:
                     Page = await ctx.send(embed=HistoryEmbed)
             
-            if math.ceil(len(CurrentUser.array) / 10) > 1:
+            #** If More Than One Page Being Displayed, Add Back And Next Reactions & Add To Global Pagination System **
+            if math.ceil(len(CurrentUser.array) / 5) > 1:
                 await Page.add_reaction(self.Emojis['Back'])
                 await Page.add_reaction(self.Emojis['Next'])
                 await self.Pagination.add_fields(Page.id, Pages)
         
+        #** Let User Know If They Have No Listening History To Display **
         else:
             await ctx.send("**You do not have any history to display!**\nGet listening today by joining a vc and running `!play`!")
     
@@ -161,7 +253,7 @@ class AccountCog(commands.Cog, name="Account"):
                     await Page.edit(content="**Analysing Your Spotify History...**")
 
                     #** Get Recommendations From Returned Songs **
-                    Tracks = SongData.Recommend(Songs)
+                    Tracks = SongData.RecommendFromTracks(Songs)
                     print("Got Recomendations")
                                 
                 #** Let User Know If They've Not Connected Their Spotify **
@@ -294,9 +386,65 @@ class AccountCog(commands.Cog, name="Account"):
                 Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
                 if Reaction.event_type == 'REACTION_ADD':
                     if str(Reaction.emoji) == self.Emojis['Tick']:
-                        Database.RemoveSpotify(ctx.author.id)
+                        Database.RemoveData(ctx.author.id, ['spotify'])
                         await ctx.message.author.dm_channel.send("**Spotify Account Unlinked!**\nIf you need to relink at any time, simply run `!link`.")
 
+
+    @commands.command(aliases=['remove', 'clear'],
+                      description="Deletes your user data where requested from our database.",
+                      usage="!remove <data>",
+                      help="`Possible Inputs For <data>:`\n- all: *deletes all traces of your data*\n- spotify: *deletes your spotify data (equivalent of `!unlink`)*\n"+
+                           "- history: *deletes all your listening history*\n- user: *deletes all user data including your listening history, but excluding spotify data*")
+    async def delete(self, ctx, data):
+        
+        #** Generate Message To Send To User & The Table That Would Need To Be Deleted **
+        if data == "all":
+            Message = "All stored data will be deleted and lost forever!\nYou may lose access to certain bot features temporarily after this process!"
+            Tables = ['users', 'spotify', 'history', 'recommendations']
+        elif data == "spotify":
+            Message = "All spotify data will be deleted and lost forever!\nIf you haven't connected your spotify, this won\'t do anything!"
+            Tables = ['spotify']
+        elif data == "history":
+            Message = "All listening history will be deleted and lost forever!\nYou may lose access to certain bot features temporarily after this process!"
+            Tables = ['history']
+        elif data == "user":
+            Message = "All listening history and user data, besides spotify data, will be deleted and lost forever!\nYou may lose access to certain bot features temporarily after this process!"
+            Tables = ['user', 'recommendations', 'history']
+        
+        #** If Invalid Input, Raise Bad Argument Error **
+        else:
+            raise commands.BadArgument(message="delete")
+
+        #** Create Warning Embed & Check User Is Sure They Want To Delete Their Data **
+        WarningEmbed = discord.Embed(title="Are you sure you want to remove your data?",
+                                     description=Message,
+                                     colour=discord.Colour.red())
+        WarningEmbed.set_footer(text="If you continue using the bot, new data will be stored!")
+
+        #** Create DM Channel With User If One Doesn't Already Exist **
+        if ctx.message.author.dm_channel == None:
+            await ctx.message.author.create_dm()
+        
+        #** Try To Send Embed To User & Add Reaction If Successful**
+        try:
+            SentWarning = await ctx.message.author.dm_channel.send(embed=WarningEmbed)
+            await SentWarning.add_reaction(self.Emojis['Tick'])
+
+        #** Raise Error If Can't Send Messages To DM Channel **
+        except :
+            raise commands.CheckFailure(message="DM")
+
+        #** Check Function To Be Called When Checking If Correct Reaction Has Taken Place **
+        def ReactionAdd(Reaction):
+            return (Reaction.message_id == SentWarning.id) and (Reaction.user_id != 803939964092940308)
+
+        #** Wait For User To React To Tick & Remove Data When Done So **
+        while True:
+                Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
+                if Reaction.event_type == 'REACTION_ADD':
+                    if str(Reaction.emoji) == self.Emojis['Tick']:
+                        Database.RemoveData(ctx.author.id, Tables)
+                        await ctx.message.author.dm_channel.send("All requested data successfully removed!")
 
 #!-------------------SETUP FUNCTION-------------------#
 
