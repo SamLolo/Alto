@@ -1,11 +1,11 @@
 {
     "Status": {
-        "Playing": "DEV 1.04",
+        "Playing": "V 1.0",
         "Watching": "!help"
     },
     "StatusTime": 60,
     "Prefix": "!",
-    "Welcome_Message": "Thanks for choosing my music bot!",
+    "Welcome_Message": "Thanks for choosing my music bot! Get started by joining a vc and running `!play <song>`. \nFor more information about the range of commands available, run `!help`.",
     "Variables": {
         "Emojis": {
             "Tick": "<a:checkmark:738865801964027904>",

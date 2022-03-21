@@ -17,7 +17,7 @@ from discord.ext import commands
 
 from Classes.Users import Users
 from Classes.Database import UserData
-from Classes.Music import Music
+from Classes.MusicUtils import Music
 from Classes.Utils import Utility
 
 
@@ -216,11 +216,12 @@ class MusicCog(commands.Cog, name="Music"):
                 #** For All Current Listeners, Add New Song To Their Song History **
                 URI = event.track['identifier'].split("/")
                 ID  = URI[4].split(":")[2]
-                TrackData = {ID: {"ListenedAt": Timestamp,
-                                "SpotifyID": None,
-                                "Name": event.track['title'],
-                                "Artists": [event.track['author']],
-                                "URI": event.track['uri']}}
+                TrackData = {"ID": ID,
+                             "ListenedAt": Timestamp,
+                             "SpotifyID": None,
+                             "Name": event.track['title'],
+                             "Artists": [event.track['author']],
+                             "URI": event.track['uri']}
                 for User in UserDict.values():
                     if event.track.extra['spotify'] != {}:
                         TrackData[ID]['SpotifyID'] = event.track.extra['spotify']['ID']
@@ -329,9 +330,9 @@ class MusicCog(commands.Cog, name="Music"):
                                      'explicit': Info['Explicit'],
                                      'preview': Info['Preview']})
                 
-                #** If Track Duration = 3000ms(30s), Inform It's Only A Preview **
-                if Track.duration == 3000:
-                    await ctx.send("We could only fetch a preview for the requested song!")
+                #** If Track Duration = 30000ms(30s), Inform It's Only A Preview **
+                if Track.duration == 30000:
+                    await ctx.send("**Sorry, we could only fetch a preview for the requested song!**")
 
                 #** Format & Send Queued Embed If First Song In List To Queue **
                 if list(SongInfo.keys()).index(SpotifyID) == 0:
@@ -369,6 +370,8 @@ class MusicCog(commands.Cog, name="Music"):
                     ToCache.update(Info)
                     if ToCache['Explicit'] == 'N/A':
                         ToCache['Explicit'] = None
+                    if ToCache['Popularity'] == 'N/A':
+                        ToCache['Popularity'] = None
                     Database.AddFullSongCache(ToCache)
         
         #** If Query Is From Soundcloud Or Is A Plain Text Input **
@@ -438,8 +441,8 @@ class MusicCog(commands.Cog, name="Music"):
                     else:
                         Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, recommended=True, IgnoreHistory=False, artistURI=ArtistURI, spotify={})
 
-                    #** If Track Duration = 3000ms(30s), Inform It's Only A Preview **
-                    if Track.duration == 3000:
+                    #** If Track Duration = 30000ms(30s), Inform It's Only A Preview **
+                    if Track.duration == 30000:
                         await ctx.send("We could only fetch a preview for the requested song!")
 
                     #** Format & Send Queued Embed If First Track In List **

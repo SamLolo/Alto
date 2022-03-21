@@ -68,17 +68,18 @@ class UserData():
                              "name": Data[1],
                              "discriminator": Data[2],
                              "avatar": Data[3],
-                             "joined": Data[4],
-                             "songcount": Data[6]},
-                    "recommendations": {"Popularity": [Data[7], Data[8], Data[9]],
-                                        "Acoustic": [Data[10], Data[11], Data[12]],
-                                        "Dance": [Data[13], Data[14], Data[15]],
-                                        "Energy": [Data[16], Data[17], Data[18]],
-                                        "Instrument": [Data[19], Data[20], Data[21]],
-                                        "Live": [Data[22], Data[23], Data[24]],
-                                        "Loud": [Data[25], Data[26], Data[27]],
-                                        "Speech": [Data[28], Data[29], Data[30]],
-                                        "Valance": [Data[31], Data[32], Data[33]]}}
+                             "joined": Data[5],
+                             "songs": Data[4]},
+                    "recommendations": {"songcount": Data[7],
+                                        "Popularity": [Data[8], Data[9], Data[10]],
+                                        "Acoustic": [Data[11], Data[12], Data[13]],
+                                        "Dance": [Data[14], Data[15], Data[16]],
+                                        "Energy": [Data[17], Data[18], Data[19]],
+                                        "Instrument": [Data[20], Data[21], Data[22]],
+                                        "Live": [Data[23], Data[24], Data[25]],
+                                        "Loud": [Data[26], Data[27], Data[28]],
+                                        "Speech": [Data[29], Data[30], Data[31]],
+                                        "Valance": [Data[32], Data[33], Data[34]]}}
             return Dict
         else:
             return None
@@ -86,26 +87,34 @@ class UserData():
 
     def GetHistory(self, discordID):
 
-        #** Get Users Listening History From Database **
+        #** Get Users Listening History From Database, Ordeded By Most Recent First **
         self.cursor.execute("SELECT history.SongID, history.ListenedAt, cache.SoundcloudURL, cache.SpotifyID, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity FROM history INNER JOIN cache ON history.SongID = cache.SoundcloudID WHERE DiscordID = '"+str(discordID)+"' ORDER BY ListenedAt ASC;")
         History = self.cursor.fetchall()
         self.connection.commit()
 
-        Dict = {}
+        #** Create Empty List & Itterate Through Returned Rows **
+        List = []
         for Tuple in History:
+            
+            #** Create Dictionary Of Song Data From Returned Tuple **
             ID = int(Tuple[0])
-            Dict[ID] = {"ListenedAt": Tuple[1],
-                                   "SpotifyID": Tuple[3],
-                                   "Name": Tuple[4],
-                                   "Artists": Tuple[5].replace("'", "").split(", "),
-                                   "URI": Tuple[2]}
+            Dict = {"ID": ID,
+                    "ListenedAt": Tuple[1],
+                    "SpotifyID": Tuple[3],
+                    "Name": Tuple[4],
+                    "Artists": Tuple[5].replace("'", "").split(", "),
+                    "URI": Tuple[2]}
+            
+            #** If Song Has Spotify ID, Add Spotify Data As Well **
             if Tuple[3] != None:
-                Dict[ID]['ArtistIDs'] = Tuple[6].replace("'", "").split(", ")
-                Dict[ID]['Popularity'] = Tuple[7]
+                Dict['ArtistIDs'] = Tuple[6].replace("'", "").split(", ")
+                Dict['Popularity'] = Tuple[7]
+                
+            #** Add Dictionary To List **
+            List.append(Dict)
 
-        #** Return List Of Ordered Song IDs **
-        print(Dict)
-        return Dict
+        #** Return List Of Ordered Song Dictionaries **
+        return List
 
 
     def GetSpotify(self, discordID):
@@ -133,12 +142,13 @@ class UserData():
     def SaveUserDetails(self, User):
 
         #** Write Data About User To Users Table / Update Row If Already Exists **
-        Data = [User['data']['discordID'], User['data']['name'], User['data']['discriminator'], User['data']['avatar'], User['data']['joined']]
-        self.cursor.execute("REPLACE INTO users VALUES "+str(Data)+";")
+        Data = (str(User['data']['discordID']), User['data']['name'], User['data']['discriminator'], User['data']['avatar'], User['data']['songs'], User['data']['joined'])
+        print(Data)
+        self.cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s, %s);", Data)
         self.connection.commit()
 
-        #** Write Data About User Recommendation Data To Recommendations Table **
-        Data = [User['data']['discordID'], User['data']['songcount'], 
+        #** Write Data About User Recommendation Data To Recommendations Table / Update If Already Exists **
+        Data = (User['data']['discordID'], User['recommendations']['songcount'], 
                 User['recommendations']['Popularity'][0], User['recommendations']['Popularity'][1], User['recommendations']['Popularity'][2],
                 User['recommendations']['Acoustic'][0], User['recommendations']['Acoustic'][1], User['recommendations']['Acoustic'][2],
                 User['recommendations']['Dance'][0], User['recommendations']['Dance'][1], User['recommendations']['Dance'][2],
@@ -147,8 +157,8 @@ class UserData():
                 User['recommendations']['Live'][0], User['recommendations']['Live'][1], User['recommendations']['Live'][2],
                 User['recommendations']['Live'][0], User['recommendations']['Loud'][1], User['recommendations']['Loud'][2],
                 User['recommendations']['Speech'][0], User['recommendations']['Speech'][1], User['recommendations']['Speech'][2],
-                User['recommendations']['Valance'][0], User['recommendations']['Valance'][1], User['recommendations']['Valance'][2]]
-        self.cursor.execute("REPLACE INTO recommendations VALUES "+str(Data)+";")
+                User['recommendations']['Valance'][0], User['recommendations']['Valance'][1], User['recommendations']['Valance'][2])
+        self.cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", Data)
         self.connection.commit()
 
     
@@ -167,24 +177,21 @@ class UserData():
         self.connection.commit()
 
 
-    def AddSongHistory(self, discordID, SongDict, OutPointer):
-
-        #** Separate SongDict Into 2 Lists **
-        SongIDs = list(SongDict.keys())
+    def AddSongHistory(self, discordID, History, OutPointer):
 
         #** Delete All Rows Older Than Oldest Song In Song History & Get Amount Deleted**
-        Oldest = list(SongDict.values())[OutPointer]["ListenedAt"]
+        Oldest = History[OutPointer]["ListenedAt"]
         self.cursor.execute("DELETE FROM history WHERE ListenedAt < '"+str(Oldest)+"';")
         DeletedRows = self.cursor.execute("SELECT ROW_COUNT();")
 
         #** If No Rows Deleted, Set Deleted Rows To Length Of List So All Songs Are Added. Using REPLACE INTO Avoids Errors For Duplicates, **
         #** As Columns With The Same Primary Key Are Just OverWritten **
         if DeletedRows == None:
-            DeletedRows = len(SongIDs)
+            DeletedRows = len(History)
             
         #** Format SQL Execute String **
         for i in range(DeletedRows):
-            Data = (str(discordID), SongIDs[i], SongDict[SongIDs[i]]["ListenedAt"])
+            Data = (str(discordID), History[i]['ID'], History[i]["ListenedAt"])
             print(Data)
             self.cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", Data)
             

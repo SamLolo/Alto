@@ -70,13 +70,10 @@ class Auth():
         cursor.execute("SELECT * FROM spotify WHERE DiscordID = '"+str(discordID)+"';")
         Verification = cursor.fetchone()
         connection.commit()
-        print(Verification)
 
         #** Check Row Was Found & If Not None, Calculate Time Difference From When Request Was Made In Discord **
         if Verification != None:
-            TimeDiff = Uptime = relativedelta(datetime.now(), Verification[7])
-            print(TimeDiff.seconds)
-            print(TimeDiff.minutes)
+            TimeDiff = relativedelta(datetime.now(), Verification[7])
 
             #** Check If Time Difference Is Within 10 Mins (Auth Hasn't Timed Out) & Cleanup User From Database If So **
             if TimeDiff.minutes >= 10:
@@ -138,7 +135,6 @@ class Auth():
         AuthData = AuthData.json()
         self.UserToken = AuthData['access_token']
         self.UserRefresh = AuthData['refresh_token']
-        print(len(self.UserRefresh))
         self.UserHead = {'Accept': "application/json", 'Content-Type': "application/json", 'Authorization': "Bearer "+self.UserToken}
         
         #** Carry Out Request To Get Further Details **
@@ -210,7 +206,7 @@ def PostSpotify():
     #** Get Code & State Passed In As Params In URL **
     Code = request.args.get('code')
     State = request.args.get('state')
-    print("\n"+str(Code)+"\n"+str(State)+"\n")
+    print("New Request!\nCode: "+str(Code)+"\nState: "+str(State)+"\n")
     
     #** Check State Is An Active State & Get Corresponding Auth Class **
     if State in list(ActiveStates.keys()):
@@ -247,7 +243,6 @@ def PreSpotify():
 
     #** Get DiscordID Passed Through In URL & Check It's Valid **
     discordID = str(request.args.get('discord'))
-    print(discordID)
     if discordID.isdecimal() and len(discordID) == 18:
         
         #** Setup Auth Class For New User & Attempt To Initialise DiscordID **

@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
+import copy
 import math
 import json
 import random
@@ -17,7 +18,7 @@ from dateutil.relativedelta import relativedelta
 
 from Classes.Users import Users
 from Classes.Database import UserData
-from Classes.Music import Music
+from Classes.MusicUtils import Music
 from Classes.Utils import Utility
 
 
@@ -86,37 +87,42 @@ class AccountCog(commands.Cog, name="Account"):
                 except:
                     CurrentUser = Users(self.client, ctx.author.id)
 
-        #** Get Last SongID & It's Matching Song Data **
-        LastSong = CurrentUser.array[len(CurrentUser.array) - 1]
-        LastSongData = CurrentUser.History[LastSong]
+        #** Get Last Song's Data if Listening History Isn't Empty **
+        if CurrentUser.array > 0:
+            LastSongData = CurrentUser.History[len(CurrentUser.array) - 1]
 
-        #** Format Data For Song & Add Last Listened To Song To Embed As Field **
-        FormattedSong = Utils.format_song(LastSongData)
-        ProfileEmbed.add_field(name="Last Listened To:", value=FormattedSong, inline=False)
+            #** Format Data For Song & Add Last Listened To Song To Embed As Field **
+            FormattedSong = Utils.format_song(LastSongData)
+            ProfileEmbed.add_field(name="Last Listened To:", value=FormattedSong, inline=False)
 
-        #** Calculate Time Difference And Check What To Display **
-        TimeDiff = Uptime = relativedelta(datetime.now(), LastSongData['ListenedAt'])
-        if TimeDiff.years > 1:
-            ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.years)+" years ago")
-        elif TimeDiff.years == 1:
-            ProfileEmbed.add_field(name="Last Listening Session:", value="Over a year ago")
-        elif TimeDiff.months > 1:
-            ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.months)+" months ago")
-        elif TimeDiff.months == 1:
-            ProfileEmbed.add_field(name="Last Listening Session:", value="Over a month ago")
-        elif TimeDiff.days > 1:
-            ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.days)+" days ago")
-        elif TimeDiff.days == 1:
-            ProfileEmbed.add_field(name="Last Listening Session:", value="A day ago")
-        elif TimeDiff.hours > 1:
-            ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.hours)+" hours ago")
-        elif TimeDiff.hours == 1:
-            ProfileEmbed.add_field(name="Last Listening Session:", value="An hour ago")
+            #** Calculate Time Difference And Check What To Display **
+            TimeDiff = Uptime = relativedelta(datetime.now(), LastSongData['ListenedAt'])
+            if TimeDiff.years > 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.years)+" years ago")
+            elif TimeDiff.years == 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value="Over a year ago")
+            elif TimeDiff.months > 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.months)+" months ago")
+            elif TimeDiff.months == 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value="Over a month ago")
+            elif TimeDiff.days > 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.days)+" days ago")
+            elif TimeDiff.days == 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value="A day ago")
+            elif TimeDiff.hours > 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.hours)+" hours ago")
+            elif TimeDiff.hours == 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value="An hour ago")
+            else:
+                ProfileEmbed.add_field(name="Last Listening Session:", value="Less than an hour ago")
+        
+        #** Add Blank Fields If Listening History Empty **
         else:
-            ProfileEmbed.add_field(name="Last Listening Session:", value="Less than an hour ago")
+            ProfileEmbed.add_field(name="Last Listened To:", value="No Listening History")
+            ProfileEmbed.add_field(name="Last Listening Session:", value="N/A")
 
         #** Calculate Total Song Count & Add As Field To Embed **
-        SongTotal = int(CurrentUser.user['data']['songcount']) + len(CurrentUser.array)
+        SongTotal = int(CurrentUser.user['data']['songs']) + len(CurrentUser.array)
         ProfileEmbed.add_field(name="Lifetime Song Count:", value=str(SongTotal)+" Songs")
 
         #** Add Spotify Section If One Available, Otherwise Set Thumbnail To Discord Profile Pic **
@@ -162,27 +168,25 @@ class AccountCog(commands.Cog, name="Account"):
                 except:
                     CurrentUser = Users(self.client, ctx.author.id)
 
-        #** Check User Has Listened To Some Songs & Create Iteration Object Through History & Empty Pages List **
+        #** Check User Has Listened To Some Songs & Create Iteration Object Through History List **
         if len(CurrentUser.array) > 0:
-            History = iter(CurrentUser.array)
+            History = reversed(CurrentUser.History)
+            print(History)
             Pages = []
             
             #** For Upper Bound Of Length Of History Divided By 5 Representing The Amount Of Pages Needed **
             for Count in range(math.ceil(len(CurrentUser.array) / 5)):
 
-                #** Set Empty Description String & Get Next ID In History. If Returns None, Break Loop As Run Out Of Songs **
+                #** Set Empty Description String & Get Next SongData Dict In History. If Returns None, Break Loop As Run Out Of Songs **
                 Description = ""
                 for i in range(5):
                     NextSong = next(History, None)
                     if NextSong == None:
                         break
 
-                    #** Get Values Corresponding To SoundCloudID In NextSong **
-                    Values = CurrentUser.History[NextSong]
-
                     #** Format Song & Add Listened To Stat & Divisor **
-                    Description += Utils.format_song(Values)
-                    Description += "\n*Listened on "+Values['ListenedAt'].strftime('%d/%m/%y')+" at "+Values['ListenedAt'].strftime('%H:%M')+"*"
+                    Description += Utils.format_song(NextSong)
+                    Description += "\n*Listened on "+NextSong['ListenedAt'].strftime('%d/%m/%y')+" at "+NextSong['ListenedAt'].strftime('%H:%M')+"*"
                     Description += "\n--------------------\n"
                 
                 #** Set Embed Description To String Created Above **
@@ -191,6 +195,8 @@ class AccountCog(commands.Cog, name="Account"):
                 #** Set Page Number If More Than One Page Needed **
                 if math.ceil(len(CurrentUser.array) / 5) > 1:
                     HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.array) / 5)))
+                    PageDict = copy.deepcopy(HistoryEmbed.to_dict())
+                    Pages.append(PageDict)
                 
                 #** Send First Embed Page On First Loop Through Count **
                 if Count == 0:
@@ -200,7 +206,7 @@ class AccountCog(commands.Cog, name="Account"):
             if math.ceil(len(CurrentUser.array) / 5) > 1:
                 await Page.add_reaction(self.Emojis['Back'])
                 await Page.add_reaction(self.Emojis['Next'])
-                await self.Pagination.add_fields(Page.id, Pages)
+                await self.Pagination.add_pages(Page.id, Pages)
         
         #** Let User Know If They Have No Listening History To Display **
         else:
@@ -392,7 +398,7 @@ class AccountCog(commands.Cog, name="Account"):
 
     @commands.command(aliases=['remove', 'clear'],
                       description="Deletes your user data where requested from our database.",
-                      usage="!remove <data>",
+                      usage="!delete <data>",
                       help="`Possible Inputs For <data>:`\n- all: *deletes all traces of your data*\n- spotify: *deletes your spotify data (equivalent of `!unlink`)*\n"+
                            "- history: *deletes all your listening history*\n- user: *deletes all user data including your listening history, but excluding spotify data*")
     async def delete(self, ctx, data):
@@ -418,7 +424,7 @@ class AccountCog(commands.Cog, name="Account"):
         #** Create Warning Embed & Check User Is Sure They Want To Delete Their Data **
         WarningEmbed = discord.Embed(title="Are you sure you want to remove your data?",
                                      description=Message,
-                                     colour=discord.Colour.red())
+                                     colour=discord.Colour.gold())
         WarningEmbed.set_footer(text="If you continue using the bot, new data will be stored!")
 
         #** Create DM Channel With User If One Doesn't Already Exist **
@@ -428,6 +434,7 @@ class AccountCog(commands.Cog, name="Account"):
         #** Try To Send Embed To User & Add Reaction If Successful**
         try:
             SentWarning = await ctx.message.author.dm_channel.send(embed=WarningEmbed)
+            await ctx.send("Please check your DMs!")
             await SentWarning.add_reaction(self.Emojis['Tick'])
 
         #** Raise Error If Can't Send Messages To DM Channel **
@@ -445,6 +452,7 @@ class AccountCog(commands.Cog, name="Account"):
                     if str(Reaction.emoji) == self.Emojis['Tick']:
                         Database.RemoveData(ctx.author.id, Tables)
                         await ctx.message.author.dm_channel.send("All requested data successfully removed!")
+
 
 #!-------------------SETUP FUNCTION-------------------#
 

@@ -14,7 +14,7 @@ from datetime import datetime
 
 
 from Classes.Database import UserData
-from Classes.Music import Music
+from Classes.MusicUtils import Music
 
 
 #!--------------------------------SPOTIFY USER-----------------------------------#
@@ -99,14 +99,17 @@ class SongHistory(object):
 
         super(SongHistory, self).__init__()
 
-        #** Fetch Last Queue Session From Database, Returns Dict Of SongIDs & Data **
+        #** Fetch Last Queue Session From Database, Returns List Of Dictionaries **
         self.History = self.Database.GetHistory(DiscordID)
+        
+        #** Create Array Of SongIDs **
+        self.array = []
+        for dict in self.History:
+            self.array.append(dict['ID'])
 
-        #** Setup Pointers & Array, Defining The MaxSize & Setting Full To False
+        #** Setup Pointers, Defining The MaxSize & Setting Full To False
         self.inpointer = 0
         self.outpointer = 0
-        self.array = list(self.History.keys())
-        print(self.array)
         self.maxsize = 19
         if len(self.array) == 20:
             self.full = True
@@ -131,12 +134,14 @@ class SongHistory(object):
         #** Check If Queue Is Full **
         if not(self.check_full()):
             
-            #** Add Value To Array & Increment In-Pointer **
+            #** Add Value To Array & Data To History & Increment In-Pointer **
+            ID = list(data.keys())[0]
             if len(self.array) == self.maxsize:
-                self.array[self.inpointer] = list(data.keys())[0]
+                self.array[self.inpointer] = ID
+                self.History[self.inpointer] = data
             else:
-                self.array.append(list(data.keys())[0])
-            self.History.update(data)
+                self.array.append(ID)
+                self.History.append(data)
             if self.inpointer == self.maxsize:
                 self.inpointer = 0
             else:
@@ -156,9 +161,8 @@ class SongHistory(object):
         #** Check If Queue Is Empty **
         if not(self.check_empty()):
             
-            #** Pop Data Point From Array & Increment Out Pointer **
-            songID = self.array[self.outpointer]
-            Data = self.History.pop(songID)
+            #** Pop Data Point From History Array & Increment Out Pointer **
+            data = self.History.pop(self.outpointer)
             if self.outpointer == self.maxsize:
                 self.outpointer = 0
             else:
@@ -171,7 +175,7 @@ class SongHistory(object):
             #** Set Full To False If Currently True & Return Removed Data Point **
             if self.full:
                 self.full = False
-            return Data
+            return data
             
         #** Return None If No Value Removed **    
         else:
@@ -193,7 +197,7 @@ class Users(SpotifyUser, SongHistory):
         #** Initialise SpotifyUser, & Listening History Classes **
         super(Users, self).__init__(DiscordID)
         
-        #** Get User Object **
+        #** Get User Dictionary **
         self.user = self.Database.GetUser(DiscordID)
         if self.user == None:
             discordUser = self.client.get_user(DiscordID)
@@ -202,8 +206,9 @@ class Users(SpotifyUser, SongHistory):
                                   "discriminator": discordUser.discriminator,
                                   "avatar": str(discordUser.avatar_url),
                                   "joined": datetime.now(),
-                                  "songcount": 0},
-                        "recommendations": {"Popularity": [0, 50, 100],
+                                  "songs": 0},
+                        "recommendations": {"songcount": 0,
+                                            "Popularity": [0, 50, 100],
                                             "Acoustic": [0.0018, 0.223396, 0.8350],
                                             "Dance": [0.3080, 0.684500, 0.9560],
                                             "Energy": [0.2860, 0.644640, 0.8970],
@@ -227,9 +232,49 @@ class Users(SpotifyUser, SongHistory):
         if self.check_full():
             OldSong = self.clearSong()
             
+            #** Check If OldSong Has A Spotify ID & Get Audio Features **
             if OldSong['spotifyID'] != None:
                 Features = self.SongData.GetAudioFeatures(OldSong['spotifyID'])
-         
+                
+                #** Create Conversions Dict Between Recommendations Data & Feature Keys From Request **
+                Conversions = {'Acoustic':'acousticness', 
+                               'Dance': 'danceability',
+                               'Energy': 'energy',
+                               'Instrument': 'instrumentalness',
+                               'Live': 'liveness',
+                               'Loud': 'loudness',
+                               'Speech': 'speechiness',
+                               'Valance': 'valence'}
+                
+                #** Get Song Count For Recommendations **
+                SongCount = self.user['recommendations']['songcount']
+                
+                #** Create New Value By Adding New Value To Total & Dividing By New Song Count **
+                for key, values in self.user['recommendations']:
+                    if key == "Popularity":
+                        if OldSong['Popularity'] != None:
+                            NewValue = int(((values[1] * SongCount) + OldSong['Popularity']) / (SongCount + 1))
+                        else:
+                            NewValue = int(((values[1] * SongCount) + 50) / (SongCount + 1))
+                    else:
+                        NewValue = int(((values[1] * SongCount) + Features[Conversions[key]]) / (SongCount + 1))
+                    
+                    #** Get Difference Between Old Average & New Average **
+                    Difference = values[1] - NewValue
+                    
+                    #** Add 1/10th Of Difference To Min & Max Values Either Side Of Average **
+                    values[0] = values[0] + (Difference / 10)
+                    values[1] = NewValue
+                    values[2] = values[2] + (Difference / 10)
+                    
+                    #** Add 1 To Song Count For Recommendations & Add New Values For Each Key **
+                    self.user['recommendations']['songcount'] += 1
+                    self.user['recommendations'][key] = values
+
+            #** Add Song To Overall Song Count Regardless **
+            self.user['data']['songs'] += 1
+            print(self.user)
+
         #** Add New Song To Queue **
         self.addSong(TrackData)
 
@@ -238,9 +283,9 @@ class Users(SpotifyUser, SongHistory):
 
         #** Create Lists Of Listened To Spotify Track ID's And Artists From Listening History **
         TrackIDs = []
-        for songID in self.array:
-            if self.History[songID]['SpotifyID'] is not None:
-                TrackIDs.append(self.History[songID]['SpotifyID'])
+        for i in range(len(self.array)):
+            if self.History[i]['SpotifyID'] is not None:
+                TrackIDs.append(self.History[i]['SpotifyID'])
 
         #** Select 3 Track ID's and 2 Artist ID's At Random From The Two Lists **
         while len(TrackIDs) > 3:

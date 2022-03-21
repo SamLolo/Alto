@@ -434,16 +434,20 @@ class Music(Spotify):
         self.Keys = {'0': 'C', '1': 'C# / D♭', '2': 'D', '3': 'D♯ / E♭', '4': 'E', '5': 'F', '6': 'F# / G♭', '7': 'G', '8': 'G# / A♭', '9': 'A', '10': 'A# / B♭', '11': 'B'}
         self.Volumes = {'Very Quiet': [-100, -55], 'Quite Quiet': [-55, -45], 'Quiet': [-45, -35], 'Normal': [-35, -25], 'Loud': [-25, -15], 'Quite Loud': [-15, -5], 'Very Loud': [-5, 100]}
 
-        #** Load Genre Data and Setup Genre Prediction Decision Tree **
+        #** Load Test Data **
+        with open('SongData.json') as TestFile:
+            TestData = json.load(TestFile)
+            TestFile.close()
+        
+        #** Split Test Data Into Prediction & Genre Data **
         PredictionData = []
         GenreData = []
         for Genre in self.Genres:
-            with open('SongData.json') as TestFile:
-                TestData = json.load(TestFile)
-                TestFile.close()
             for Data in TestData[Genre]:
                 PredictionData.append(Data)
                 GenreData.append(Genre)
+                
+        #** Fit Data Lists To Create Prediction Decision Tree **
         Tree = tree.DecisionTreeClassifier()
         self.GenrePredictor = Tree.fit(PredictionData, GenreData)
 
@@ -551,12 +555,12 @@ class Music(Spotify):
             for i in range(len(ToSort)):
                 if len(ToSort[i]) > 1:
 
-                    #** Sort To Sort **
+                    #** Sort To Sort List First **
                     Array = ToSort.pop(i)
                     ToSort.insert(i, Array[(len(Array) // 2):])
                     ToSort.insert(i, Array[:(len(Array) // 2)])
 
-                    #** Sort Genres **
+                    #** Sort Genres Identical To To Sort List **
                     Array = Genres.pop(i)
                     Genres.insert(i, Array[(len(Array) // 2):])
                     Genres.insert(i, Array[:(len(Array) // 2)])
