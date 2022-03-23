@@ -88,7 +88,7 @@ class AccountCog(commands.Cog, name="Account"):
                     CurrentUser = Users(self.client, ctx.author.id)
 
         #** Get Last Song's Data if Listening History Isn't Empty **
-        if CurrentUser.array > 0:
+        if len(CurrentUser.array) > 0:
             LastSongData = CurrentUser.History[len(CurrentUser.array) - 1]
 
             #** Format Data For Song & Add Last Listened To Song To Embed As Field **
@@ -96,7 +96,7 @@ class AccountCog(commands.Cog, name="Account"):
             ProfileEmbed.add_field(name="Last Listened To:", value=FormattedSong, inline=False)
 
             #** Calculate Time Difference And Check What To Display **
-            TimeDiff = Uptime = relativedelta(datetime.now(), LastSongData['ListenedAt'])
+            TimeDiff = relativedelta(datetime.now(), LastSongData['ListenedAt'])
             if TimeDiff.years > 1:
                 ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.years)+" years ago")
             elif TimeDiff.years == 1:
@@ -171,7 +171,6 @@ class AccountCog(commands.Cog, name="Account"):
         #** Check User Has Listened To Some Songs & Create Iteration Object Through History List **
         if len(CurrentUser.array) > 0:
             History = reversed(CurrentUser.History)
-            print(History)
             Pages = []
             
             #** For Upper Bound Of Length Of History Divided By 5 Representing The Amount Of Pages Needed **

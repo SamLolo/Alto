@@ -11,6 +11,7 @@ import requests
 import mysql.connector
 from time import sleep
 from datetime import datetime
+from cryptography.fernet import Fernet
 from dateutil.relativedelta import relativedelta
 from flask import Flask, request, render_template, redirect
 
@@ -108,7 +109,11 @@ class Auth():
     def AuthenticateUser(self, Code):
         
         #** Request For An Access Token To Connected User Account Via Spotify Web API **
-        data = {'grant_type': "authorization_code", 'code': str(Code), 'redirect_uri': 'http://82.22.157.214:5000/', 'client_id': self.ID, 'client_secret': self.Secret}
+        data = {'grant_type': "authorization_code", 
+                'code': str(Code), 
+                'redirect_uri': 'http://82.22.157.214:5000/', 
+                'client_id': self.ID, 
+                'client_secret': self.Secret}
         AuthData = requests.post("https://accounts.spotify.com/api/token", data, self.AuthHead)
 
         #** Check If Request Was A Success **
@@ -180,13 +185,34 @@ class Auth():
 
     def AddToDatabase(self):
 
+        #** Setup Symmetric Encryption Module **
+        Key = os.environ['ENCRYPTION_KEY']
+        Key = bytes(Key, 'utf-8')
+        fernet = Fernet(Key)
+
+        #** Encrypt Sensitive Information **
+        Refresh = fernet.encrypt(str(self.UserRefresh).encode())
+        Name = fernet.encrypt(str(self.Name).encode())
+        Avatar = fernet.encrypt(str(self.Avatar).encode())
+        SpotifyID = fernet.encrypt(str(self.UserID).encode())
+
+        #** Convert Bytes To String **
+        Refresh = str(Refresh).replace("b'", "").replace("'", "")
+        Name = str(Name).replace("b'", "").replace("'", "")
+        Avatar = str(Avatar).replace("b'", "").replace("'", "")
+        SpotifyID = str(SpotifyID).replace("b'", "").replace("'", "")
+
+        #** Delete Variables To Keep Key Safe **
+        del Key
+        del fernet
+
         #** Update Row In Spotify Table In Database With User Details & Refresh Token **
-        cursor.execute("UPDATE Spotify SET SpotifyID = '"+self.UserID+"',"+
-                                          "Name = '"+self.Name+"',"+
-                                          "Avatar = '"+self.Avatar+"',"+
+        cursor.execute("UPDATE Spotify SET SpotifyID = '"+str(SpotifyID)+"',"+
+                                          "Name = '"+str(Name)+"',"+
+                                          "Avatar = '"+str(Avatar)+"',"+
                                           "Followers = "+str(self.Followers)+","+
                                           "Subscription = "+str(self.Subscription)+","+
-                                          "Refresh = '"+str(self.UserRefresh)+"'"+
+                                          "Refresh = '"+str(Refresh)+"'"+
                        "WHERE DiscordID = '"+str(self.discordID)+"';")
         connection.commit()
 

@@ -3,8 +3,9 @@
 
 
 import os
-from datetime import datetime
 import mysql.connector
+from datetime import datetime
+from cryptography.fernet import Fernet
 
 
 #!--------------------------------DATABASE CONNECTION---------------------------------#
@@ -60,7 +61,6 @@ class UserData():
         self.cursor.execute("SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '"+str(discordID)+"';")
         Data = self.cursor.fetchone()
         self.connection.commit()
-        print(Data)
 
         #** Format UserData To Dictionary & Return Values **
         if Data != None:
@@ -87,12 +87,18 @@ class UserData():
 
     def GetHistory(self, discordID):
 
-        #** Get Users Listening History From Database, Ordeded By Most Recent First **
-        self.cursor.execute("SELECT history.SongID, history.ListenedAt, cache.SoundcloudURL, cache.SpotifyID, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity FROM history INNER JOIN cache ON history.SongID = cache.SoundcloudID WHERE DiscordID = '"+str(discordID)+"' ORDER BY ListenedAt ASC;")
+        #** Get Users Listening History From Database, Ordered By Most Recent First **
+        Sql = ("SELECT history.SongID, history.ListenedAt, cache.SoundcloudURL, cache.SpotifyID, cache.Name, "
+               "cache.Artists, cache.ArtistID, cache.Popularity "
+               "FROM history "
+               "INNER JOIN cache ON history.SongID = cache.SoundcloudID "
+               "WHERE DiscordID = '"+str(discordID)+"' "
+               "ORDER BY ListenedAt ASC;")
+        self.cursor.execute(Sql)
         History = self.cursor.fetchall()
         self.connection.commit()
 
-        #** Create Empty List & Itterate Through Returned Rows **
+        #** Create Empty List & Iterate Through Returned Rows **
         List = []
         for Tuple in History:
             
@@ -124,17 +130,39 @@ class UserData():
         Data = self.cursor.fetchone()
         self.connection.commit()
         
-        #** Format Spotify Data To Dictionary & Return Values **
+        #** Check If Data Is Found & If Data Has Spotify ID**
         if Data != None:
-            Dict = {"discordID": int(Data[1]),
-                    "spotifyID": Data[0],
-                    "name": Data[2],
-                    "avatar": Data[3],
-                    "followers": Data[4],
-                    "subscription": Data[5],
-                    "refresh": Data[6],
-                    "linked": Data[7]}
-            return Dict
+            if Data[0] != None:
+
+                #** Setup Symmetric Encryption Module **
+                Key = os.environ['ENCRYPTION_KEY']
+                Key = bytes(Key, 'utf-8')
+                fernet = Fernet(Key)
+
+                #** Decrypt Sensitive Information **
+                Refresh = fernet.decrypt(bytes(Data[6], 'utf-8')).decode()
+                Name = fernet.decrypt(bytes(Data[2], 'utf-8')).decode()
+                Avatar = fernet.decrypt(bytes(Data[3], 'utf-8')).decode()
+                SpotifyID = fernet.decrypt(bytes(Data[0], 'utf-8')).decode()
+
+                #** Delete Variables To Keep Key Safe **
+                del Key
+                del fernet
+
+                #** Format Data Into Dictionary & Return Dictionary**
+                Dict = {"discordID": int(Data[1]),
+                        "spotifyID": SpotifyID,
+                        "name": Name,
+                        "avatar": Avatar,
+                        "followers": Data[4],
+                        "subscription": Data[5],
+                        "refresh": Refresh,
+                        "linked": Data[7]}
+                return Dict
+
+        #** Return None If No Spotify Data Found **
+            else:
+                return None
         else:
             return None
 
@@ -143,7 +171,6 @@ class UserData():
 
         #** Write Data About User To Users Table / Update Row If Already Exists **
         Data = (str(User['data']['discordID']), User['data']['name'], User['data']['discriminator'], User['data']['avatar'], User['data']['songs'], User['data']['joined'])
-        print(Data)
         self.cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s, %s);", Data)
         self.connection.commit()
 
@@ -192,7 +219,6 @@ class UserData():
         #** Format SQL Execute String **
         for i in range(DeletedRows):
             Data = (str(discordID), History[i]['ID'], History[i]["ListenedAt"])
-            print(Data)
             self.cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", Data)
             
         #** Write Changes To Database **

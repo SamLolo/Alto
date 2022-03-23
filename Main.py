@@ -123,15 +123,23 @@ async def on_command_error(ctx, error):
             
         #** If Error Message Is "Spotify", Let User Know They Need To Connect Their Spotify**
         elif str(error) == "Spotify":
-            Temp = await ctx.send("**Spotify Not Connected!**\nTo run this command, first run `!link`.")
+            Temp = await ctx.message.channel.send("**Spotify Not Connected!**\nTo run this command, first run `!link`.")
             
         #** If Error Message Is "History", Let User Know They Need To Get Some Listening History Before Running The Command **
         elif str(error) == "History":
-            Temp = await ctx.send("**You must have listened to some songs before you can run this command!**\nJoin a Voice Channel and run `!play <song>` to get listening.")
+            Temp = await ctx.message.channel.send("**You must have listened to some songs before you can run this command!**\nJoin a Voice Channel and run `!play <song>` to get listening.")
+
+        #** If Error Message Is "SongNotFound", Let User Know They Need To Double Check Their Input **
+        elif str(error) == "SongNotFound":
+            Temp = await ctx.message.channel.send("**We couldn't find any tracks for the provided input!**\nPlease check your input and try again.")
         
         #** If Error Message Is "DM", Let User Know They Need To Join A VC **
         elif str(error) == "DM":
             Temp = await ctx.message.channel.send("**DM Failed!**\nPlease turn on `Allow Server Direct Messages` in Discord settings in order to link your account")
+
+        #** Called When An Unexpected Error Occurs, Shouldn't Happen Very Often **
+        elif str(error) == "UnexpectedError":
+            Temp = await ctx.message.channel.send("**An Unexpected Error Occurred!**If this error persists, contact Lolo#6699.")
         
         #** If Error Message Is Not Above, Let User Know They Can't Run The Command & Try Retry **
         else:
@@ -169,7 +177,7 @@ def is_admin():
 @is_admin()
 async def reload(ctx, CogName):
     
-    #** Dictonary Describing What Needs To Be Reloaded For Each Class **
+    #** Dictionary Describing What Needs To Be Reloaded For Each Class **
     Classes = {'musicutils': ['users', 'Cogs.Account', 'Cogs.Music'], 
                'database': ['users', 'Cogs.Account', 'Cogs.Background', 'Cogs.Music'],
                'users': ['Cogs.Account', 'Cogs.Music'],
@@ -224,7 +232,7 @@ async def reload(ctx, CogName):
     else:
         Message += "**Reload Completed!**"
     
-    #** Edit Message To New Cokpleted Message, & Delete Both Messages After 10 Second Wait **
+    #** Edit Message To New Completed Message, & Delete Both Messages After 10 Second Wait **
     await Temp.edit(content=Message)
     await asyncio.sleep(10)
     await ctx.message.delete()

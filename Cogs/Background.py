@@ -2,8 +2,10 @@
 #!---------------------------IMPORT MODULES-----------------------#
 
 
+import os
 import json
 import discord
+from cryptography.fernet import Fernet
 from discord.ext import tasks, commands
 
 
@@ -105,6 +107,20 @@ class BackgroundTasks(commands.Cog):
         for Update in Recent:
             if Update[0] != None:
 
+                #** Setup Symmetric Encryption Module **
+                Key = os.environ['ENCRYPTION_KEY']
+                Key = bytes(Key, 'utf-8')
+                fernet = Fernet(Key)
+
+                #** Decrypt Necessary Sensitive Information **
+                Name = fernet.decrypt(bytes(Update[2], 'utf-8')).decode()
+                Avatar = fernet.decrypt(bytes(Update[3], 'utf-8')).decode()
+                SpotifyID = fernet.decrypt(bytes(Update[0], 'utf-8')).decode()
+
+                #** Delete Variables To Keep Key Safe **
+                del Key
+                del fernet
+
                 #** Get User And If One Found **
                 User = self.client.get_user(int(Update[1]))
                 if User != None:
@@ -117,9 +133,8 @@ class BackgroundTasks(commands.Cog):
                     try:
                         SuccessEmbed = discord.Embed(title = "Spotify Account Connected!",
                                 colour = discord.Colour.blue())
-                        SuccessEmbed.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
-                        SuccessEmbed.set_thumbnail(url=Update[3])
-                        SuccessEmbed.add_field(name="Username", value="["+Update[2]+"](https://open.spotify.com/user/"+Update[0]+")")
+                        SuccessEmbed.set_thumbnail(url=str(Avatar))
+                        SuccessEmbed.add_field(name="Username", value="["+str(Name)+"](https://open.spotify.com/user/"+str(SpotifyID)+")")
                         SuccessEmbed.add_field(name="What To Do Next?", value="- Start playing some of your private playlists through the bot using `!play`\n"
                                                                     +"- Get song recommendations using your Spotify playlists using `!recommendations spotify`\n"
                                                                     +"- Run `!profile` and check out your updated user profile", inline=False)

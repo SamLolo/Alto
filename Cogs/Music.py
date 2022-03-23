@@ -150,31 +150,42 @@ class MusicCog(commands.Cog, name="Music"):
             
             #** Create Now Playing Embed **
             NowPlaying = discord.Embed(title = "Now Playing:")
-            
-            #** Set Author & Footer and Add Position Field **
-            NowPlaying.set_author(name="Requested By "+str(event.track.requester)+"", icon_url=event.track.requester.avatar_url)
-            NowPlaying.add_field(name="Position:", value = "0:00 / "+ Utils.format_time(event.track.duration))
+
+            #** Add Up Next To Footer Of Embed **
             if event.player.queue == []:
                 NowPlaying.set_footer(text="Up Next: Nothing")
             else:
                 NowPlaying.set_footer(text="Up Next: "+event.player.queue[0]["title"])
+
+            #** If Not A Stream, Add Position Field & Source Of Music **
+            if not(event.track.stream):
+                NowPlaying.set_author(name="Playing From Soundcloud", icon_url="https://cdn.discordapp.com/emojis/897135141040832563.png?size=96&quality=lossless")
+                NowPlaying.add_field(name="Position:", value = "0:00 / "+ Utils.format_time(event.track.duration))
+                
+                #** If Track Has Spotify Info, Format List of Artists **
+                if event.track.extra['spotify'] != {}:
+                    Artists = Utils.format_artists(event.track.extra['spotify']['artists'], event.track.extra['spotify']['artistID'])
+
+                    #** Set Descrition and Thumbnail & Add By Field Above Position Field **
+                    NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")\n"+self.Emojis['Spotify']+" ["+event.track.extra['spotify']['name']+"]("+event.track.extra['spotify']['URI']+")"
+                    NowPlaying.set_thumbnail(url=event.track.extra['spotify']['art'])
+                    NowPlaying.insert_field_at(0, name="By:", value=Artists)
+
+                #** If No Spotify Info, Create Basic Now Playing Embed **
+                else:
+                    #** Set Descrition and Thumbnail & Add By Field Above Position Field **
+                    NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")"
+                    NowPlaying.insert_field_at(0, name="By:", value="["+event.track.author+"]("+event.track.extra["artistURI"]+")")
             
-            #** If Track Has Spotify Info, Format List of Artists **
-            if event.track.extra['spotify'] != {}:
-                Artists = Utils.format_artists(event.track.extra['spotify']['artists'], event.track.extra['spotify']['artistID'])
-
-                #** Set Descrition and Thumbnail & Add By Field Above Position Field **
-                NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")\n"+self.Emojis['Spotify']+" ["+event.track.extra['spotify']['name']+"]("+event.track.extra['spotify']['URI']+")"
-                NowPlaying.set_thumbnail(url=event.track.extra['spotify']['art'])
-                NowPlaying.insert_field_at(0, name="By:", value=Artists)
-
-            #** If No Spotify Info, Create Basic Now Playing Embed **
+            #** If Track Is A Stream, Add Appropriate Information For A Stream **
             else:
-                #** Set Descrition and Thumbnail & Add By Field Above Position Field **
-                NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")"
-                NowPlaying.insert_field_at(0, name="By:", value="["+event.track.author+"]("+event.track.extra["artistURI"]+")")
+                NowPlaying.set_author(name="Playing From "+event.track.extra['Source'].title()+" Stream")
+                NowPlaying.description = "["+event.track['title']+"]("+event.track["uri"]+")"
+                NowPlaying.add_field(name="By: ", value=event.track['author'])
+                NowPlaying.add_field(name="Duration: ", value="N/A")
 
-            #** Send Embed To Channel Where First Play Cmd Was Ran **
+            #** Add Requester To Embed & Send Embed To Channel Where First Play Cmd Was Ran **
+            NowPlaying.add_field(name="Requested By: ", value=str(event.track.requester), inline=False)
             Message = await Channel.send(embed=NowPlaying)
 
             #** Fetch Previous Now Playing Message & Store New Now Playing Message In Player **
@@ -213,7 +224,7 @@ class MusicCog(commands.Cog, name="Music"):
                     UserDict[str(DiscordID)] = Users(self.client, DiscordID)
                 event.player.store('Users', UserDict)
 
-                #** For All Current Listeners, Add New Song To Their Song History **
+                #** Format Current Track Data Into Dict To Be Added To History **
                 URI = event.track['identifier'].split("/")
                 ID  = URI[4].split(":")[2]
                 TrackData = {"ID": ID,
@@ -222,13 +233,15 @@ class MusicCog(commands.Cog, name="Music"):
                              "Name": event.track['title'],
                              "Artists": [event.track['author']],
                              "URI": event.track['uri']}
+                if event.track.extra['spotify'] != {}:
+                    TrackData['SpotifyID'] = event.track.extra['spotify']['ID']
+                    TrackData['Name'] = event.track.extra['spotify']['name']
+                    TrackData['Artists'] = event.track.extra['spotify']['artists']
+                    TrackData['ArtistIDs'] = event.track.extra['spotify']['artistID']
+                    TrackData['Popularity'] = event.track.extra['spotify']['popularity']
+                
+                #** For All Current Listeners, Add New Song To Their Song History **
                 for User in UserDict.values():
-                    if event.track.extra['spotify'] != {}:
-                        TrackData[ID]['SpotifyID'] = event.track.extra['spotify']['ID']
-                        TrackData[ID]['Name'] = event.track.extra['spotify']['name']
-                        TrackData[ID]['Artists'] = event.track.extra['spotify']['artists']
-                        TrackData[ID]['ArtistIDs'] = event.track.extra['spotify']['artistID']
-                        TrackData[ID]['Popularity'] = event.track.extra['spotify']['popularity']
                     await User.incrementHistory(TrackData)
 
 
@@ -254,7 +267,7 @@ class MusicCog(commands.Cog, name="Music"):
             #** Strip ID From URL **
             SpotifyID = (Query.split("/"))[4].split("?")[0]
             if len(SpotifyID) != 22:
-                raise commands.UserInputError(message="Bad URL")
+                raise commands.CheckFailure(message="SongNotFound")
             Cached = False
 
             #**------------INPUT: TRACK---------------**#
@@ -272,7 +285,9 @@ class MusicCog(commands.Cog, name="Music"):
 
                     #** Raise Error if No Song Found Otherwise Reformat Query With New Data **
                     if SongInfo == "SongNotFound":
-                        raise commands.UserInputError(message="Bad URL")
+                        raise commands.CheckFailure(message="SongNotFound")
+                    elif SongInfo == "UnexpectedError":
+                        raise commands.CheckFailure(message="UnexpectedError")
                 
                 else:
                     Cached = True
@@ -283,9 +298,14 @@ class MusicCog(commands.Cog, name="Music"):
 
                 #** Get Playlist Info From Spotify Web API **
                 SongInfo = SongData.GetPlaylistSongs(SpotifyID)
-                if SongInfo == "PlaylistNotFound":
-                    raise commands.UserInputError(message="Bad URL")
 
+                #** Raise Error If Playlist Not Found or Unexpected Error Occurs **
+                if SongInfo == "PlaylistNotFound":
+                    raise commands.CheckFailure(message="SongNotFound")
+                elif SongInfo == "UnexpectedError":
+                    raise commands.CheckFailure(message="UnexpectedError")
+
+                #** Setup Playlist & Song Info; & Set Type **
                 PlaylistInfo = SongInfo['PlaylistInfo']
                 SongInfo = SongInfo['Tracks']
                 Type = "Playlist"
@@ -296,9 +316,14 @@ class MusicCog(commands.Cog, name="Music"):
 
                 #** Get Album Info From Spotify Web API **
                 SongInfo = SongData.GetAlbumInfo(SpotifyID)
-                if SongInfo == "PlaylistNotFound":
-                    raise commands.UserInputError(message="Bad URL")
+                
+                #** Raise Error If Album Not Found Or Unexpected Error **
+                if SongInfo == "AlbumNotFound":
+                    raise commands.CheckFailure(message="SongNotFound")
+                elif SongInfo == "UnexpectedError":
+                    raise commands.CheckFailure(message="UnexpectedError")
 
+                #** Setup Playlist(Album) & Song Info; & Set Type **
                 PlaylistInfo = SongInfo['PlaylistInfo']
                 SongInfo = SongInfo['Tracks']
                 Type = "Album"
@@ -330,9 +355,13 @@ class MusicCog(commands.Cog, name="Music"):
                                      'explicit': Info['Explicit'],
                                      'preview': Info['Preview']})
                 
+                #** Raise Song Not Found Error If Song Couldn't Be Found On Soundcloud **
+                else:
+                    raise commands.CheckFailure(message="SongNotFound")
+                
                 #** If Track Duration = 30000ms(30s), Inform It's Only A Preview **
                 if Track.duration == 30000:
-                    await ctx.send("**Sorry, we could only fetch a preview for the requested song!**")
+                    await ctx.send("**Sorry, we could only fetch a preview for `"+Info['Name']+"`!**")
 
                 #** Format & Send Queued Embed If First Song In List To Queue **
                 if list(SongInfo.keys()).index(SpotifyID) == 0:
@@ -375,7 +404,7 @@ class MusicCog(commands.Cog, name="Music"):
                     Database.AddFullSongCache(ToCache)
         
         #** If Query Is From Soundcloud Or Is A Plain Text Input **
-        elif Query.startswith("https://soundcloud.com/") or not(Query.startswith("https://")):
+        elif Query.startswith("https://soundcloud.com/") or not(Query.startswith("https://") or Query.startswith("http://")):
 
              #**------------INPUT: TEXT, TRACK OR PLAYLIST---------------**#
 
@@ -402,7 +431,6 @@ class MusicCog(commands.Cog, name="Music"):
                         SpotifyID = list(Spotify.keys())[0]
                         Spotify = Spotify[SpotifyID]
                         if Spotify['PartialCache']:
-                            print("PartialCache")
                             Spotify = None
                         Cached = True
                     
@@ -443,7 +471,7 @@ class MusicCog(commands.Cog, name="Music"):
 
                     #** If Track Duration = 30000ms(30s), Inform It's Only A Preview **
                     if Track.duration == 30000:
-                        await ctx.send("We could only fetch a preview for the requested song!")
+                        await ctx.send("We could only fetch a preview for `"+ResultTrack['info']['title']+"`!")
 
                     #** Format & Send Queued Embed If First Track In List **
                     if Results['tracks'].index(ResultTrack) == 0:
@@ -485,6 +513,34 @@ class MusicCog(commands.Cog, name="Music"):
                         else:
                             ToCache = {'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Name': Track.title, 'Artists': [Track.author]}
                             Database.AddPartialSongCache(ToCache)
+            
+            #** Raise Bad Argument Error If No Tracks Found **
+            else:
+                raise commands.CheckFailure(message="SongNotFound")
+        
+        #** If Query Is A URL, Not From Spotify Or Soundcloud, And Not From Youtube Either **
+        elif (Query.startswith("https://") or Query.startswith("http://")) and not(Query.startswith("https://www.youtube.com/")):
+
+            #**--------------------INPUT: URL--------------------**#
+
+            #** Get Results From Provided Input URL **
+            Results = await Player.node.get_tracks(Query)
+
+            #** If Track Loaded, Create Track Object From Stream **
+            if Results["loadType"] == 'TRACK_LOADED':
+                Track = lavalink.models.AudioTrack(Results['tracks'][0], ctx.author, recommended=True, IgnoreHistory=True, Source=Results['tracks'][0]['info']['sourceName'])
+
+                #**-----------------PLAY / ADD TO QUEUE--------------**#
+
+                #** Add Song To Queue & Play if Not Already Playing **
+                Player.add(requester=ctx.author.id, track=Track)
+                if not(Player.is_playing):
+                    await Player.play()
+            
+            #** If URL Can't Be Loaded, Raise Error **
+            else:
+                raise commands.CheckFailure(message="SongNotFound")
+
 
         #** If Input Isn't One Of Above Possible Categories, Raise Bad Argument Error **
         else:
@@ -511,7 +567,8 @@ class MusicCog(commands.Cog, name="Music"):
 
             #** Remove Old Now Playing Message & Delete Stored Value **
             OldMessage = Player.fetch('NowPlaying')
-            await OldMessage.delete()
+            if OldMessage != None:
+                await OldMessage.delete()
             Player.delete('NowPlaying')
 
             #** Save All Current Users Stored In Player To Database **
@@ -607,25 +664,49 @@ class MusicCog(commands.Cog, name="Music"):
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
         Player = await self.ensure_voice(ctx)
 
-        #** Format Queue List Into String **
+        #** Format Queue List Into String To Set As Embed Description **
         if Player.queue != []:
             Queue = "__**NOW PLAYING:**__\n"
+
+            #** Loop Through Queue **
             for i in range(-1, len(Player.queue)):
+
+                #** -1 Indicates Currently Playing Song, Added First **
                 if i == -1:
-                    if Player.current.extra['spotify'] != {}:
-                        Spotify = Player.current.extra['spotify']
-                        Artists = Utils.format_artists(Spotify['artists'], Spotify['artistID'])
-                        Queue += self.Emojis['Spotify']+"["+Spotify['name']+"]("+Spotify['URI']+")\nBy: "+Artists+"\n"
+
+                    #** If Not Stream, Check If Has Spotify Data **
+                    if not(Player.current.stream):
+                        if Player.current.extra['spotify'] != {}:
+
+                            #** Format Data For Spotify Else Format And Add Data For SoundCloud Instead **
+                            Spotify = Player.current.extra['spotify']
+                            Artists = Utils.format_artists(Spotify['artists'], Spotify['artistID'])
+                            Queue += self.Emojis['Spotify']+"["+Spotify['name']+"]("+Spotify['URI']+")\nBy: "+Artists+"\n"
+                        else:
+                            Queue += self.Emojis['Soundcloud']+" ["+Player.current['title']+"]("+Player.current['uri']+")\nBy: "+Player.current['author']+"\n"
+                    
+                    #** If Stream, Format Data For Stream, And Add Up Next Seperator For Rest Of Queue **
                     else:
-                        Queue += self.Emojis['Soundcloud']+" ["+Player.current['title']+"]("+Player.current['uri']+")\nBy: "+Player.current['author']+"\n"
+                        Queue += "["+Player.current['title']+"]("+Player.current['uri']+")\nBy: "+Player.current['author']+"\n"
                     Queue += "--------------------\n__**UP NEXT:**__\n"
+                
+                #** For i>=0, Work Though Index's In Queue **
                 else:
-                    if Player.queue[i].extra['spotify'] != {}:
-                        Spotify = Player.queue[i].extra['spotify']
-                        Artists = Utils.format_artists(Spotify['artists'], Spotify['artistID'])
-                        Queue += self.Emojis['Spotify']+" **"+str(i+1)+": **["+Spotify['name']+"]("+Spotify['URI']+")\nBy: "+Artists+"\n"
+
+                    #** If Track At Index Is Not Stream, Check If Song Has Spotify Data **
+                    if not(Player.queue[i].stream):
+                        if Player.queue[i].extra['spotify'] != {}:
+
+                            #** Format Data For Spotify Else Format And Add Data For SoundCloud Instead **
+                            Spotify = Player.queue[i].extra['spotify']
+                            Artists = Utils.format_artists(Spotify['artists'], Spotify['artistID'])
+                            Queue += self.Emojis['Spotify']+" **"+str(i+1)+": **["+Spotify['name']+"]("+Spotify['URI']+")\nBy: "+Artists+"\n"
+                        else:
+                            Queue += self.Emojis['Soundcloud']+" **"+str(i+1)+": **["+Player.queue[i]['title']+"]("+Player.queue[i]['uri']+")\nBy: ["+Player.queue[i]['author']+"]("+Player.queue[i].extra['artistURI']+")\n"
+                    
+                    #** If Stream, Format Data For Stream & Add To String **
                     else:
-                        Queue += self.Emojis['Soundcloud']+" **"+str(i+1)+": **["+Player.queue[i]['title']+"]("+Player.queue[i]['uri']+")\nBy: ["+Player.queue[i]['author']+"]("+Player.queue[i].extra['artistURI']+")\n"
+                        Queue += "**"+str(i+1)+": **["+Player.queue[i]['title']+"]("+Player.queue[i]['uri']+")\nBy: "+Player.queue[i]['author']+"\n"
 
             #** Format Queue Into Embed & Send Into Discord **
             UpNext = discord.Embed(
@@ -667,12 +748,17 @@ class MusicCog(commands.Cog, name="Music"):
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
         Player = await self.ensure_voice(ctx)
 
-        #** Enable / Disable Repeat Mode **
-        Player.repeat = not(Player.repeat)
-        if Player.repeat:
-            await ctx.send("Current Track Now Looping!")
+        #** If Current Track Not A Stream, Enable / Disable Repeat Mode **
+        if not(Player.current.stream):
+            Player.repeat = not(Player.repeat)
+            if Player.repeat:
+                await ctx.send("Current Track Now Looping!")
+            else:
+                await ctx.send("Track Loop Disabled!")
+        
+        #** If Current Track Is A Stream, Let User Know It Can't Be Looped **
         else:
-            await ctx.send("Track Loop Disabled!")
+            await ctx.send("Looping is not available for audio streams!")
 
 
     @commands.guild_only()
@@ -752,34 +838,44 @@ class MusicCog(commands.Cog, name="Music"):
         Player = await self.ensure_voice(ctx)
         
         #** Create Now Playing Embed **
-        NowPlaying = discord.Embed(title = "Now Playing:")
-        
-        #** Set Author & Footer and Add Position Field **
-        NowPlaying.set_author(name="Requested By "+str(Player.current.requester)+"", icon_url=Player.current.requester.avatar_url)
-        NowPlaying.add_field(name="Position:", value = Utils.format_time(Player.position)+" / "+ Utils.format_time(Player.current.duration))
+        NowPlaying = discord.Embed(title="Now Playing:")
+
+        #** Add Up Next To Footer Of Embed **
         if Player.queue == []:
             NowPlaying.set_footer(text="Up Next: Nothing")
         else:
             NowPlaying.set_footer(text="Up Next: "+Player.queue[0]["title"])
+
+        #** If Not A Stream, Add Position Field & Source Of Music **
+        if not(Player.current.stream):
+            NowPlaying.set_author(name="Playing From Soundcloud", icon_url="https://cdn.discordapp.com/emojis/897135141040832563.png?size=96&quality=lossless")
+            NowPlaying.add_field(name="Position:", value = "0:00 / "+ Utils.format_time(Player.current.duration))
+            
+            #** If Track Has Spotify Info, Format List of Artists **
+            if Player.current.extra['spotify'] != {}:
+                Artists = Utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
+
+                #** Set Descrition and Thumbnail & Add By Field Above Position Field **
+                NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"+self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")"
+                NowPlaying.set_thumbnail(url=Player.current.extra['spotify']['art'])
+                NowPlaying.insert_field_at(0, name="By:", value=Artists)
+
+            #** If No Spotify Info, Create Basic Now Playing Embed **
+            else:
+                #** Set Descrition and Thumbnail & Add By Field Above Position Field **
+                NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
+                NowPlaying.insert_field_at(0, name="By:", value="["+Player.current.author+"]("+Player.current.extra["artistURI"]+")")
         
-        #** If Track Has Spotify Info, Format List of Artists **
-        if Player.current.extra['spotify'] != {}:
-            Artists = Utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
-
-            #** Set Descrition and Thumbnail & Add By Field Above Position Field **
-            NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"+self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")"
-            NowPlaying.set_thumbnail(url=Player.current.extra['spotify']['art'])
-            NowPlaying.insert_field_at(0, name="By:", value=Artists)
-
-        #** If No Spotify Info, Create Basic Now Playing Embed **
+        #** If Track Is A Stream, Add Appropriate Information For A Stream **
         else:
-            
-            #** Set Descrition and Thumbnail & Add By Field Above Position Field **
-            NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
-            NowPlaying.insert_field_at(0, name="By:", value="["+Player.current.author+"]("+Player.current.extra['artistURI']+")")
-            
-        #** Send Embed To Channel Where First Play Cmd Was Ran **
-        Message = await ctx.send(embed=NowPlaying)
+            NowPlaying.set_author(name="Playing From "+Player.current.extra['Source'].title()+" Stream")
+            NowPlaying.description = "["+Player.current['title']+"]("+Player.current["uri"]+")"
+            NowPlaying.add_field(name="By: ", value=Player.current['author'])
+            NowPlaying.add_field(name="Duration: ", value="N/A")
+
+        #** Add Requester To Embed & Send Embed To User **
+        NowPlaying.add_field(name="Requested By: ", value=str(Player.current.requester), inline=False)
+        await ctx.send(embed=NowPlaying)
 
 
     @commands.command(aliases=['i', 'song', 'songinfo'], 
@@ -788,9 +884,13 @@ class MusicCog(commands.Cog, name="Music"):
                       help="`Possible Inputs For <spotifyURL>:`\n- Spotify Track URL")
     async def info(self, ctx, SpotifyURL):
 
-        #** Format Input Data and Check To Make Sure It's A Valid ID **
+        #** Check If Input Is Spotify URL & Format Input Data, Else Raise Bad Argument Error **
         if SpotifyURL.startswith("https://open.spotify.com/track/"):
             SpotifyID = (SpotifyURL.split("/"))[4].split("?")[0]
+        else:
+            raise commands.BadArgument(message="info")
+
+        #** Check ID Is A Valid Spotify ID **
         if len(SpotifyID) == 22:
 
             #** Get Song Details And Check If Song Is Found **
@@ -838,11 +938,11 @@ class MusicCog(commands.Cog, name="Music"):
                 await Page.add_reaction(self.Emojis['Next'])
                 await self.Pagination.add_pages(Page.id, [Basic, Advanced])
         
-            #** Raise Bad Argument Error If SpotifyID From Link Doesn't Work **
+            #** Raise Check Failure Error If Track Can't Be Found **
             else:
-                raise commands.BadArgument(message="info")
+                raise commands.CheckFailure(message="SongNotFound")
         else:
-            raise commands.BadArgument(message="info")
+            raise commands.CheckFailure(message="SongNotFound")
 
 
 #!-------------------SETUP FUNCTION-------------------#

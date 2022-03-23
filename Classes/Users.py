@@ -135,7 +135,7 @@ class SongHistory(object):
         if not(self.check_full()):
             
             #** Add Value To Array & Data To History & Increment In-Pointer **
-            ID = list(data.keys())[0]
+            ID = list(data.values())[0]
             if len(self.array) == self.maxsize:
                 self.array[self.inpointer] = ID
                 self.History[self.inpointer] = data
@@ -209,14 +209,14 @@ class Users(SpotifyUser, SongHistory):
                                   "songs": 0},
                         "recommendations": {"songcount": 0,
                                             "Popularity": [0, 50, 100],
-                                            "Acoustic": [0.0018, 0.223396, 0.8350],
-                                            "Dance": [0.3080, 0.684500, 0.9560],
-                                            "Energy": [0.2860, 0.644640, 0.8970],
-                                            "Instrument": [0, 0.001568, 0.0542],
-                                            "Live": [0.0264, 0.163196, 0.4610],
-                                            "Loud": [-11.8810, -6.250840, -2.7240],
-                                            "Speech": [0.0282, 0.106186, 0.4020],
-                                            "Valance": [0.0386, 0.521244, 0.9420]}}
+                                            "Acoustic": [0.0, 0.223396, 1.0],
+                                            "Dance": [0.0, 0.684500, 1.0],
+                                            "Energy": [0.0, 0.644640, 1.0],
+                                            "Instrument": [0, 0.001568, 1.0],
+                                            "Live": [0.0, 0.163196, 1.0],
+                                            "Loud": [-15.0, -6.250840, 0],
+                                            "Speech": [0.0, 0.106186, 1.0],
+                                            "Valance": [0.0, 0.521244, 1.0]}}
 
 
     async def save(self):

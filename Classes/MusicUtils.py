@@ -79,7 +79,7 @@ class Spotify(object):
                 print("Error: Spotify Request Code "+str(SongData.status_code))
                 return "UnexpectedError"
         
-        #** Itterate Through Each Song And Check Ignore If Empty **
+        #** Iterate Through Each Song And Check Ignore If Empty **
         if SongData != []:
             SongData = SongData.json()
             Songs = {}
@@ -121,12 +121,12 @@ class Spotify(object):
                 
             #** Check If Album Not Found, and Return "AlbumNotFound" **
             elif 404 == AlbumData.status_code:
-                return "PlaylistNotFound"
+                return "AlbumNotFound"
             
             #** If Other Error Occurs, Raise Error **
             else:
                 print("\n----------------------UNEXPECTED ERROR--------------------")
-                print("Location: Spotify -> GetPlaylistSongs")
+                print("Location: Spotify -> GetAlbumInfo")
                 print("Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y"))
                 print("Error: Spotify Request Code "+str(AlbumData.status_code))
                 return "UnexpectedError"
@@ -365,6 +365,7 @@ class Spotify(object):
     def GetRecommendations(self, data):
         
         #** Requests Recommendations From Spotify With The Data Provided **
+        print(data)
         Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
 
         #** Check If Request Was A Success **
@@ -399,6 +400,7 @@ class Spotify(object):
         #** Iterate Through Each Song And Check Ignore If Empty **
         if Recommendations != []:
             Recommendations = Recommendations.json()
+            print(Recommendations)
 
             #** Check Spotify Actually Returned Tracks In Request **
             if Recommendations['tracks'] != []:
