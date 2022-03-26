@@ -168,9 +168,16 @@ class AccountCog(commands.Cog, name="Account"):
                 except:
                     CurrentUser = Users(self.client, ctx.author.id)
 
-        #** Check User Has Listened To Some Songs & Create Iteration Object Through History List **
+        #** Check User Has Listened To Some Songs **
         if len(CurrentUser.array) > 0:
-            History = reversed(CurrentUser.History)
+
+            #** Organise Song History Queue Into New Array Sorted With Newest First Song First **
+            OrganisedArray = []
+            for i in range(CurrentUser.inpointer-1, (-1*len(CurrentUser.array)+(CurrentUser.inpointer-1)), -1):
+                OrganisedArray.append(CurrentUser.History[i])
+
+            #** Create Iteration Object Through History List **
+            History = iter(OrganisedArray)
             Pages = []
             
             #** For Upper Bound Of Length Of History Divided By 5 Representing The Amount Of Pages Needed **

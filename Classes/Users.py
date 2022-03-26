@@ -273,7 +273,6 @@ class Users(SpotifyUser, SongHistory):
 
             #** Add Song To Overall Song Count Regardless **
             self.user['data']['songs'] += 1
-            print(self.user)
 
         #** Add New Song To Queue **
         self.addSong(TrackData)
