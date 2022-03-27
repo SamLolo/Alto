@@ -144,6 +144,7 @@ class MusicCog(commands.Cog, name="Music"):
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
             #** Get Channel & Print Out Now Playing Information When New Track Starts **
+            print("TrackStartEvent")
             Timestamp = datetime.now()
             Channel = self.client.get_channel(int(event.player.fetch("Channel")))
             print(event.track["title"], event.track["uri"])
@@ -276,7 +277,6 @@ class MusicCog(commands.Cog, name="Music"):
 
                 #** Get Song From Cache & Check If It Is Cached **
                 SongInfo = Database.SearchCache(SpotifyID)
-                print(SongInfo)
                 PlaylistInfo = None
                 if SongInfo == None:
 
@@ -540,7 +540,6 @@ class MusicCog(commands.Cog, name="Music"):
             #** If URL Can't Be Loaded, Raise Error **
             else:
                 raise commands.CheckFailure(message="SongNotFound")
-
 
         #** If Input Isn't One Of Above Possible Categories, Raise Bad Argument Error **
         else:

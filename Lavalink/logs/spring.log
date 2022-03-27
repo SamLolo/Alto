@@ -1,9 +1,9 @@
-2022-03-23 09:57:43.096  INFO 10764 --- [main] lavalink.server.Launcher                 : Starting Launcher on DESKTOP-9JIO0D7 with PID 10764 (C:\Users\Samue\OneDrive\Documents\Github\Discord Music\Lavalink\Lavalink.jar started by Samue in C:\Users\Samue\OneDrive\Documents\Github\Discord Music\Lavalink)
-2022-03-23 09:57:43.109  INFO 10764 --- [main] lavalink.server.Launcher                 : No active profile set, falling back to default profiles: default
-2022-03-23 09:57:43.167  WARN 10764 --- [background-preinit] o.s.h.c.j.Jackson2ObjectMapperBuilder    : For Jackson Kotlin classes support please add "com.fasterxml.jackson.module:jackson-module-kotlin" to the classpath
-2022-03-23 09:57:44.661  INFO 10764 --- [main] lavalink.server.Launcher                 : Started Launcher in 2.345 seconds (JVM running for 3.418)
-2022-03-23 09:57:44.663  INFO 10764 --- [main] lavalink.server.Launcher                 : You can safely ignore the big red warning about illegal reflection. See https://github.com/freyacodes/Lavalink/issues/295
-2022-03-23 09:57:44.719  INFO 10764 --- [main] lavalink.server.Launcher                 : 
+2022-03-27 12:39:54.755  INFO 18936 --- [main] lavalink.server.Launcher                 : Starting Launcher on DESKTOP-9JIO0D7 with PID 18936 (C:\Users\Samue\OneDrive\Documents\Github\Discord Music\Lavalink\Lavalink.jar started by Samue in C:\Users\Samue\OneDrive\Documents\Github\Discord Music\Lavalink)
+2022-03-27 12:39:54.780  INFO 18936 --- [main] lavalink.server.Launcher                 : No active profile set, falling back to default profiles: default
+2022-03-27 12:39:55.717  WARN 18936 --- [background-preinit] o.s.h.c.j.Jackson2ObjectMapperBuilder    : For Jackson Kotlin classes support please add "com.fasterxml.jackson.module:jackson-module-kotlin" to the classpath
+2022-03-27 12:39:56.919  INFO 18936 --- [main] lavalink.server.Launcher                 : Started Launcher in 3.08 seconds (JVM running for 4.041)
+2022-03-27 12:39:56.922  INFO 18936 --- [main] lavalink.server.Launcher                 : You can safely ignore the big red warning about illegal reflection. See https://github.com/freyacodes/Lavalink/issues/295
+2022-03-27 12:39:57.043  INFO 18936 --- [main] lavalink.server.Launcher                 : 
 
 [32m       .  [31m _                  _ _       _    [32m__ _ _
 [32m      /\\ [31m| | __ ___   ____ _| (_)_ __ | | __[32m\ \ \ \
@@ -21,422 +21,41 @@
 	JVM:            16.0.1
 	Lavaplayer      1.3.97-original
 
-2022-03-23 09:57:44.729  INFO 10764 --- [main] lavalink.server.Launcher                 : No active profile set, falling back to default profiles: default
-2022-03-23 09:57:45.905  WARN 10764 --- [main] io.undertow.websockets.jsr               : UT026010: Buffer pool was not set on WebSocketDeploymentInfo, the default pool will be used
-2022-03-23 09:57:45.949  INFO 10764 --- [main] io.undertow.servlet                      : Initializing Spring embedded WebApplicationContext
-2022-03-23 09:57:45.950  INFO 10764 --- [main] o.s.web.context.ContextLoader            : Root WebApplicationContext: initialization completed in 1217 ms
-2022-03-23 09:57:46.064  WARN 10764 --- [main] l.server.config.SentryConfiguration      : Turning off sentry
-2022-03-23 09:57:46.534  INFO 10764 --- [main] c.s.d.l.tools.GarbageCollectionMonitor   : GC monitoring enabled, reporting results every 2 minutes.
-2022-03-23 09:57:46.947  INFO 10764 --- [main] lavalink.server.config.KoeConfiguration  : OS: Windows 10, Arch: amd64
-2022-03-23 09:57:46.948  WARN 10764 --- [main] lavalink.server.config.KoeConfiguration  : This system and architecture appears to not support native audio sending! GC pauses may cause your bot to stutter during playback.
-2022-03-23 09:57:47.098  INFO 10764 --- [main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
-2022-03-23 09:57:47.342  INFO 10764 --- [main] org.xnio                                 : XNIO version 3.3.8.Final
-2022-03-23 09:57:47.362  INFO 10764 --- [main] org.xnio.nio                             : XNIO NIO Implementation Version 3.3.8.Final
-2022-03-23 09:57:47.498  INFO 10764 --- [main] o.s.b.w.e.u.UndertowServletWebServer     : Undertow started on port(s) 2333 (http) with context path ''
-2022-03-23 09:57:47.499  INFO 10764 --- [main] lavalink.server.Launcher                 : Started Launcher in 2.829 seconds (JVM running for 6.256)
-2022-03-23 09:58:08.820  INFO 10764 --- [XNIO-1 task-1] io.undertow.servlet                      : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2022-03-23 09:58:08.821  INFO 10764 --- [XNIO-1 task-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2022-03-23 09:58:08.831  INFO 10764 --- [XNIO-1 task-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 9 ms
-2022-03-23 09:58:08.855  INFO 10764 --- [XNIO-1 task-1] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:58198
-2022-03-23 09:58:08.952  INFO 10764 --- [XNIO-1 task-1] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py
-2022-03-23 09:58:08.979  INFO 10764 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "configureResuming", "key": "default-node", "timeout": 60}
-2022-03-23 09:58:17.832  INFO 10764 --- [XNIO-1 task-2] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one"
-2022-03-23 09:58:17.920  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] c.s.d.l.s.s.SoundCloudClientIdTracker    : Updating SoundCloud client ID (current is null).
-2022-03-23 09:58:18.420  INFO 10764 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "voiceUpdate", "guildId": "718648160901267457", "sessionId": "f7974e34c447ea4dae24b1ca3927ac98", "event": {"token": "b504ef3488cdcee8", "guild_id": "718648160901267457", "endpoint": "rotterdam2413.discord.media:443"}}
-2022-03-23 09:58:18.474  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] c.s.d.l.s.s.SoundCloudClientIdTracker    : Updating SoundCloud client ID succeeded, new ID is u8V3dqZ2Fiu0ciuXebiXDmUpKEeVEDmw.
-2022-03-23 09:58:18.745  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded playlist Search results for: http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one
-2022-03-23 10:04:36.992  INFO 10764 --- [XNIO-1 task-4] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one"
-2022-03-23 10:04:38.962  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] c.s.l.c.natives.NativeLibraryLoader      : Native library libmpg123-0: loading with filter com.sedmelluq.discord.lavaplayer.natives.ConnectorNativeLibLoader$$Lambda$625/0x00000008012af7a0@3b26c
-2022-03-23 10:04:38.990  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] c.s.l.c.natives.NativeLibraryLoader      : Native library libmpg123-0: successfully loaded.
-2022-03-23 10:04:38.991  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] c.s.l.c.natives.NativeLibraryLoader      : Native library connector: loading with filter null
-2022-03-23 10:04:39.045  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] c.s.l.c.natives.NativeLibraryLoader      : Native library connector: successfully loaded.
-2022-03-23 10:04:39.050  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded track BBC Radio
-2022-03-23 10:05:04.503  INFO 10764 --- [XNIO-1 task-6] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://sondclod.com/iamannemarie/anne-marie-beautiful"
-2022-03-23 10:05:05.531 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Load failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: That URL is not playable.
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.detectContainerWithClient(HttpAudioSourceManager.java:138) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.detectContainer(HttpAudioSourceManager.java:120) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.loadItem(HttpAudioSourceManager.java:81) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-Caused by: java.lang.IllegalStateException: Status code 403
-	... 10 common frames omitted
-
-2022-03-23 10:05:05.532 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] l.server.player.AudioLoaderRestHandler   : Track loading failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: That URL is not playable.
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.detectContainerWithClient(HttpAudioSourceManager.java:138) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.detectContainer(HttpAudioSourceManager.java:120) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.loadItem(HttpAudioSourceManager.java:81) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-Caused by: java.lang.IllegalStateException: Status code 403
-	... 10 common frames omitted
-
-2022-03-23 10:05:37.983  INFO 10764 --- [XNIO-1 task-8] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://soundcloud.com/annemarie/anne-marie-beautiful"
-2022-03-23 10:05:38.108 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Load failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: This track is not available
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadTrack(SoundCloudAudioSourceManager.java:213) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.processAsSingleTrack(SoundCloudAudioSourceManager.java:186) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadItem(SoundCloudAudioSourceManager.java:123) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:05:38.109 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] l.server.player.AudioLoaderRestHandler   : Track loading failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: This track is not available
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadTrack(SoundCloudAudioSourceManager.java:213) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.processAsSingleTrack(SoundCloudAudioSourceManager.java:186) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadItem(SoundCloudAudioSourceManager.java:123) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:05:53.584  INFO 10764 --- [XNIO-1 task-10] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://soundcloud.com/annemarie/anne-marie-beautiful"
-2022-03-23 10:05:53.698 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Load failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: This track is not available
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadTrack(SoundCloudAudioSourceManager.java:213) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.processAsSingleTrack(SoundCloudAudioSourceManager.java:186) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadItem(SoundCloudAudioSourceManager.java:123) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:05:53.699 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] l.server.player.AudioLoaderRestHandler   : Track loading failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: This track is not available
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadTrack(SoundCloudAudioSourceManager.java:213) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.processAsSingleTrack(SoundCloudAudioSourceManager.java:186) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadItem(SoundCloudAudioSourceManager.java:123) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:09:13.401  INFO 10764 --- [XNIO-1 task-12] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://soundcloud.com/annemarie/anne-marie-beautiful"
-2022-03-23 10:09:13.552 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Load failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: This track is not available
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadTrack(SoundCloudAudioSourceManager.java:213) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.processAsSingleTrack(SoundCloudAudioSourceManager.java:186) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadItem(SoundCloudAudioSourceManager.java:123) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:09:13.553 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] l.server.player.AudioLoaderRestHandler   : Track loading failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: This track is not available
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadTrack(SoundCloudAudioSourceManager.java:213) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.processAsSingleTrack(SoundCloudAudioSourceManager.java:186) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadItem(SoundCloudAudioSourceManager.java:123) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:24:06.279  INFO 10764 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:58198 with status CloseStatus[code=1006, reason=] -- Session can be resumed within the next 60 seconds with key default-node
-2022-03-23 10:24:11.950  INFO 10764 --- [XNIO-1 task-14] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:62923
-2022-03-23 10:24:11.953  INFO 10764 --- [XNIO-1 task-14] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py
-2022-03-23 10:24:11.955  INFO 10764 --- [XNIO-1 I/O-1] lavalink.server.io.SocketServer          : {"op": "configureResuming", "key": "default-node", "timeout": 60}
-2022-03-23 10:25:06.281  INFO 10764 --- [pool-2-thread-1] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
-2022-03-23 10:30:11.645  INFO 10764 --- [XNIO-1 task-15] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one"
-2022-03-23 10:30:12.174  INFO 10764 --- [XNIO-1 I/O-1] lavalink.server.io.SocketServer          : {"op": "voiceUpdate", "guildId": "718648160901267457", "sessionId": "d2acb59b99dabd1f8fc21cefe73745ec", "event": {"token": "f03874af12dcad37", "guild_id": "718648160901267457", "endpoint": "rotterdam2413.discord.media:443"}}
-2022-03-23 10:30:12.860  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded track BBC Radio
-2022-03-23 10:30:19.760  INFO 10764 --- [XNIO-1 task-17] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://sondclod.com/iamannemarie/anne-marie-beautiful"
-2022-03-23 10:30:20.666 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Load failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: That URL is not playable.
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.detectContainerWithClient(HttpAudioSourceManager.java:138) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.detectContainer(HttpAudioSourceManager.java:120) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.loadItem(HttpAudioSourceManager.java:81) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-Caused by: java.lang.IllegalStateException: Status code 403
-	... 10 common frames omitted
-
-2022-03-23 10:30:20.667 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] l.server.player.AudioLoaderRestHandler   : Track loading failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: That URL is not playable.
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.detectContainerWithClient(HttpAudioSourceManager.java:138) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.detectContainer(HttpAudioSourceManager.java:120) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.loadItem(HttpAudioSourceManager.java:81) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-Caused by: java.lang.IllegalStateException: Status code 403
-	... 10 common frames omitted
-
-2022-03-23 10:30:32.100  INFO 10764 --- [XNIO-1 task-19] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://soundcloud.com/annemarie/anne-marie-beautiful"
-2022-03-23 10:30:32.245 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Load failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: This track is not available
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadTrack(SoundCloudAudioSourceManager.java:213) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.processAsSingleTrack(SoundCloudAudioSourceManager.java:186) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadItem(SoundCloudAudioSourceManager.java:123) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:30:32.246 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] l.server.player.AudioLoaderRestHandler   : Track loading failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: This track is not available
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadTrack(SoundCloudAudioSourceManager.java:213) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.processAsSingleTrack(SoundCloudAudioSourceManager.java:186) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.soundcloud.SoundCloudAudioSourceManager.loadItem(SoundCloudAudioSourceManager.java:123) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:36:25.017  INFO 10764 --- [XNIO-1 task-21] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://www.twitch.tv/ethos"
-2022-03-23 10:36:25.500  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded track NRG ethos // radiant grind
-2022-03-23 10:41:39.818  INFO 10764 --- [XNIO-1 task-23] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://www.globalplayer.com/live/capitaldance/uk/"
-2022-03-23 10:41:39.941 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Load failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: Unknown file format.
-	at com.sedmelluq.discord.lavaplayer.source.ProbingAudioSourceManager.handleLoadResult(ProbingAudioSourceManager.java:34) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.loadItem(HttpAudioSourceManager.java:81) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:41:39.942 ERROR 10764 --- [lava-daemon-pool-info-loader-2-thread-1] l.server.player.AudioLoaderRestHandler   : Track loading failed
-
-com.sedmelluq.discord.lavaplayer.tools.FriendlyException: Unknown file format.
-	at com.sedmelluq.discord.lavaplayer.source.ProbingAudioSourceManager.handleLoadResult(ProbingAudioSourceManager.java:34) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager.loadItem(HttpAudioSourceManager.java:81) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItemOnce(DefaultAudioPlayerManager.java:436) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.checkSourcesForItem(DefaultAudioPlayerManager.java:418) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager.lambda$createItemLoader$0(DefaultAudioPlayerManager.java:217) ~[lavaplayer-fork-1.3.97.jar!/:na]
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:630) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:831) ~[na:na]
-	Suppressed: com.sedmelluq.discord.lavaplayer.tools.exception.EnvironmentInformation: 
-  lavaplayer.version: 1.3.97-original
-  os.arch: amd64
-  os.name: Windows 10
-  os.version: 10.0
-  java.vendor: Oracle Corporation
-  java.version: 16.0.1
-  java.runtime.version: 16.0.1+9-24
-  java.vm.version: 16.0.1+9-24
-
-2022-03-23 10:43:20.587  INFO 10764 --- [XNIO-1 task-25] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://media-ice.musicradio.com/CapitalDanceMP3"
-2022-03-23 10:43:20.699  WARN 10764 --- [lava-daemon-pool-info-loader-2-thread-1] o.a.h.c.protocol.ResponseProcessCookies  : Cookie rejected [dax_listenerid="BB1724B86B337EE736033C434E4A75ED", version:0, domain:thisisdax.com, path:/, expiry:Thu Sep 21 22:36:40 BST 2023] Illegal 'domain' attribute "thisisdax.com". Domain of origin: "media-ice.musicradio.com"
-2022-03-23 10:43:20.700  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded track Capital Dance
-2022-03-23 11:47:54.043  INFO 10764 --- [XNIO-1 task-27] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "https://media-ice.musicradio.com/CapitalDanceMP3"
-2022-03-23 11:47:54.150  WARN 10764 --- [lava-daemon-pool-info-loader-2-thread-1] o.a.h.c.protocol.ResponseProcessCookies  : Cookie rejected [dax_listenerid="BB1724B86B337EE736033C434E4A75ED", version:0, domain:thisisdax.com, path:/, expiry:Thu Sep 21 23:41:14 BST 2023] Illegal 'domain' attribute "thisisdax.com". Domain of origin: "media-ice.musicradio.com"
-2022-03-23 11:47:54.151  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded track Capital Dance
-2022-03-23 11:48:04.454  INFO 10764 --- [XNIO-1 I/O-1] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:62923 with status CloseStatus[code=1006, reason=] -- Session can be resumed within the next 60 seconds with key default-node
-2022-03-23 11:48:10.565  INFO 10764 --- [XNIO-1 task-29] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:58138
-2022-03-23 11:48:10.569  INFO 10764 --- [XNIO-1 task-29] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py
-2022-03-23 11:48:10.571  INFO 10764 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "configureResuming", "key": "default-node", "timeout": 60}
-2022-03-23 11:48:30.787  INFO 10764 --- [XNIO-1 task-30] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:Bastille Back To The Future"
-2022-03-23 11:48:31.127  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded playlist Search results for: Bastille Back To The Future
-2022-03-23 11:48:31.176  INFO 10764 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "voiceUpdate", "guildId": "718648160901267457", "sessionId": "a083534e1c86f10b51f297e757ffdf44", "event": {"token": "f03874af12dcad37", "guild_id": "718648160901267457", "endpoint": "rotterdam2413.discord.media:443"}}
-2022-03-23 11:48:31.409  INFO 10764 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "play", "guildId": "718648160901267457", "track": "QAAA5wIAEkJhY2sgVG8gVGhlIEZ1dHVyZQAIQkFTVElMTEUAAAAAAAKkvAByTzpodHRwczovL2FwaS12Mi5zb3VuZGNsb3VkLmNvbS9tZWRpYS9zb3VuZGNsb3VkOnRyYWNrczoxMjA1MTI0MTg3Lzk4Y2M1MDRkLTA2OTMtNDhlMy1iMDE4LWE5ZWRlMjY0N2I0MS9zdHJlYW0vaGxzAAEANGh0dHBzOi8vc291bmRjbG91ZC5jb20vYmFzdGlsbGV1ay9iYWNrLXRvLXRoZS1mdXR1cmUACnNvdW5kY2xvdWQAAAAAAAAAAA==", "startTime": 0, "endTime": 0, "noReplace": false}
-2022-03-23 11:49:04.456  INFO 10764 --- [pool-3-thread-1] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
-2022-03-23 11:49:10.862  INFO 10764 --- [XNIO-1 task-32] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:Bastille Back To The Future"
-2022-03-23 11:49:11.175  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded playlist Search results for: Bastille Back To The Future
-2022-03-23 11:50:30.172  INFO 10764 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "stop", "guildId": "718648160901267457"}
-2022-03-23 11:50:31.641  INFO 10764 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:58138 with status CloseStatus[code=1006, reason=] -- Session can be resumed within the next 60 seconds with key default-node
-2022-03-23 11:50:36.847  INFO 10764 --- [XNIO-1 task-34] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:55410
-2022-03-23 11:50:36.850  INFO 10764 --- [XNIO-1 task-34] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py
-2022-03-23 11:50:36.851  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "configureResuming", "key": "default-node", "timeout": 60}
-2022-03-23 11:50:54.696  INFO 10764 --- [XNIO-1 task-35] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:Bastille Back To The Future"
-2022-03-23 11:50:54.875  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded playlist Search results for: Bastille Back To The Future
-2022-03-23 11:50:54.928  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "voiceUpdate", "guildId": "718648160901267457", "sessionId": "c70e5aca90dc89ed5889f8055de3b4c2", "event": {"token": "f87ccd5a47d54016", "guild_id": "718648160901267457", "endpoint": "rotterdam2413.discord.media:443"}}
-2022-03-23 11:50:55.147  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "play", "guildId": "718648160901267457", "track": "QAAA5wIAEkJhY2sgVG8gVGhlIEZ1dHVyZQAIQkFTVElMTEUAAAAAAAKkvAByTzpodHRwczovL2FwaS12Mi5zb3VuZGNsb3VkLmNvbS9tZWRpYS9zb3VuZGNsb3VkOnRyYWNrczoxMjA1MTI0MTg3Lzk4Y2M1MDRkLTA2OTMtNDhlMy1iMDE4LWE5ZWRlMjY0N2I0MS9zdHJlYW0vaGxzAAEANGh0dHBzOi8vc291bmRjbG91ZC5jb20vYmFzdGlsbGV1ay9iYWNrLXRvLXRoZS1mdXR1cmUACnNvdW5kY2xvdWQAAAAAAAAAAA==", "startTime": 0, "endTime": 0, "noReplace": false}
-2022-03-23 11:51:31.643  INFO 10764 --- [pool-4-thread-1] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
-2022-03-23 11:51:54.016  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "stop", "guildId": "718648160901267457"}
-2022-03-23 11:51:59.403  INFO 10764 --- [XNIO-1 task-37] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:Bastille Back To The Future"
-2022-03-23 11:51:59.611  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "voiceUpdate", "guildId": "718648160901267457", "sessionId": "c70e5aca90dc89ed5889f8055de3b4c2", "event": {"token": "56495f425be964b5", "guild_id": "718648160901267457", "endpoint": "rotterdam2413.discord.media:443"}}
-2022-03-23 11:51:59.628  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded playlist Search results for: Bastille Back To The Future
-2022-03-23 11:51:59.880  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "play", "guildId": "718648160901267457", "track": "QAAA5wIAEkJhY2sgVG8gVGhlIEZ1dHVyZQAIQkFTVElMTEUAAAAAAAKkvAByTzpodHRwczovL2FwaS12Mi5zb3VuZGNsb3VkLmNvbS9tZWRpYS9zb3VuZGNsb3VkOnRyYWNrczoxMjA1MTI0MTg3Lzk4Y2M1MDRkLTA2OTMtNDhlMy1iMDE4LWE5ZWRlMjY0N2I0MS9zdHJlYW0vaGxzAAEANGh0dHBzOi8vc291bmRjbG91ZC5jb20vYmFzdGlsbGV1ay9iYWNrLXRvLXRoZS1mdXR1cmUACnNvdW5kY2xvdWQAAAAAAAAAAA==", "startTime": 0, "endTime": 0, "noReplace": false}
-2022-03-23 11:54:06.417  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "stop", "guildId": "718648160901267457"}
-2022-03-23 11:54:12.920  INFO 10764 --- [XNIO-1 task-39] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:Bastille Back To The Future"
-2022-03-23 11:54:13.121  INFO 10764 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded playlist Search results for: Bastille Back To The Future
-2022-03-23 11:54:13.124  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "voiceUpdate", "guildId": "718648160901267457", "sessionId": "c70e5aca90dc89ed5889f8055de3b4c2", "event": {"token": "e9de428acae13808", "guild_id": "718648160901267457", "endpoint": "rotterdam2413.discord.media:443"}}
-2022-03-23 11:54:13.393  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "play", "guildId": "718648160901267457", "track": "QAAA5wIAEkJhY2sgVG8gVGhlIEZ1dHVyZQAIQkFTVElMTEUAAAAAAAKkvAByTzpodHRwczovL2FwaS12Mi5zb3VuZGNsb3VkLmNvbS9tZWRpYS9zb3VuZGNsb3VkOnRyYWNrczoxMjA1MTI0MTg3Lzk4Y2M1MDRkLTA2OTMtNDhlMy1iMDE4LWE5ZWRlMjY0N2I0MS9zdHJlYW0vaGxzAAEANGh0dHBzOi8vc291bmRjbG91ZC5jb20vYmFzdGlsbGV1ay9iYWNrLXRvLXRoZS1mdXR1cmUACnNvdW5kY2xvdWQAAAAAAAAAAA==", "startTime": 0, "endTime": 0, "noReplace": false}
-2022-03-23 11:57:06.925  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "stop", "guildId": "718648160901267457"}
-2022-03-23 12:00:37.619  INFO 10764 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:55410 with status CloseStatus[code=1006, reason=] -- Session can be resumed within the next 60 seconds with key default-node
-2022-03-23 12:00:45.488  INFO 10764 --- [XNIO-1 task-41] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:64731
-2022-03-23 12:00:45.493  INFO 10764 --- [XNIO-1 task-41] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py
-2022-03-23 12:00:45.494  INFO 10764 --- [XNIO-1 I/O-3] lavalink.server.io.SocketServer          : {"op": "configureResuming", "key": "default-node", "timeout": 60}
-2022-03-23 12:01:37.620  INFO 10764 --- [pool-5-thread-1] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
-2022-03-23 12:03:27.196  INFO 10764 --- [XNIO-1 I/O-3] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:64731 with status CloseStatus[code=1006, reason=] -- Session can be resumed within the next 60 seconds with key default-node
+2022-03-27 12:39:57.061  INFO 18936 --- [main] lavalink.server.Launcher                 : No active profile set, falling back to default profiles: default
+2022-03-27 12:39:58.867  WARN 18936 --- [main] io.undertow.websockets.jsr               : UT026010: Buffer pool was not set on WebSocketDeploymentInfo, the default pool will be used
+2022-03-27 12:39:58.912  INFO 18936 --- [main] io.undertow.servlet                      : Initializing Spring embedded WebApplicationContext
+2022-03-27 12:39:58.913  INFO 18936 --- [main] o.s.web.context.ContextLoader            : Root WebApplicationContext: initialization completed in 1845 ms
+2022-03-27 12:39:59.058  WARN 18936 --- [main] l.server.config.SentryConfiguration      : Turning off sentry
+2022-03-27 12:39:59.550  INFO 18936 --- [main] c.s.d.l.tools.GarbageCollectionMonitor   : GC monitoring enabled, reporting results every 2 minutes.
+2022-03-27 12:39:59.876  INFO 18936 --- [main] lavalink.server.config.KoeConfiguration  : OS: Windows 10, Arch: amd64
+2022-03-27 12:39:59.877  WARN 18936 --- [main] lavalink.server.config.KoeConfiguration  : This system and architecture appears to not support native audio sending! GC pauses may cause your bot to stutter during playback.
+2022-03-27 12:40:00.064  INFO 18936 --- [main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+2022-03-27 12:40:00.373  INFO 18936 --- [main] org.xnio                                 : XNIO version 3.3.8.Final
+2022-03-27 12:40:00.402  INFO 18936 --- [main] org.xnio.nio                             : XNIO NIO Implementation Version 3.3.8.Final
+2022-03-27 12:40:00.698  INFO 18936 --- [main] o.s.b.w.e.u.UndertowServletWebServer     : Undertow started on port(s) 2333 (http) with context path ''
+2022-03-27 12:40:00.699  INFO 18936 --- [main] lavalink.server.Launcher                 : Started Launcher in 3.767 seconds (JVM running for 7.821)
+2022-03-27 12:47:20.676  INFO 18936 --- [XNIO-1 task-1] io.undertow.servlet                      : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2022-03-27 12:47:20.677  INFO 18936 --- [XNIO-1 task-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2022-03-27 12:47:20.693  INFO 18936 --- [XNIO-1 task-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 14 ms
+2022-03-27 12:47:20.750  INFO 18936 --- [XNIO-1 task-1] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:57060
+2022-03-27 12:47:20.926  INFO 18936 --- [XNIO-1 task-1] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py
+2022-03-27 12:47:20.960  INFO 18936 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : {"op": "configureResuming", "key": "default-node", "timeout": 60}
+2022-03-27 12:48:19.516  INFO 18936 --- [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:57060 with status CloseStatus[code=1006, reason=] -- Session can be resumed within the next 60 seconds with key default-node
+2022-03-27 12:49:19.520  INFO 18936 --- [pool-2-thread-1] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2022-03-27 12:59:17.911  INFO 18936 --- [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:64923
+2022-03-27 12:59:17.916  INFO 18936 --- [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py
+2022-03-27 12:59:17.916  INFO 18936 --- [XNIO-1 I/O-3] lavalink.server.io.SocketServer          : {"op": "configureResuming", "key": "default-node", "timeout": 60}
+2022-03-27 13:06:19.249  INFO 18936 --- [XNIO-1 I/O-3] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:64923 with status CloseStatus[code=1006, reason=] -- Session can be resumed within the next 60 seconds with key default-node
+2022-03-27 13:07:19.251  INFO 18936 --- [pool-3-thread-1] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2022-03-27 13:58:38.105  INFO 18936 --- [XNIO-1 task-3] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:52450
+2022-03-27 13:58:38.109  INFO 18936 --- [XNIO-1 task-3] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py
+2022-03-27 13:58:38.110  INFO 18936 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "configureResuming", "key": "default-node", "timeout": 60}
+2022-03-27 13:59:23.416  INFO 18936 --- [XNIO-1 task-4] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:Take my breath the weeknd"
+2022-03-27 13:59:23.508  INFO 18936 --- [lava-daemon-pool-info-loader-2-thread-1] c.s.d.l.s.s.SoundCloudClientIdTracker    : Updating SoundCloud client ID (current is null).
+2022-03-27 13:59:23.603  INFO 18936 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "voiceUpdate", "guildId": "718648160901267457", "sessionId": "5f69635960b1ea0f54c2d1516cb788cf", "event": {"token": "168987e39232f039", "guild_id": "718648160901267457", "endpoint": "rotterdam9228.discord.media:443"}}
+2022-03-27 13:59:24.133  INFO 18936 --- [lava-daemon-pool-info-loader-2-thread-1] c.s.d.l.s.s.SoundCloudClientIdTracker    : Updating SoundCloud client ID succeeded, new ID is gm55QhEUd3ZaSUB6eVrf3vxNKtJu59Mn.
+2022-03-27 13:59:24.469  INFO 18936 --- [lava-daemon-pool-info-loader-2-thread-1] lavalink.server.player.AudioLoader       : Loaded playlist Search results for: Take my breath the weeknd
+2022-03-27 13:59:25.266  INFO 18936 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "play", "guildId": "718648160901267457", "track": "QAAA+AIAG1RoZSBXZWVrbmQgLSBUYWtlIE15IEJyZWF0aAAKVGhlIFdlZWtuZAAAAAAAA1xOAHJPOmh0dHBzOi8vYXBpLXYyLnNvdW5kY2xvdWQuY29tL21lZGlhL3NvdW5kY2xvdWQ6dHJhY2tzOjExMDExMTkyNjAvYTYyNzYxYTItZmRhNS00NjNiLTgxZmUtYzUwZWU2MWEzZTVkL3N0cmVhbS9obHMAAQA6aHR0cHM6Ly9zb3VuZGNsb3VkLmNvbS90aGV3ZWVrbmQvdGhlLXdlZWtuZC10YWtlLW15LWJyZWF0aAAKc291bmRjbG91ZAAAAAAAAAAA", "startTime": 0, "endTime": 0, "noReplace": false}
+2022-03-27 14:00:08.683  INFO 18936 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : {"op": "stop", "guildId": "718648160901267457"}
+2022-03-27 14:44:10.523  INFO 18936 --- [XNIO-1 I/O-4] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:52450 with status CloseStatus[code=1006, reason=] -- Session can be resumed within the next 60 seconds with key default-node
+2022-03-27 14:45:10.525  INFO 18936 --- [pool-4-thread-1] lavalink.server.io.SocketContext         : Shutting down 0 playing players.

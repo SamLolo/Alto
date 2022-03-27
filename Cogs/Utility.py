@@ -62,7 +62,7 @@ class UtilityCog(commands.Cog, name="Utility"):
         Invite = discord.Embed(
             title="Invite Alto To Your Discord Server!",
             colour=discord.Colour.blue(),
-            description="A whole new way to listen to music awaits you:\n🎶 [Alto | Discord Music](https://discord.com/api/oauth2/authorize?client_id=803939964092940308&permissions=139921845328&scope=bot) 🎶")
+            description="A whole new way to listen to music awaits you:\n🎶 [Alto | Discord Music](https://discord.com/oauth2/authorize?client_id=803939964092940308&permissions=3632192&scope=bot) 🎶")
         Invite.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
 
         #** Send Embed To Discord **

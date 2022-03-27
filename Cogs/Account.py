@@ -241,6 +241,7 @@ class AccountCog(commands.Cog, name="Account"):
                     #** Send Processing Message To User & Get Recommendations From Spotify API Through User Class**
                     Page = await ctx.send("**Analysing Your Listening History...**")
                     Tracks = User.getRecommendations()
+                    print("Got Recommendations")
                 
                 else:
                     raise commands.CheckFailure(message="History")
@@ -248,7 +249,7 @@ class AccountCog(commands.Cog, name="Account"):
             #** Check If User Has Requested To Use Spotify & Make Sure User Has Spotify Connected **
             elif Input.lower() == "spotify":    
                 if User.SpotifyConnected:
-                    print("User Found")
+                    print("\nSpotify User Found")
 
                     #** Send Initial Waiting Message To User **
                     Page = await ctx.send("**Collecting Your Spotify History...**")
@@ -273,7 +274,6 @@ class AccountCog(commands.Cog, name="Account"):
                     raise commands.CheckFailure(message="Spotify")
 
             #** Check Tracks We're Fetched Correctly From Spotify API **
-            print(Tracks)
             if not(Tracks in ["RecommendationsNotFound", "UnexpectedError"]):
 
                 #** Randomly Choose 10 Songs From 50 Recomendations **
@@ -317,7 +317,7 @@ class AccountCog(commands.Cog, name="Account"):
 
                 #** Add Embed To Active Pages In Pagination Cog **
                 await self.Pagination.add_pages(Page.id, Pages)
-                print("All Pages Created!")
+                print("All Pages Created!\n")
             
             #** Return Error To User If Failed To Get Recommendations **
             else:

@@ -139,6 +139,7 @@ class EmbedPaginator(commands.Cog):
         try:
             Embed = self.OpenPages[MessageID]
         except:
+            print("Pages not found!")
             return None
         
         #** Move Page To Back Of Queue **

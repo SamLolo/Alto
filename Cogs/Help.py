@@ -88,9 +88,6 @@ class HelpCog(commands.Cog):
                     CategoryEmbed.set_footer(text="Page "+str(CommandNo // 6))
                     PageDict = copy.deepcopy(CategoryEmbed.to_dict())
                     PageData.append(PageDict)
-                    print("[PAGE]\n")
-                    print(PageData)
-                    print()
                     
                     #** If First Page, Send Embed & Add Reactions **#
                     if (CommandNo / 6) == 1:
@@ -100,7 +97,6 @@ class HelpCog(commands.Cog):
                     
                     #** Clear Embed Fields **
                     CategoryEmbed.clear_fields()
-                    print(PageDict)
                 
                 #** Create Field Description With Command Aliases And Command Description **
                 Value = "*"+command.description+"*\n ---------------------------"
@@ -115,16 +111,12 @@ class HelpCog(commands.Cog):
             if len(list(Cog.walk_commands())) > 6 and (CommandNo % 6) != 0:
                 CategoryEmbed.set_footer(text="Page "+str(int(math.ceil(CommandNo / 6))))
                 PageData.append(CategoryEmbed.to_dict())
-                print("[PAGE]\n")
-                print(PageData)
-                print()
                 
             #** Send Embed if less than 6 commands otherwise Create Pagination For Embed **
             if PageData == []:
                 await ctx.send(embed=CategoryEmbed)
             else:
                 await self.Pagination.add_pages(Page.id, PageData)
-                print("Pagination Sent!")
                 
         #**------------------SINGLE COMMAND------------------**#
                 
