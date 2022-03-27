@@ -109,7 +109,7 @@ class MusicCog(commands.Cog, name="Music"):
                 await ctx.guild.change_voice_state(channel=ctx.author.voice.channel)
                 
             #** If Bot Doesn't Need To Connect, Raise Error **
-            elif ctx.command.name in ['stop', 'pause', 'skip', 'queue', 'seek']:
+            elif ctx.command.name in ['stop', 'pause', 'skip', 'queue', 'seek', 'nowplaying', 'loop']:
                 raise commands.CheckFailure("BotVoice")
                 
         else:

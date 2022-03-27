@@ -365,6 +365,7 @@ class Spotify(object):
     def GetRecommendations(self, data):
         
         #** Requests Recommendations From Spotify With The Data Provided **
+        print(data)
         Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
 
         #** Check If Request Was A Success **
@@ -399,6 +400,7 @@ class Spotify(object):
         #** Iterate Through Each Song And Check Ignore If Empty **
         if Recommendations != []:
             Recommendations = Recommendations.json()
+            print(Recommendations)
 
             #** Check Spotify Actually Returned Tracks In Request **
             if Recommendations['tracks'] != []:

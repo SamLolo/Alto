@@ -277,12 +277,14 @@ class AccountCog(commands.Cog, name="Account"):
             if not(Tracks in ["RecommendationsNotFound", "UnexpectedError"]):
 
                 #** Randomly Choose 10 Songs From 50 Recomendations **
+                print(Tracks)
                 Recommendations = {}
                 for i in range(10):
                     SpotifyID = random.choice(list(Tracks.keys()))
                     while SpotifyID in Recommendations.keys():
                         SpotifyID = random.choice(list(Tracks.keys()))
                     Recommendations.update({SpotifyID: Tracks[SpotifyID]})
+                print(Recommendations)
 
                 #** Loop Through Data & Create Dictionary Of Embed Pages **
                 Pages = []
@@ -406,7 +408,7 @@ class AccountCog(commands.Cog, name="Account"):
                       description="Deletes your user data where requested from our database.",
                       usage="!delete <data>",
                       help="`Possible Inputs For <data>:`\n- all: *deletes all traces of your data*\n- spotify: *deletes your spotify data (equivalent of `!unlink`)*\n"+
-                           "- history: *deletes all your listening history*\n- user: *deletes all user data including your listening history, but excluding spotify data*")
+                           "- user: *deletes all user data including your listening history, but excluding spotify data*")
     async def delete(self, ctx, data):
         
         #** Generate Message To Send To User & The Table That Would Need To Be Deleted **
@@ -416,12 +418,9 @@ class AccountCog(commands.Cog, name="Account"):
         elif data == "spotify":
             Message = "All spotify data will be deleted and lost forever!\nIf you haven't connected your spotify, this won\'t do anything!"
             Tables = ['spotify']
-        elif data == "history":
-            Message = "All listening history will be deleted and lost forever!\nYou may lose access to certain bot features temporarily after this process!"
-            Tables = ['history']
         elif data == "user":
             Message = "All listening history and user data, besides spotify data, will be deleted and lost forever!\nYou may lose access to certain bot features temporarily after this process!"
-            Tables = ['user', 'recommendations', 'history']
+            Tables = ['users', 'recommendations', 'history']
         
         #** If Invalid Input, Raise Bad Argument Error **
         else:

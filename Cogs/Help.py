@@ -5,6 +5,7 @@
 import math
 import json
 import copy
+import asyncio
 import discord
 from datetime import datetime
 from discord.ext import commands
@@ -153,6 +154,16 @@ class HelpCog(commands.Cog):
             
             #** Send Embed To Discord **
             await ctx.send(embed=CommandEmbed)
+
+        #**------------------UNKNOWN INPUT------------------**#
+
+        else:
+            #** Let User Know Input Is Invalid **
+            Temp = await ctx.message.channel.send("**"+input.title()+" is not a valid command or catergory!**\nPlease, check your input and try again.")
+            await asyncio.sleep(10)
+            await ctx.message.delete()
+            await Temp.delete()
+
         
 
 #!-------------------SETUP FUNCTION-------------------#

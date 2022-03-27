@@ -173,7 +173,7 @@ def is_admin():
 #!--------------------------------DISCORD COMMANDS-----------------------------------# 
 
 
-@client.command()
+@client.command(hidden=True)
 @is_admin()
 async def reload(ctx, CogName):
     

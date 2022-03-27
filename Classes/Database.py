@@ -182,7 +182,7 @@ class UserData():
                 User['recommendations']['Energy'][0], User['recommendations']['Energy'][1], User['recommendations']['Energy'][2],
                 User['recommendations']['Instrument'][0], User['recommendations']['Instrument'][1], User['recommendations']['Instrument'][2],
                 User['recommendations']['Live'][0], User['recommendations']['Live'][1], User['recommendations']['Live'][2],
-                User['recommendations']['Live'][0], User['recommendations']['Loud'][1], User['recommendations']['Loud'][2],
+                User['recommendations']['Loud'][0], User['recommendations']['Loud'][1], User['recommendations']['Loud'][2],
                 User['recommendations']['Speech'][0], User['recommendations']['Speech'][1], User['recommendations']['Speech'][2],
                 User['recommendations']['Valance'][0], User['recommendations']['Valance'][1], User['recommendations']['Valance'][2])
         self.cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", Data)
