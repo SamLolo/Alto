@@ -420,7 +420,7 @@ class AccountCog(commands.Cog, name="Account"):
             Tables = ['spotify']
         elif data == "user":
             Message = "All listening history and user data, besides spotify data, will be deleted and lost forever!\nYou may lose access to certain bot features temporarily after this process!"
-            Tables = ['users', 'recommendations', 'history']
+            Tables = ['users', 'history', 'recommendations']
         
         #** If Invalid Input, Raise Bad Argument Error **
         else:

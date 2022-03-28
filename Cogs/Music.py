@@ -127,7 +127,7 @@ class MusicCog(commands.Cog, name="Music"):
         if isinstance(event, lavalink.events.QueueEndEvent):
             
             #** When Queue Empty, Disconnect From VC **
-            print("QueueEndEvent")
+            print("\nQueueEndEvent")
             Guild = self.client.get_guild(int(event.player.guild_id))
             await Guild.change_voice_state(channel=None)
             
@@ -140,11 +140,12 @@ class MusicCog(commands.Cog, name="Music"):
             UserDict = event.player.fetch('Users')
             for User in UserDict.values():
                 await User.save()
+            print("All User Data Saved!")
             
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
             #** Get Channel & Print Out Now Playing Information When New Track Starts **
-            print("TrackStartEvent")
+            print("\nTrackStartEvent")
             Timestamp = datetime.now()
             Channel = self.client.get_channel(int(event.player.fetch("Channel")))
             print(event.track["title"], event.track["uri"])

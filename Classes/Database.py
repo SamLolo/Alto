@@ -200,7 +200,8 @@ class UserData():
         
         #** Remove Row From Each Specified Table With Specified Discord ID **
         for Table in Tables:
-            self.cursor.execute("DELETE FROM "+Table+" WHERE DiscordID='"+str(discordID)+"'")
+            self.cursor.execute("DELETE FROM "+Table+" WHERE DiscordID='"+str(discordID)+"';")
+            print("Table '"+Table+"' deleted for user: "+str(discordID)+"!")
         self.connection.commit()
 
 

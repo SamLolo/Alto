@@ -147,7 +147,7 @@ class SongHistory(object):
             else:
                 self.inpointer += 1
 
-            print("Song History Added To Queue!")
+            print("Song History Added!")
 
             #** Set Full To True If Same As OutPointer **
             if self.inpointer == self.outpointer and len(self.array) == self.maxsize:
@@ -166,7 +166,7 @@ class SongHistory(object):
             else:
                 self.outpointer += 1
 
-            print("Song History Removed From Queue!")
+            print("Song History Removed")
 
             #** Set Full To False If Currently True & Return Removed Data Point **
             if self.full:
