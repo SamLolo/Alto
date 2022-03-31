@@ -23,27 +23,17 @@ DROP TABLE IF EXISTS `spotify`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `spotify` (
-  `SpotifyID` varchar(32) NOT NULL,
+  `SpotifyID` varchar(512) DEFAULT NULL,
   `DiscordID` varchar(32) NOT NULL,
-  `Name` varchar(128) DEFAULT NULL,
-  `Avatar` varchar(128) DEFAULT NULL,
+  `Name` varchar(1024) DEFAULT NULL,
+  `Avatar` varchar(1024) DEFAULT NULL,
   `Followers` varchar(16) DEFAULT NULL,
   `Subscription` tinyint DEFAULT NULL,
-  `Refresh` varchar(64) DEFAULT NULL,
-  `State` varchar(16) DEFAULT NULL,
+  `Refresh` varchar(1024) DEFAULT NULL,
   `Linked` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`SpotifyID`)
+  PRIMARY KEY (`DiscordID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `spotify`
---
-
-LOCK TABLES `spotify` WRITE;
-/*!40000 ALTER TABLE `spotify` DISABLE KEYS */;
-/*!40000 ALTER TABLE `spotify` ENABLE KEYS */;
-UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -54,4 +44,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-02-03  8:18:01
+-- Dump completed on 2022-03-31 21:32:50

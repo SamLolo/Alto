@@ -159,16 +159,16 @@ class MusicCog(commands.Cog, name="Music"):
             else:
                 NowPlaying.set_footer(text="Up Next: "+event.player.queue[0]["title"])
 
-            #** If Not A Stream, Add Position Field & Source Of Music **
+            #** If Not A Stream, Add Duration Field & Source Of Music **
             if not(event.track.stream):
                 NowPlaying.set_author(name="Playing From Soundcloud", icon_url="https://cdn.discordapp.com/emojis/897135141040832563.png?size=96&quality=lossless")
-                NowPlaying.add_field(name="Position:", value = "0:00 / "+ Utils.format_time(event.track.duration))
+                NowPlaying.add_field(name="Duration:", value = Utils.format_time(event.track.duration))
                 
                 #** If Track Has Spotify Info, Format List of Artists **
                 if event.track.extra['spotify'] != {}:
                     Artists = Utils.format_artists(event.track.extra['spotify']['artists'], event.track.extra['spotify']['artistID'])
 
-                    #** Set Descrition and Thumbnail & Add By Field Above Position Field **
+                    #** Set Descrition and Thumbnail & Add By Field Above Duration Field **
                     NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")\n"+self.Emojis['Spotify']+" ["+event.track.extra['spotify']['name']+"]("+event.track.extra['spotify']['URI']+")"
                     NowPlaying.set_thumbnail(url=event.track.extra['spotify']['art'])
                     NowPlaying.insert_field_at(0, name="By:", value=Artists)
@@ -179,7 +179,7 @@ class MusicCog(commands.Cog, name="Music"):
                     NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")"
                     NowPlaying.insert_field_at(0, name="By:", value="["+event.track.author+"]("+event.track.extra["artistURI"]+")")
             
-            #** If Track Is A Stream, Add Appropriate Information For A Stream **
+            #** If Track Is A Stream, Add Appropriate Information For A Stream & N/A For Duration As It Is Endless **
             else:
                 NowPlaying.set_author(name="Playing From "+event.track.extra['Source'].title()+" Stream")
                 NowPlaying.description = "["+event.track['title']+"]("+event.track["uri"]+")"
@@ -849,7 +849,7 @@ class MusicCog(commands.Cog, name="Music"):
         #** If Not A Stream, Add Position Field & Source Of Music **
         if not(Player.current.stream):
             NowPlaying.set_author(name="Playing From Soundcloud", icon_url="https://cdn.discordapp.com/emojis/897135141040832563.png?size=96&quality=lossless")
-            NowPlaying.add_field(name="Position:", value = "0:00 / "+ Utils.format_time(Player.current.duration))
+            NowPlaying.add_field(name="Position:", value = Utils.format_time(Player.position)+" / "+ Utils.format_time(Player.current.duration))
             
             #** If Track Has Spotify Info, Format List of Artists **
             if Player.current.extra['spotify'] != {}:
@@ -871,7 +871,7 @@ class MusicCog(commands.Cog, name="Music"):
             NowPlaying.set_author(name="Playing From "+Player.current.extra['Source'].title()+" Stream")
             NowPlaying.description = "["+Player.current['title']+"]("+Player.current["uri"]+")"
             NowPlaying.add_field(name="By: ", value=Player.current['author'])
-            NowPlaying.add_field(name="Duration: ", value="N/A")
+            NowPlaying.add_field(name="Position: ", value="N/A")
 
         #** Add Requester To Embed & Send Embed To User **
         NowPlaying.add_field(name="Requested By: ", value=str(Player.current.requester), inline=False)

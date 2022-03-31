@@ -24,6 +24,7 @@ DROP TABLE IF EXISTS `recommendations`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `recommendations` (
   `DiscordID` varchar(32) NOT NULL,
+  `SongCount` int DEFAULT '0',
   `Min Popularity` int DEFAULT NULL,
   `Avg Popularity` int DEFAULT NULL,
   `Max Popularity` int DEFAULT NULL,
@@ -54,15 +55,6 @@ CREATE TABLE `recommendations` (
   PRIMARY KEY (`DiscordID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `recommendations`
---
-
-LOCK TABLES `recommendations` WRITE;
-/*!40000 ALTER TABLE `recommendations` DISABLE KEYS */;
-/*!40000 ALTER TABLE `recommendations` ENABLE KEYS */;
-UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -73,4 +65,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-02-03  8:18:01
+-- Dump completed on 2022-03-31 21:32:51

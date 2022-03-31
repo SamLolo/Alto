@@ -7,9 +7,7 @@ import json
 import asyncio
 import discord
 from datetime import datetime
-from discord.utils import get
 from discord.ext import commands
-from Classes.Users import Users
 
 
 #!--------------------------------STARTUP-----------------------------------# 
