@@ -59,10 +59,15 @@ class SpotifyUser(object):
     def RefreshUserToken(self):
 
         #** Request New User Token From Spotify **
+        print(self.SpotifyData['refresh'])
         data = {'grant_type': "refresh_token", 'refresh_token': self.SpotifyData['refresh'], 'client_id': self.SpotifyID, 'client_secret': self.Secret}
-        AuthData = requests.post("https://accounts.spotify.com/api/token", data, self.AuthHead).json()
+        AuthData = requests.post("https://accounts.spotify.com/api/token", data, self.AuthHead)
+        print(AuthData)
+
 
         #** Update Token and User Header **
+        AuthData = AuthData.json()
+        print(AuthData)
         self.Token = AuthData['access_token']
         self.UserHead = {'Accept': "application/json", 'Content-Type': "application/json", 'Authorization': "Bearer "+self.Token}
 

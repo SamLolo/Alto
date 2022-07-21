@@ -55,6 +55,16 @@ CREATE TABLE `recommendations` (
   PRIMARY KEY (`DiscordID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recommendations`
+--
+
+LOCK TABLES `recommendations` WRITE;
+/*!40000 ALTER TABLE `recommendations` DISABLE KEYS */;
+INSERT INTO `recommendations` VALUES ('925098537539211304',0,0,50,100,0,0.223396,1,0,0.6845,1,0,0.64464,1,0,0.001568,1,0,0.163196,1,-15,-6.25084,0,0,0.106186,1,0,0.521244,1);
+/*!40000 ALTER TABLE `recommendations` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -65,4 +75,4 @@ CREATE TABLE `recommendations` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-03-31 21:32:51
+-- Dump completed on 2022-07-18 17:48:55

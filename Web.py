@@ -284,7 +284,8 @@ def PreSpotify():
             
             #** Add To Dict Of Active States & Redirect User To Spotify Auth URL **
             ActiveStates[State] = User
-            AuthURL = "https://accounts.spotify.com/authorize?client_id=710b5d6211ee479bb370e289ed1cda3d&response_type=code&redirect_uri=http%3A%2F%2F82.22.157.214:5000%2F&scope=playlist-read-private%20playlist-read-collaborative%20user-read-private&state="+State
+            AuthURL = "https://accounts.spotify.com/authorize?client_id=710b5d6211ee479bb370e289ed1cda3d&response_type=code"
+            AuthURL += "&redirect_uri=http%3A%2F%2F82.22.157.214:5000%2F&scope=playlist-read-private%20playlist-read-collaborative%20user-read-private&state="+State
             return redirect(AuthURL)
 
         #** Render Error Template If Something Isn't Right With The Request **
