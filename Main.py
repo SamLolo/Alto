@@ -249,4 +249,4 @@ for Cog in Config['Active_Extensions']:
 
 #** Connecting To Discord **    
 print("---------------------CONNECTING TO DISCORD--------------------")
-client.run(os.environ["MUSICA_TOKEN"])
+client.run(os.environ["ALTO_TOKEN"])
