@@ -57,12 +57,12 @@ class HelpCog(commands.Cog):
             
             #** Create Help Embed Showing Command Categories & Basic Info **
             MainMenu = discord.Embed(title = "Alto: Using The Discord Bot",
-                              description = "**- !help <catergory>:** *Shows all "+
-                                            "commands within specified catergory from below with a brief description of each.*\n**- !help <command>:"+
+                              description = "**- /help <catergory>:** *Shows all "+
+                                            "commands within specified catergory from below with a brief description of each.*\n**- /help <command>:"+
                                             "** *Shows a more detailed description on how to use the specified command.*\n\n__**Categories:**__",
                               colour=discord.Colour.blue())
             for Name, Description in self.activeCogs.items():
-                MainMenu.add_field(name=Name, value="`!help "+Name+"`\n*"+Description+"*")
+                MainMenu.add_field(name=Name, value="`/help "+Name+"`\n*"+Description+"*")
             MainMenu.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
             
             await ctx.send(embed=MainMenu)
@@ -101,7 +101,7 @@ class HelpCog(commands.Cog):
                 #** Create Field Description With Command Aliases And Command Description **
                 Value = "*"+command.description+"*\n ---------------------------"
                 if command.aliases != []:
-                    Value = "`Aliases: !"+(", !".join(command.aliases))+"`\n"+Value
+                    Value = "`Aliases: !"+(", /".join(command.aliases))+"`\n"+Value
                 else:
                     Value = "`Aliases: None`"+Value
                     
@@ -128,7 +128,7 @@ class HelpCog(commands.Cog):
             #** Create Embed Description
             Description = "\n*"+Command.description+"*"
             if Command.aliases != []:
-                Description = "`Aliases: !"+(", !".join(Command.aliases))+"`"+Description
+                Description = "`Aliases: !"+(", /".join(Command.aliases))+"`"+Description
             else:
                 Description = "`Aliases: None`"+Description
                 
@@ -158,7 +158,7 @@ class HelpCog(commands.Cog):
 
         else:
             #** Let User Know Input Is Invalid **
-            Temp = await ctx.message.channel.send("**"+input.title()+" is not a valid command or catergory!**\nPlease, check your input and try again.")
+            Temp = await ctx.message.channel.send("`/"+input.title()+"` **is not a valid command or catergory!**\nPlease, check your input and try again.")
             await asyncio.sleep(10)
             await ctx.message.delete()
             await Temp.delete()

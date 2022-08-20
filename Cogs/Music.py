@@ -249,7 +249,7 @@ class MusicCog(commands.Cog, name="Music"):
     @commands.guild_only()
     @commands.command(aliases=['p'], 
                       description="Allows you to play music through a Discord Voice Channel from a variety of sources.", 
-                      usage="!play <song>", 
+                      usage="/play <song>", 
                       brief="You must be in a voice channel to use this command!",
                       help="`Possible Inputs For <song>:`\n- Text Search For Song\n- Soundcloud Track URL\n- Soundcloud Playlist URL\n- Spotify Track URL\n"+
                            "- Spotify Playlist URL**\* **\n- Spotify Album URL\n- HTTP Audio Stream URL\n**\* **")
@@ -583,7 +583,7 @@ class MusicCog(commands.Cog, name="Music"):
     @commands.guild_only()
     @commands.command(aliases=['v', 'loudness'], 
                       description="Adjusts the volume of the audio player between 0% and 100%.",
-                      usage="!volume <percentage>",
+                      usage="/volume <percentage>",
                       brief="You must be in a voice channel to use this command!",
                       help="`Possible Inputs For <percentage>:`\n- Default: None *(shows current volume level)*\n- Integer value between 0 and 100")
     async def volume(self, ctx, *args):
@@ -763,7 +763,7 @@ class MusicCog(commands.Cog, name="Music"):
     @commands.guild_only()
     @commands.command(aliases=['ts', 'timeskip'], 
                       description="Skips forward or backwards in time in the currently playing song.",
-                      usage="!seek <time>",
+                      usage="/seek <time>",
                       brief="You must be in a voice channel to use this command!",
                       help="`Possible Inputs For <time>:`\n- Positive time in seconds less than remaining duration\n    *(skips forward specified time in song)*\n"+
                            "- Positive time in seconds greater than remaining duration\n    *(skips onto next song in queue)*\n"+
@@ -879,7 +879,7 @@ class MusicCog(commands.Cog, name="Music"):
 
     @commands.command(aliases=['i', 'song', 'songinfo'], 
                       description="Displays both basic and more in-depth information about a specified song.",
-                      usage= "!info <spotifyURL>",
+                      usage= "/info <spotifyURL>",
                       help="`Possible Inputs For <spotifyURL>:`\n- Spotify Track URL")
     async def info(self, ctx, SpotifyURL):
 

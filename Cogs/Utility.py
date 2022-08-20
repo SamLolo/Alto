@@ -37,14 +37,16 @@ class UtilityCog(commands.Cog, name="Utility"):
         self.Emojis = Config['Variables']['Emojis']
 
 
-    @commands.command(aliases=['pg'], description="Displays the bot's current latency to Discord in milliseconds.")
+    @commands.command(aliases=['pg'], 
+                      description="Displays the bot's current latency to Discord in milliseconds.")
     async def ping(self, ctx):
 
         #** Return Client Latency in ms **
         await ctx.send("Pong! "+str(round(self.client.latency * 1000))+"ms")
     
 
-    @commands.command(aliases=['up', 'runtime'], description="Displays the time since the bot last went down.")
+    @commands.command(aliases=['up', 'runtime'], 
+                      description="Displays the time since the bot last went down.")
     async def uptime(self, ctx):
         
         #** Calculate Time Difference Between DateTime Stored At Startup & Datetime Now **
@@ -55,7 +57,8 @@ class UtilityCog(commands.Cog, name="Utility"):
                        " Hours & "+str(Uptime.minutes)+" Minutes`")
 
 
-    @commands.command(aliases=['inv'], description="Displays the bot's Discord invite link.")
+    @commands.command(aliases=['inv'], 
+                      description="Displays the bot's Discord invite link.")
     async def invite(self, ctx):
         
         #** Create Embed With Invite Information **

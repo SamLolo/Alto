@@ -209,7 +209,6 @@ class AccountCog(commands.Cog, name="Account"):
 
     @commands.command(aliases=['r', 'recommend', 'suggestions'], 
                       description="Displays 10 random song recommendations based on your listening history.",
-                      usage="!recommendations",
                       brief="Requires you to have some listening history!")
     async def recommendations(self, ctx, *args):
         
@@ -278,7 +277,7 @@ class AccountCog(commands.Cog, name="Account"):
         
         #** Return Error To User If Failed To Get Recommendations **
         else:
-            await Page.edit(content="**An Error Occurred Whilst Fetching Recommendations**!\nIf this error persists, open a ticket in our discord server:* `/discord`.")
+            await Page.edit(content="**An Error Occurred Whilst Fetching Recommendations**!\nIf this error persists, open a ticket in our Discord server:* `/discord`.")
             await asyncio.sleep(5)
             await ctx.message.delete()
             await Page.delete()
@@ -286,7 +285,7 @@ class AccountCog(commands.Cog, name="Account"):
 
     @commands.command(aliases=['remove', 'clear'],
                       description="Deletes your user data where requested from our database.",
-                      usage="!delete <data>",
+                      usage="/delete <data>",
                       help="`Possible Inputs For <data>:`\n- all: *deletes all traces of your data*\n- history: *clears your stored listening history*\n"+
                            "- user: *deletes all user data including your listening history*")
     async def delete(self, ctx, data):
