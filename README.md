@@ -1,5 +1,7 @@
 # A-Level Project
-Discord Music Bot
+#Alto | Discord Music Bot
 
-Ideas Page:
-https://trello.com/b/GtDWpbqe/music-bot
+##Trello Pages:
+- [Development](https://trello.com/b/nghSiaQg/development)
+- [General & Discord](https://trello.com/b/dSXSJpFh/general-discord)
+- [Products](https://trello.com/b/sr1ipjVr/products)
