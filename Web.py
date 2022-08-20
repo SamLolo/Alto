@@ -22,12 +22,13 @@ from flask import Flask, request, render_template, redirect
 #** Get Connection Details **
 Host = os.environ["DATABASE_HOST"]
 User = os.environ["DATABASE_USER"]
+Schema = os.environ["DATABASE_SCHEMA"]
 Password = os.environ["DATABASE_PASS"]
 
 #** Connect To Database **
 print("--------------------CONNECTING TO DATABASE--------------------")
 connection = mysql.connector.connect(host = Host,
-                                    database = "discordmusic",
+                                    database = Schema,
                                     user = User,
                                     password = Password)
 

@@ -5,7 +5,6 @@
 import json
 import copy
 import discord
-import random
 import asyncio
 import lavalink
 from datetime import datetime
@@ -253,7 +252,7 @@ class MusicCog(commands.Cog, name="Music"):
                       usage="!play <song>", 
                       brief="You must be in a voice channel to use this command!",
                       help="`Possible Inputs For <song>:`\n- Text Search For Song\n- Soundcloud Track URL\n- Soundcloud Playlist URL\n- Spotify Track URL\n"+
-                           "- Spotify Playlist URL**\* **\n- Spotify Album URL\n- HTTP Audio Stream URL\n**\* ** *Private playlists require linking Spotify to Discord using `!link` first!*")
+                           "- Spotify Playlist URL**\* **\n- Spotify Album URL\n- HTTP Audio Stream URL\n**\* **")
     async def play(self, ctx, *, Query):
 
         #** Ensure Voice To Make Sure Client Is Good To Run **

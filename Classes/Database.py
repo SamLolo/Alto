@@ -5,7 +5,6 @@
 import os
 import mysql.connector
 from datetime import datetime
-from cryptography.fernet import Fernet
 
 
 #!--------------------------------DATABASE CONNECTION---------------------------------#
@@ -14,12 +13,13 @@ from cryptography.fernet import Fernet
 #** Get Connection Details **
 Host = os.environ["DATABASE_HOST"]
 User = os.environ["DATABASE_USER"]
+Schema = os.environ["DATABASE_TABLE"]
 Password = os.environ["DATABASE_PASS"]
 
 #** Connect To Database **
 print("--------------------CONNECTING TO DATABASE--------------------")
 connection = mysql.connector.connect(host = Host,
-                                    database = "discordmusic",
+                                    database = Schema,
                                     user = User,
                                     password = Password)
 
@@ -121,50 +121,6 @@ class UserData():
 
         #** Return List Of Ordered Song Dictionaries **
         return List
-
-
-    def GetSpotify(self, discordID):
-
-        #** Get Spotify Data From Database & Return It **
-        self.cursor.execute("SELECT * FROM spotify WHERE DiscordID='"+str(discordID)+"';")
-        Data = self.cursor.fetchone()
-        self.connection.commit()
-        
-        #** Check If Data Is Found & If Data Has Spotify ID**
-        if Data != None:
-            if Data[0] != None:
-
-                #** Setup Symmetric Encryption Module **
-                Key = os.environ['ENCRYPTION_KEY']
-                Key = bytes(Key, 'utf-8')
-                fernet = Fernet(Key)
-
-                #** Decrypt Sensitive Information **
-                Refresh = fernet.decrypt(bytes(Data[6], 'utf-8')).decode()
-                Name = fernet.decrypt(bytes(Data[2], 'utf-8')).decode()
-                Avatar = fernet.decrypt(bytes(Data[3], 'utf-8')).decode()
-                SpotifyID = fernet.decrypt(bytes(Data[0], 'utf-8')).decode()
-
-                #** Delete Variables To Keep Key Safe **
-                del Key
-                del fernet
-
-                #** Format Data Into Dictionary & Return Dictionary**
-                Dict = {"discordID": int(Data[1]),
-                        "spotifyID": SpotifyID,
-                        "name": Name,
-                        "avatar": Avatar,
-                        "followers": Data[4],
-                        "subscription": Data[5],
-                        "refresh": Refresh,
-                        "linked": Data[7]}
-                return Dict
-
-        #** Return None If No Spotify Data Found **
-            else:
-                return None
-        else:
-            return None
 
 
     def SaveUserDetails(self, User):

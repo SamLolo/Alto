@@ -74,7 +74,7 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound) or ctx.command.qualified_name in ['reload']:
         
         #** Send Error Message, & Delete Input & Error Message After 10 Seconds **
-        Temp = await ctx.message.channel.send("**Command Not Found!**\nFor a full list of commands, run `!help`")
+        Temp = await ctx.message.channel.send("**Command Not Found!**\nFor a full list of commands, run `/help`")
         await asyncio.sleep(10)
         await ctx.message.delete()
         await Temp.delete()
@@ -84,7 +84,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.MissingRequiredArgument):
         
         #** Send Error Message With Missing Parameter & Delete Input & Error Message After 10 Seconds **
-        Temp = await ctx.message.channel.send("**Missing Parameter `"+str(error.param)+"`!**\nFor a full list of commands & their parameters, run `!help`")
+        Temp = await ctx.message.channel.send("**Missing Parameter `"+str(error.param)+"`!**\nFor a full list of commands & their parameters, run `/help`")
         await asyncio.sleep(10)
         await ctx.message.delete()
         await Temp.delete()
@@ -94,7 +94,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.BadArgument):
         
         #** Send Error Message & Delete Input & Error Message After 10 Seconds **
-        Temp = await ctx.message.channel.send("**Oops, it seems the argument you gave was invalid!**\nFor a full list of valid arguments, run `!help "+str(error)+"`")
+        Temp = await ctx.message.channel.send("**Oops, it seems the argument you gave was invalid!**\nFor a full list of valid arguments, run `/help "+str(error)+"`")
         await asyncio.sleep(10)
         await ctx.message.delete()
         await Temp.delete()
@@ -119,13 +119,9 @@ async def on_command_error(ctx, error):
         elif str(error) == "NotPlaying":
             Temp = await ctx.message.channel.send("I'm Not Currently Playing Anything!")
             
-        #** If Error Message Is "Spotify", Let User Know They Need To Connect Their Spotify**
-        elif str(error) == "Spotify":
-            Temp = await ctx.message.channel.send("**Spotify Not Connected!**\nTo run this command, first run `!link`.")
-            
         #** If Error Message Is "History", Let User Know They Need To Get Some Listening History Before Running The Command **
         elif str(error) == "History":
-            Temp = await ctx.message.channel.send("**You must have listened to some songs before you can run this command!**\nJoin a Voice Channel and run `!play <song>` to get listening.")
+            Temp = await ctx.message.channel.send("**You must have listened to some songs before you can run this command!**\nJoin a Voice Channel and run `/play <song>` to get listening.")
 
         #** If Error Message Is "SongNotFound", Let User Know They Need To Double Check Their Input **
         elif str(error) == "SongNotFound":
@@ -133,15 +129,15 @@ async def on_command_error(ctx, error):
         
         #** If Error Message Is "DM", Let User Know They Need To Join A VC **
         elif str(error) == "DM":
-            Temp = await ctx.message.channel.send("**DM Failed!**\nPlease turn on `Allow Server Direct Messages` in Discord settings in order to link your account")
+            Temp = await ctx.message.channel.send("**DM Failed!**\nPlease turn on `Allow Server Direct Messages` in Discord settings!")
 
         #** Called When An Unexpected Error Occurs, Shouldn't Happen Very Often **
         elif str(error) == "UnexpectedError":
-            Temp = await ctx.message.channel.send("**An Unexpected Error Occurred!**If this error persists, contact Lolo#6699.")
+            Temp = await ctx.message.channel.send("**An Unexpected Error Occurred!**If this error persists, open a ticket in our discord server:* `!discord`.")
         
         #** If Error Message Is Not Above, Let User Know They Can't Run The Command & Try Retry **
         else:
-            Temp = await ctx.message.channel.send("You are not able to run this command!\n*If you believe this is an error, contact Lolo#6699.*")
+            Temp = await ctx.message.channel.send("You are not able to run this command!\n*If you believe this is an error, open a ticket in our discord server:* `/discord`.")
         
         #** Delete Input & Error Message After 10 Seconds **
         await asyncio.sleep(10)

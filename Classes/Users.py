@@ -2,11 +2,7 @@
 #!-------------------------IMPORT MODULES-----------------------!#
 
 
-import os
-import json
-import base64
 import random
-import requests
 from datetime import datetime
 
 
@@ -15,85 +11,6 @@ from datetime import datetime
 
 from Classes.Database import UserData
 from Classes.MusicUtils import Music
-
-
-#!--------------------------------SPOTIFY USER-----------------------------------#
-
-
-class SpotifyUser(object):
-    
-    def __init__(self, DiscordID):
-
-        super(SpotifyUser, self).__init__(DiscordID)
-
-        #** Get Spotify Details **
-        self.SpotifyID = os.environ["SPOTIFY_CLIENT"]
-        self.Secret = os.environ["SPOTIFY_SECRET"]
-
-        #** Setup Header For Authentication **
-        ClientData = self.SpotifyID+":"+self.Secret
-        AuthStr =  base64.urlsafe_b64encode(ClientData.encode()).decode()
-        self.AuthHead = {"Content-Type": "application/x-www-form-urlencoded", 'Authorization': 'Basic {0}'.format(AuthStr)}
-
-        #** Get Spotify Credentials From Database **
-        Data = self.Database.GetSpotify(DiscordID)
-        if Data != None:
-
-            #** Check SpotifyID Is Actually Present (Account Isn't Half Linked)
-            if Data['spotifyID'] != None:
-
-                #** Assign Class Objects **
-                self.SpotifyData = Data
-                self.SpotifyConnected = True
-
-                #** Get UserToken & User Header For New User **
-                self.RefreshUserToken()
-
-            #** Set SpotifyConnected To False If A Connection Couldn't Be Made **
-            else:
-                self.SpotifyConnected = False
-        else:
-            self.SpotifyConnected = False
-
-
-    def RefreshUserToken(self):
-
-        #** Request New User Token From Spotify **
-        print(self.SpotifyData['refresh'])
-        data = {'grant_type': "refresh_token", 'refresh_token': self.SpotifyData['refresh'], 'client_id': self.SpotifyID, 'client_secret': self.Secret}
-        AuthData = requests.post("https://accounts.spotify.com/api/token", data, self.AuthHead)
-        print(AuthData)
-
-
-        #** Update Token and User Header **
-        AuthData = AuthData.json()
-        print(AuthData)
-        self.Token = AuthData['access_token']
-        self.UserHead = {'Accept': "application/json", 'Content-Type': "application/json", 'Authorization': "Bearer "+self.Token}
-
-
-    def GetUserPlaylists(self):
-
-        #** Iterate Through Requests For User Playlists (50 per Request) **
-        Playlists = {}
-        NextURL = "https://api.spotify.com/v1/me/playlists?limit=50"
-        while str(NextURL) != "None":
-            UserData = requests.get(str(NextURL), headers = self.UserHead).json()
-
-            #** If Error, Refresh Token and Retry **
-            if 'error' in UserData.keys():
-                self.RefreshUserToken()
-                UserData = requests.get(str(NextURL), headers = self.UserHead).json()
-
-            #** Sort User Playlists into a dictionary **
-            NextURL = UserData['next']
-            for Playlist in UserData['items']:
-                if Playlist['owner']['id'] == self.SpotifyData['spotifyID']:
-                    Playlists[Playlist['id']] = Playlist['name']
-        
-        #** Return Filled Dict Of Playlists **
-        return Playlists
-
 
 #!------------------------SONG HISTORY QUEUE-----------------------!#
 
@@ -186,7 +103,7 @@ class SongHistory(object):
 #!-------------------------USER OBJECT------------------------!#
 
 
-class Users(SpotifyUser, SongHistory):
+class Users(SongHistory):
     
     def __init__(self, client, DiscordID):
         
@@ -195,7 +112,7 @@ class Users(SpotifyUser, SongHistory):
         self.SongData = Music()
         self.Database = UserData()
 
-        #** Initialise SpotifyUser, & Listening History Classes **
+        #** Initialise Listening History Classe **
         super(Users, self).__init__(DiscordID)
         
         #** Get User Dictionary **

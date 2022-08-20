@@ -2,10 +2,8 @@
 #!---------------------------IMPORT MODULES-----------------------#
 
 
-import os
 import json
 import discord
-from cryptography.fernet import Fernet
 from discord.ext import tasks, commands
 
 
@@ -61,7 +59,6 @@ class BackgroundTasks(commands.Cog):
         
         #** Gently Shutdown All Current Background Tasks **
         self.StatusRotation.stop()
-        self.AuthCheck.stop()
         print("Background Cog Unloaded!")
         
         
@@ -71,7 +68,6 @@ class BackgroundTasks(commands.Cog):
         #** When Bot Startup Is Complete, Start Status Rotation & Auth Checking Background Tasks **
         self.StatusRotation.change_interval(seconds = self.StatusTime)
         self.StatusRotation.start()
-        self.AuthCheck.start()
 
 
     @tasks.loop()
@@ -93,57 +89,6 @@ class BackgroundTasks(commands.Cog):
         
         #** Update Presence On Discord **
         await self.client.change_presence(activity=discord.Activity(type=Activity, name=" "+str(self.Status[self.CurrentStatus][1])))
-
-
-    @tasks.loop(seconds=120)
-    async def AuthCheck(self):
-
-        #** Get All Rows Updated In The Last Five Mins From Spotify Table **
-        self.cursor.execute("SELECT * FROM spotify WHERE Linked BETWEEN DATE_SUB(NOW(), INTERVAL 2 MINUTE) AND NOW()")
-        Recent = self.cursor.fetchall()
-        self.connection.commit()
-
-        #** For Row In Returned Row, Check If Spotify ID Present, ie, Change Has Been Made **
-        for Update in Recent:
-            if Update[0] != None:
-
-                #** Setup Symmetric Encryption Module **
-                Key = os.environ['ENCRYPTION_KEY']
-                Key = bytes(Key, 'utf-8')
-                fernet = Fernet(Key)
-
-                #** Decrypt Necessary Sensitive Information **
-                Name = fernet.decrypt(bytes(Update[2], 'utf-8')).decode()
-                Avatar = fernet.decrypt(bytes(Update[3], 'utf-8')).decode()
-                SpotifyID = fernet.decrypt(bytes(Update[0], 'utf-8')).decode()
-
-                #** Delete Variables To Keep Key Safe **
-                del Key
-                del fernet
-
-                #** Get User And If One Found **
-                User = self.client.get_user(int(Update[1]))
-                if User != None:
-
-                    #** Create DM Channel If One Doesn't Exist **
-                    if User.dm_channel == None:
-                        await User.create_dm()
-
-                    #** Format Successful Link Embed & Try To Send To User **
-                    try:
-                        SuccessEmbed = discord.Embed(title = "Spotify Account Connected!",
-                                colour = discord.Colour.blue())
-                        SuccessEmbed.set_thumbnail(url=str(Avatar))
-                        SuccessEmbed.add_field(name="Username", value="["+str(Name)+"](https://open.spotify.com/user/"+str(SpotifyID)+")")
-                        SuccessEmbed.add_field(name="What To Do Next?", value="- Start playing some of your private playlists through the bot using `!play`\n"
-                                                                    +"- Get song recommendations using your Spotify playlists using `!recommendations spotify`\n"
-                                                                    +"- Run `!profile` and check out your updated user profile", inline=False)
-                        await User.dm_channel.send(embed=SuccessEmbed)
-
-                    #** Print Error If Sending Embed Fails **
-                    except:
-                        print("User Had DMs Off Whilst Trying To Send Successful Auth Embed!")
-
 
 
 #!-------------------SETUP FUNCTION-------------------#
