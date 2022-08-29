@@ -27,12 +27,25 @@ with open('Config.json') as ConfigFile:
     ConfigFile.close()
 
 #** Creating Bot Client **
+class MyClient(commands.Bot):
+    
+    def __init__(self, *args, intents: discord.Intents, **kwargs):
+        #** Initialise Discord Client Class **
+        super().__init__(*args, intents=intents, **kwargs)
+
+    async def setup_hook(self):
+        #** Work Through List Of Active Cog Names In Config File, Loading Each One As You Go **
+        for Cog in Config['Active_Extensions']:
+            await self.load_extension(Cog)
+
+#** Instanciate Bot Client Class **
 intents = discord.Intents.default()
 intents.members = True
-client = commands.Bot(command_prefix = Config['Prefix'], 
-                      case_insensitive=True, 
-                      intents=intents,
-                      help_command=None)
+intents.message_content = True
+client = MyClient(command_prefix = Config['Prefix'], 
+                  case_insensitive=True, 
+                  intents=intents,
+                  help_command=None)
 
 #** Setup Emojis **
 Emojis = Config['Variables']['Emojis']
@@ -233,16 +246,8 @@ async def reload(ctx, CogName):
     await Temp.delete()
 
 
-#!-------------------------------LOAD COGS-------------------------------#
-
-
-#** Work Through List Of Active Cog Names In Config File, Loading Each One As You Go **
-for Cog in Config['Active_Extensions']:
-    client.load_extension(Cog)
-
-
 #!--------------------------------DISCORD LOOP-----------------------------------# 
 
 #** Connecting To Discord **    
 print("---------------------CONNECTING TO DISCORD--------------------")
-client.run(os.environ["ALTO_TOKEN"])
+client.run(os.environ["DEV_TOKEN"])

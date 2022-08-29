@@ -1,8 +1,10 @@
--- MySQL dump 10.13  Distrib 8.0.21, for Win64 (x86_64)
+CREATE DATABASE  IF NOT EXISTS `alto` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `alto`;
+-- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
 --
--- Host: localhost    Database: discordmusic
+-- Host: localhost    Database: alto
 -- ------------------------------------------------------
--- Server version	8.0.21
+-- Server version	8.0.30
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -16,28 +18,31 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `history`
+-- Table structure for table `users`
 --
 
-DROP TABLE IF EXISTS `history`;
+DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `history` (
+CREATE TABLE `users` (
   `DiscordID` varchar(32) NOT NULL,
-  `SongID` varchar(16) NOT NULL,
-  `ListenedAt` timestamp NOT NULL,
-  PRIMARY KEY (`DiscordID`,`ListenedAt`)
+  `Name` varchar(128) DEFAULT NULL,
+  `Discriminator` varchar(8) DEFAULT NULL,
+  `Avatar` varchar(128) DEFAULT NULL,
+  `Songs` varchar(8) DEFAULT NULL,
+  `Joined` datetime DEFAULT NULL,
+  PRIMARY KEY (`DiscordID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `history`
+-- Dumping data for table `users`
 --
 
-LOCK TABLES `history` WRITE;
-/*!40000 ALTER TABLE `history` DISABLE KEYS */;
-INSERT INTO `history` VALUES ('925098537539211304','209579854','2022-03-29 16:37:12'),('925098537539211304','209579854','2022-03-29 16:38:48');
-/*!40000 ALTER TABLE `history` ENABLE KEYS */;
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES ('925098537539211304','TestAccount','1539','https://cdn.discordapp.com/embed/avatars/4.png','0','2022-03-29 17:37:18');
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -49,4 +54,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-07-18 17:48:55
+-- Dump completed on 2022-08-29 18:51:10

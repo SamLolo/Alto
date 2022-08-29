@@ -206,5 +206,5 @@ class EmbedPaginator(commands.Cog):
 #!-------------------SETUP FUNCTION-------------------#
 
 
-def setup(client):
-    client.add_cog(EmbedPaginator(client))
+async def setup(client):
+    await client.add_cog(EmbedPaginator(client))

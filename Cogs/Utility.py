@@ -75,5 +75,5 @@ class UtilityCog(commands.Cog, name="Utility"):
 #!-------------------SETUP FUNCTION-------------------#
 
 
-def setup(client):
-    client.add_cog(UtilityCog(client))
+async def setup(client):
+    await client.add_cog(UtilityCog(client))

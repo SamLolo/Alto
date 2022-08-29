@@ -22,8 +22,8 @@ class Spotify(object):
     def __init__(self):
 
         #** Get Spotify Tokens From Environment Variables **
-        self.ID = os.environ["SPOTIFY_CLIENT"]
-        self.Secret = os.environ["SPOTIFY_SECRET"]
+        self.ID = os.environ["DEV_SPOTIFY_CLIENT"]
+        self.Secret = os.environ["DEV_SPOTIFY_SECRET"]
 
         #** Setup Header For Authentication **
         ClientData = self.ID+":"+self.Secret

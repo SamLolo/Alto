@@ -84,7 +84,7 @@ class MusicCog(commands.Cog, name="Music"):
                 raise commands.CheckFailure(message="UserVoice")
         
         #** Return a Player If One Exists, Otherwise Create One **
-        Player = self.client.lavalink.player_manager.create(ctx.guild.id, endpoint=str(ctx.guild.region))
+        Player = self.client.lavalink.player_manager.create(ctx.guild.id)
 
         #** Check If Bot If Is Connected & Needs to Connect to VC **
         if not(Player.is_connected):
@@ -164,6 +164,7 @@ class MusicCog(commands.Cog, name="Music"):
                 NowPlaying.add_field(name="Duration:", value = Utils.format_time(event.track.duration))
                 
                 #** If Track Has Spotify Info, Format List of Artists **
+                print(event.track.extra)
                 if event.track.extra['spotify'] != {}:
                     Artists = Utils.format_artists(event.track.extra['spotify']['artists'], event.track.extra['spotify']['artistID'])
 
@@ -411,7 +412,9 @@ class MusicCog(commands.Cog, name="Music"):
             #** Get Track(s) From Lavalink Player **
             if not(Query.startswith("https://")):
                 Results = await Player.node.get_tracks("scsearch:"+Query)
-                Results['tracks'] = [Results['tracks'][0]]
+                print(Results)
+                print(Results['tracks'])
+                Results.tracks = [Results['tracks'][0]]
             else:
                 Results = await Player.node.get_tracks(Query)
 
@@ -453,7 +456,7 @@ class MusicCog(commands.Cog, name="Music"):
 
                     #** Setup Track Objects For Track With Spotify Data If Available **
                     if Spotify != None:
-                        Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, recommended=True, IgnoreHistory=False, artistURI=ArtistURI,
+                        Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, IgnoreHistory=False, artistURI=ArtistURI, 
                                 spotify={'name': Spotify['Name'],
                                          'ID': SpotifyID,
                                          'artists': Spotify['Artists'],
@@ -467,7 +470,7 @@ class MusicCog(commands.Cog, name="Music"):
                                          'explicit': Spotify['Explicit'],
                                          'preview': Spotify['Preview']})
                     else:
-                        Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, recommended=True, IgnoreHistory=False, artistURI=ArtistURI, spotify={})
+                        Track = lavalink.models.AudioTrack(ResultTrack, ctx.author, IgnoreHistory=False, artistURI=ArtistURI, spotify={})
 
                     #** If Track Duration = 30000ms(30s), Inform It's Only A Preview **
                     if Track.duration == 30000:
@@ -475,14 +478,14 @@ class MusicCog(commands.Cog, name="Music"):
 
                     #** Format & Send Queued Embed If First Track In List **
                     if Results['tracks'].index(ResultTrack) == 0:
-                        if Results['playlistInfo'] == {}:
+                        if Results['playlist_info']['name'] == None:
                             Queued = discord.Embed(
                                 title = self.Emojis["Soundcloud"]+" Track Added To Queue!",
                                 description = "["+ResultTrack['info']['title']+"]("+ResultTrack['info']['uri']+") \nBy: ["+ResultTrack['info']['author']+"]("+ArtistURI+")")
                         else:
                             Queued = discord.Embed(
                                 title = self.Emojis["Soundcloud"]+" Playlist Added To Queue!",
-                                description = "["+Results['playlistInfo']['name']+"]("+Query+") - "+str(len(Results['tracks']))+" Tracks")
+                                description = "["+Results['playlist_info']['name']+"]("+Query+") - "+str(len(Results['tracks']))+" Tracks")
                         Queued.set_footer(text="Requested By "+ctx.author.display_name+"#"+str(ctx.author.discriminator))
                         await ctx.send(embed=Queued)
 
@@ -947,5 +950,5 @@ class MusicCog(commands.Cog, name="Music"):
 #!-------------------SETUP FUNCTION-------------------#
 
 
-def setup(client):
-    client.add_cog(MusicCog(client))
+async def setup(client):
+    await client.add_cog(MusicCog(client))

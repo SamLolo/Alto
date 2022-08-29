@@ -94,5 +94,5 @@ class BackgroundTasks(commands.Cog):
 #!-------------------SETUP FUNCTION-------------------#
 
 
-def setup(client):
-    client.add_cog(BackgroundTasks(client))
+async def setup(client):
+    await client.add_cog(BackgroundTasks(client))
