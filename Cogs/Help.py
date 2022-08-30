@@ -10,15 +10,6 @@ import discord
 from discord.ext import commands
 
 
-#!--------------------------------STARTUP-----------------------------------# 
-
-
-#** Startup Sequence **
-print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Help")
-print("Modules Imported: ✓\n")
-
-
 #!-------------------------HELP COG-----------------------------#
 
 
@@ -46,6 +37,9 @@ class HelpCog(commands.Cog):
         for Command in self.client.walk_commands():
             if not(Command.hidden):
                 self.activeCommands.append(Command.name)
+                
+        #** Output Logging **
+        client.logger.info("Extension Loaded: Cogs.Help")
 
     
     @commands.command()

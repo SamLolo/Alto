@@ -9,15 +9,6 @@ from discord.ext import commands
 from dateutil.relativedelta import relativedelta
 
 
-#!--------------------------------STARTUP-----------------------------------# 
-
-
-#** Startup Sequence **
-print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Utility")
-print("Modules Imported: ✓\n")
-
-
 #!------------------------UTILITY COG-----------------------#
 
 
@@ -35,6 +26,9 @@ class UtilityCog(commands.Cog, name="Utility"):
             
         #** Setup Emojis **
         self.Emojis = Config['Variables']['Emojis']
+        
+        #** Output Logging **
+        client.logger.info("Extension Loaded: Cogs.Utility")
 
 
     @commands.command(aliases=['pg'], 

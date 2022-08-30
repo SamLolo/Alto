@@ -2,6 +2,7 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
+from logging import exception
 import os
 import mysql.connector
 from datetime import datetime
@@ -17,7 +18,6 @@ Schema = os.environ["DATABASE_TABLE"]
 Password = os.environ["DATABASE_PASS"]
 
 #** Connect To Database **
-print("--------------------CONNECTING TO DATABASE--------------------")
 connection = mysql.connector.connect(host = Host,
                                     database = Schema,
                                     user = User,

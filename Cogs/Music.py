@@ -20,15 +20,6 @@ from Classes.MusicUtils import Music
 from Classes.Utils import Utility
 
 
-#!--------------------------------STARTUP-----------------------------------# 
-
-
-#** Startup Sequence **
-print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Music")
-print("Modules Imported: ✓")
-
-
 #!------------------------INITIALISE CLASSES-------------------#
 
 
@@ -53,10 +44,11 @@ class MusicCog(commands.Cog, name="Music"):
             client.lavalink = lavalink.Client(803939964092940308)
             client.lavalink.add_node('127.0.0.1', 2333, 'youshallnotpass', 'eu', 'default-node')
             client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
+            client.logger.info("Created new connection to lavalink client")
 
         #** Add Event Hook **
         lavalink.add_event_hook(self.track_hook)
-        print("Lavalink Started: ✓\n")
+        client.logger.debug("Lavalink event hooks registered")
         
         #** Load Config File **
         with open('Config.json') as ConfigFile:
@@ -67,6 +59,9 @@ class MusicCog(commands.Cog, name="Music"):
         self.Emojis = Config['Variables']['Emojis']
         self.Emojis["True"] = "✅"
         self.Emojis["False"] = "❌"
+        
+        #** Output Logging **
+        client.logger.info("Extension Loaded: Cogs.Music")
 
 
     def cog_unload(self):

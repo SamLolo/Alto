@@ -8,15 +8,6 @@ from discord.ext import commands
 from discord.utils import get
 
 
-#!--------------------------------STARTUP-----------------------------------# 
-
-
-#** Startup Sequence **
-print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Pagination")
-print("Modules Imported: ✓\n")
-
-
 #!-------------------------EMBED CLASS-----------------------!#
 
 
@@ -108,6 +99,9 @@ class EmbedPaginator(commands.Cog):
             
         #** Setup Emojis **
         self.Emojis = Config['Variables']['Emojis']
+        
+        #** Output Logging **
+        client.logger.info("Extension Loaded: Cogs.Pagination")
 
     
     async def add_pages(self, MessageID, Pages):

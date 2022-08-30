@@ -3,19 +3,74 @@
 
 
 import os
+import sys
 import json
 import asyncio
+import logging
 import discord
+import logging.handlers
 from datetime import datetime
 from discord.ext import commands
 
 
-#!--------------------------------STARTUP-----------------------------------# 
+#!--------------------------------SETUP LOGGING---------------------------------#
 
 
-#** Startup Sequence **
-print("--------------------------STARTING UP-------------------------")
-print("Startup Time: "+datetime.now().strftime("%H:%M - %d/%m/%Y")+"\n")
+#** Setup Logging **
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+#** Setup Handlers **
+fileHandle = logging.handlers.RotatingFileHandler(
+    filename='Logs/bot.log',
+    encoding='utf-8',
+    maxBytes=32 * 1024 * 1024,  # 32 MiB
+    backupCount=5)
+consoleHandle = logging.StreamHandler(sys.stdout)
+
+#** Setup Formatting & Add Handlers **
+class ColouredFormat(logging.Formatter):
+    colours = {'yellow': "\x1b[38;5;220m",
+               'red': "\x1b[38;5;9m",
+               'orange': "\x1b[38;5;202m",
+               'blue': "\x1b[38;5;25m",
+               'light_purple': "\x1b[38;5;63m",
+               'green': "\x1b[38;5;2m",
+               'light_green': "\x1b[38;5;76m",
+               'light_blue': "\x1b[38;5;45m",
+               'grey': "\x1b[38;5;240m",
+               'light_orange': "\x1b[38;5;216m"}
+    reset = "\x1b[0m"
+
+    levelFormats = {logging.DEBUG:  colours['green'] + "[%(levelname)s]" + reset,
+                    logging.INFO: colours['blue'] + "[%(levelname)s]" + reset,
+                    logging.WARNING: colours['yellow'] + "[%(levelname)s]" + reset,
+                    logging.ERROR: colours['orange'] + "[%(levelname)s]" + reset,
+                    logging.CRITICAL: colours['red'] + "[%(levelname)s]" + reset}
+
+    def format(self, record):
+        logFormat = "%(asctime)s " + self.levelFormats.get(record.levelno)
+        
+        if record.name.startswith("discord"):
+            logFormat += self.colours['light_purple'] + " %(name)s"+ self.reset +": %(message)s"
+        elif record.name.startswith("spotify"):
+            logFormat += self.colours['light_green'] + " %(name)s"+ self.reset +": %(message)s"
+        elif record.name.startswith("lavalink"):
+            logFormat += self.colours['light_blue'] + " %(name)s"+ self.reset +": %(message)s"
+        elif record.name.startswith("database"):
+            logFormat += self.colours['light_orange'] + " %(name)s"+ self.reset +": %(message)s"
+        else:
+            logFormat += self.colours['grey'] + " %(name)s"+ self.reset +": %(message)s"
+        
+        formatter = logging.Formatter(logFormat, datefmt="%d-%m-%Y %H:%M:%S")
+        return formatter.format(record)
+    
+
+fileHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
+consoleHandle.setFormatter(ColouredFormat())
+logger.addHandler(fileHandle)
+logger.addHandler(consoleHandle)
+logger.info("Code Started!")
 
 
 #!--------------------------------DISCORD BOT-----------------------------------# 
@@ -46,6 +101,7 @@ client = MyClient(command_prefix = Config['Prefix'],
                   case_insensitive=True, 
                   intents=intents,
                   help_command=None)
+client.logger = logging.getLogger('discord')
 
 #** Setup Emojis **
 Emojis = Config['Variables']['Emojis']
@@ -61,13 +117,12 @@ Emojis["False"] = "❌"
 async def on_ready():
 
     #** Make Sure Client Waits Until Fully Connected **
-    print("Connection Established!")
-    print("Preparing Internal Cache...")
+    client.logger.info("Waiting until ready...")
     await client.wait_until_ready()
     
     #** Record Startup Time As Client Object & Print Bot Is Ready **
     client.startup = datetime.now()
-    print("Bot Is Now Online & Ready!\n")
+    client.logger.info("Bot Is Now Online & Ready!")
 
 
 #{ Event Called When Bot Joins New Guild/Server }
@@ -249,5 +304,4 @@ async def reload(ctx, CogName):
 #!--------------------------------DISCORD LOOP-----------------------------------# 
 
 #** Connecting To Discord **    
-print("---------------------CONNECTING TO DISCORD--------------------")
-client.run(os.environ["DEV_TOKEN"])
+client.run(os.environ["DEV_TOKEN"], log_handler=None)

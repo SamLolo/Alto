@@ -22,15 +22,6 @@ from Classes.MusicUtils import Music
 from Classes.Utils import Utility
 
 
-#!--------------------------------STARTUP-----------------------------------# 
-
-
-#** Startup Sequence **
-print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Account")
-print("Modules Imported: ✓\n")
-
-
 #!------------------------INITIALISE CLASSES-------------------#
 
 
@@ -59,6 +50,9 @@ class AccountCog(commands.Cog, name="Account"):
         self.Emojis = Config['Variables']['Emojis']
         self.Emojis["True"] = "✅"
         self.Emojis["False"] = "❌"
+        
+        #** Output Logging **
+        client.logger.info("Extension Loaded: Cogs.Account")
         
     
     @commands.command(aliases=['account', 'a'], 

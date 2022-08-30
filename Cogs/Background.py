@@ -13,15 +13,6 @@ from discord.ext import tasks, commands
 from Classes.Database import UserData
 
 
-#!--------------------------------STARTUP-----------------------------------# 
-
-
-#** Startup Sequence **
-print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Background")
-print("Modules Imported: ✓\n")
-
-
 #!------------------------INITIALISE CLASSES-------------------#
 
 
@@ -54,12 +45,16 @@ class BackgroundTasks(commands.Cog):
         #** Setup Database Details **
         self.connection, self.cursor = Database.return_connection()
         
+        #** Output Logging **
+        client.logger.info("Extension Loaded: Cogs.Background")
+        
     
     def cog_unload(self):
         
         #** Gently Shutdown All Current Background Tasks **
         self.StatusRotation.stop()
-        print("Background Cog Unloaded!")
+        self.client.logger.info("Status rotation stopped")
+        self.client.logger.info("Extension Unloaded: Cogs.Background")
         
         
     @commands.Cog.listener()
@@ -68,6 +63,7 @@ class BackgroundTasks(commands.Cog):
         #** When Bot Startup Is Complete, Start Status Rotation & Auth Checking Background Tasks **
         self.StatusRotation.change_interval(seconds = self.StatusTime)
         self.StatusRotation.start()
+        self.client.logger.info("Started status rotation at time interval "+ str(self.StatusTime) +" seconds")
 
 
     @tasks.loop()
