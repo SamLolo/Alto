@@ -16,6 +16,7 @@ logger = logging.getLogger("database")
 
 #!--------------------------------DATABASE CONNECTION---------------------------------#
 
+# Hello Alex
 
 #** Get Connection Details **
 Host = os.environ["DATABASE_HOST"]
