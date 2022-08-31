@@ -33,7 +33,7 @@ debugHandle = logging.handlers.RotatingFileHandler(
     backupCount=10)
 consoleHandle = logging.StreamHandler(sys.stdout)
 
-#** Create Custom Coloured Formatter
+#** Create Custom Coloured Formatter hello
 class ColouredFormat(logging.Formatter):
     
     #** ANSI Escape Colours + ANSI Reset String **
