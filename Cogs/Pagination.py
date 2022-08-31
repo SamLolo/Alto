@@ -4,6 +4,7 @@
 
 import json
 import discord
+import logging
 from discord.ext import commands
 from discord.utils import get
 
@@ -88,9 +89,10 @@ class EmbedPaginator(commands.Cog):
 
     def __init__(self, client):
 
-        #** Assign Class Objects **
+        #** Assign Class Objects & Setup Logging **
         self.client = client
         self.OpenPages = {}
+        self.logger = logging.getLogger("discord.pagination")
 
         #** Load Config File **
         with open('Config.json') as ConfigFile:
@@ -133,7 +135,7 @@ class EmbedPaginator(commands.Cog):
         try:
             Embed = self.OpenPages[MessageID]
         except:
-            print("Pages not found!")
+            self.logger.warning("Pages not found for messageID: "+str(MessageID))
             return None
         
         #** Move Page To Back Of Queue **
@@ -150,7 +152,7 @@ class EmbedPaginator(commands.Cog):
         try:
             Embed = self.OpenPages[MessageID]
         except:
-            print("Pages not found!")
+            self.logger.warning("Pages not found for messageID: "+str(MessageID))
             return None
         
         #** Work Through Page Queue To Find Last Page **

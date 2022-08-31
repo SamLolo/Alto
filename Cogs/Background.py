@@ -3,6 +3,7 @@
 
 
 import json
+import logging
 import discord
 from discord.ext import tasks, commands
 
@@ -45,7 +46,8 @@ class BackgroundTasks(commands.Cog):
         #** Setup Database Details **
         self.connection, self.cursor = Database.return_connection()
         
-        #** Output Logging **
+        #** Setup Logging **
+        self.logger = logging.getLogger("discord.background")
         client.logger.info("Extension Loaded: Cogs.Background")
         
     
@@ -53,7 +55,7 @@ class BackgroundTasks(commands.Cog):
         
         #** Gently Shutdown All Current Background Tasks **
         self.StatusRotation.stop()
-        self.client.logger.info("Status rotation stopped")
+        self.logger.info("Status rotation stopped")
         self.client.logger.info("Extension Unloaded: Cogs.Background")
         
         
@@ -63,7 +65,7 @@ class BackgroundTasks(commands.Cog):
         #** When Bot Startup Is Complete, Start Status Rotation & Auth Checking Background Tasks **
         self.StatusRotation.change_interval(seconds = self.StatusTime)
         self.StatusRotation.start()
-        self.client.logger.info("Started status rotation at time interval "+ str(self.StatusTime) +" seconds")
+        self.logger.info("Started status rotation at time interval "+ str(self.StatusTime) +" seconds")
 
 
     @tasks.loop()
@@ -85,6 +87,7 @@ class BackgroundTasks(commands.Cog):
         
         #** Update Presence On Discord **
         await self.client.change_presence(activity=discord.Activity(type=Activity, name=" "+str(self.Status[self.CurrentStatus][1])))
+        self.logger.debug("Status Changed to "+self.Status[self.CurrentStatus][0]+" "+str(self.Status[self.CurrentStatus][1]))
 
 
 #!-------------------SETUP FUNCTION-------------------#

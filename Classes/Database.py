@@ -2,10 +2,16 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
-from logging import exception
+import logging
 import os
 import mysql.connector
 from datetime import datetime
+
+
+#!-----------------------------SETUP LOGGING------------------------------------#
+
+
+logger = logging.getLogger("database")
 
 
 #!--------------------------------DATABASE CONNECTION---------------------------------#
@@ -27,9 +33,9 @@ connection = mysql.connector.connect(host = Host,
 if connection.is_connected():
     cursor = connection.cursor(buffered=True)
     cursor.execute("SELECT database();")
-    print("Database Connection Established: "+datetime.now().strftime("%H:%M")+"\n")
+    logger.info("Database Connection Established!")
 else:
-    print("Database Connection Failed: "+datetime.now().strftime("%H:%M")+"\n")
+    logger.critical("Database Connection Failed!")
 
 #** Delete Connection Details **
 del Host
@@ -191,7 +197,7 @@ class UserData():
         ToExecute = "INSERT INTO cache (SoundcloudID, SoundcloudURL, Name, Artists) VALUES (%s, %s, %s, %s);"
         self.cursor.execute(ToExecute, Values)
         self.connection.commit()
-        print("Partial Data Added To Cache")
+        logger.info("Partial Data Added To Cache")
 
 
     def AddFullSongCache(self, Info):
@@ -204,7 +210,7 @@ class UserData():
         ToExecute = "REPLACE INTO cache (SoundcloudID, SoundcloudURL, SpotifyID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
         self.cursor.execute(ToExecute, Values)
         self.connection.commit()
-        print("Full Data Added To Cache")
+        logger.info("Full Data Added To Cache")
 
 
     def SearchCache(self, ID):

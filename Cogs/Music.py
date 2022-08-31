@@ -4,6 +4,7 @@
 
 import json
 import copy
+import logging
 import discord
 import asyncio
 import lavalink
@@ -35,20 +36,25 @@ class MusicCog(commands.Cog, name="Music"):
 
     def __init__(self, client):
 
-        #** Assign Discord Bot Client As Class Object **
+        #** Assign Discord Bot Client As Class Object & Setup Logging **
         self.client = client 
         self.Pagination = self.client.get_cog("EmbedPaginator")
+        self.logger = logging.getLogger('lavalink')
 
         #** Create Client If One Doesn't Already Exist **
         if not hasattr(client, 'lavalink'):
+            self.logger.info("No Previous Lavalink Client Found. Creating New Connection")
             client.lavalink = lavalink.Client(803939964092940308)
             client.lavalink.add_node('127.0.0.1', 2333, 'youshallnotpass', 'eu', 'default-node')
             client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
-            client.logger.info("Created new connection to lavalink client")
+            client.logger.debug("Lavalink listener added")
+            self.logger.info("New Client Registered")
+        else:
+            self.logger.info("Found Previous Lavalink Connection")
 
         #** Add Event Hook **
         lavalink.add_event_hook(self.track_hook)
-        client.logger.debug("Lavalink event hooks registered")
+        self.logger.info("Event hooks registered")
         
         #** Load Config File **
         with open('Config.json') as ConfigFile:
@@ -68,7 +74,8 @@ class MusicCog(commands.Cog, name="Music"):
         
         #** Clear Event Hooks When Cog Unloaded **
         self.client.lavalink._event_hooks.clear()
-        print("Music Cog Unloaded!")
+        self.client.logger.debug("Cleared Lavalink event hooks")
+        self.client.logger.info("Extension Unloaded: Cogs.Music")
 
 
     async def ensure_voice(self, ctx):
@@ -121,7 +128,6 @@ class MusicCog(commands.Cog, name="Music"):
         if isinstance(event, lavalink.events.QueueEndEvent):
             
             #** When Queue Empty, Disconnect From VC **
-            print("\nQueueEndEvent")
             Guild = self.client.get_guild(int(event.player.guild_id))
             await Guild.change_voice_state(channel=None)
             
@@ -139,10 +145,8 @@ class MusicCog(commands.Cog, name="Music"):
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
             #** Get Channel & Print Out Now Playing Information When New Track Starts **
-            print("\nTrackStartEvent")
             Timestamp = datetime.now()
             Channel = self.client.get_channel(int(event.player.fetch("Channel")))
-            print(event.track["title"], event.track["uri"])
             
             #** Create Now Playing Embed **
             NowPlaying = discord.Embed(title = "Now Playing:")
@@ -159,7 +163,6 @@ class MusicCog(commands.Cog, name="Music"):
                 NowPlaying.add_field(name="Duration:", value = Utils.format_time(event.track.duration))
                 
                 #** If Track Has Spotify Info, Format List of Artists **
-                print(event.track.extra)
                 if event.track.extra['spotify'] != {}:
                     Artists = Utils.format_artists(event.track.extra['spotify']['artists'], event.track.extra['spotify']['artistID'])
 

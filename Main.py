@@ -21,15 +21,22 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 #** Setup Handlers **
-fileHandle = logging.handlers.RotatingFileHandler(
-    filename='Logs/bot.log',
+masterHandle = logging.handlers.RotatingFileHandler(
+    filename='Logs/master.log',
     encoding='utf-8',
     maxBytes=32 * 1024 * 1024,  # 32 MiB
-    backupCount=5)
+    backupCount=10)
+debugHandle = logging.handlers.RotatingFileHandler(
+    filename='Logs/debug.log',
+    encoding='utf-8',
+    maxBytes=32 * 1024 * 1024,  # 32 MiB
+    backupCount=10)
 consoleHandle = logging.StreamHandler(sys.stdout)
 
-#** Setup Formatting & Add Handlers **
+#** Create Custom Coloured Formatter
 class ColouredFormat(logging.Formatter):
+    
+    #** ANSI Escape Colours + ANSI Reset String **
     colours = {'yellow': "\x1b[38;5;220m",
                'red': "\x1b[38;5;9m",
                'orange': "\x1b[38;5;202m",
@@ -42,12 +49,14 @@ class ColouredFormat(logging.Formatter):
                'light_orange': "\x1b[38;5;216m"}
     reset = "\x1b[0m"
 
+    #** Set Colours For Logging Levels **
     levelFormats = {logging.DEBUG:  colours['green'] + "[%(levelname)s]" + reset,
                     logging.INFO: colours['blue'] + "[%(levelname)s]" + reset,
                     logging.WARNING: colours['yellow'] + "[%(levelname)s]" + reset,
                     logging.ERROR: colours['orange'] + "[%(levelname)s]" + reset,
                     logging.CRITICAL: colours['red'] + "[%(levelname)s]" + reset}
 
+    #** Create Format Based On Inputted Record **
     def format(self, record):
         logFormat = "%(asctime)s " + self.levelFormats.get(record.levelno)
         
@@ -65,11 +74,20 @@ class ColouredFormat(logging.Formatter):
         formatter = logging.Formatter(logFormat, datefmt="%d-%m-%Y %H:%M:%S")
         return formatter.format(record)
     
-
-fileHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
+#** Set Formatters **
+masterHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
+debugHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
 consoleHandle.setFormatter(ColouredFormat())
-logger.addHandler(fileHandle)
+
+#** Rollover Current File Handlers **
+masterHandle.doRollover()
+debugHandle.doRollover()
+
+#** Add Handlers & Log Code Start **
+debugHandle.setLevel(logging.DEBUG)
+logger.addHandler(masterHandle)
 logger.addHandler(consoleHandle)
+logger.addHandler(debugHandle)
 logger.info("Code Started!")
 
 
