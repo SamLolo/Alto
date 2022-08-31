@@ -5,6 +5,7 @@
 import os
 import sys
 import json
+import shutil
 import asyncio
 import logging
 import discord
@@ -15,6 +16,16 @@ from discord.ext import commands
 
 #!--------------------------------SETUP LOGGING---------------------------------#
 
+#** Save Previous Session Logs To Zip **
+with open("Logs/master.log", 'r') as File:
+    timestamp  = File.readline().replace(":", ".").split(" ")
+os.mkdir("Logs/Session ("+" ".join(timestamp[0:2])+")")
+files = os.listdir("Logs/")
+print(files)
+for name in files[2]:
+    if name.endswith(".log"):
+        print(name)
+        shutil.move("Logs/"+name, "Logs/Session ("+" ".join(timestamp[0:2])+")/"+name)
 
 #** Setup Logging **
 logger = logging.getLogger()
@@ -36,7 +47,7 @@ consoleHandle = logging.StreamHandler(sys.stdout)
 #** Create Custom Coloured Formatter hello
 class ColouredFormat(logging.Formatter):
     
-    #** ANSI Escape Colours + ANSI Reset String **
+    #** ANSI Escape Colours (https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit) + ANSI Reset String **
     colours = {'yellow': "\x1b[38;5;220m",
                'red': "\x1b[38;5;9m",
                'orange': "\x1b[38;5;202m",
@@ -78,10 +89,6 @@ class ColouredFormat(logging.Formatter):
 masterHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
 debugHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
 consoleHandle.setFormatter(ColouredFormat())
-
-#** Rollover Current File Handlers **
-masterHandle.doRollover()
-debugHandle.doRollover()
 
 #** Add Handlers & Log Code Start **
 debugHandle.setLevel(logging.DEBUG)
