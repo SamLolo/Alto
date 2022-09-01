@@ -5,11 +5,11 @@
 import os
 import sys
 import json
-from zipfile import ZipFile
 import asyncio
 import logging
 import discord
 import logging.handlers
+from zipfile import ZipFile
 from datetime import datetime
 from discord.ext import commands
 
@@ -17,12 +17,13 @@ from discord.ext import commands
 #!--------------------------------SETUP LOGGING---------------------------------#
 
 #** Save Previous Session Logs To Zip **
-with open("Logs/master.log", 'r') as File:
-    timestamp  = File.readline().replace(":", ".").split(" ")
-with ZipFile("Logs/Session ("+" ".join(timestamp[0:2])+").zip", 'w') as zipFile:
-    for file in os.listdir("Logs/"):
-        if file.endswith(".log"):
-            zipFile.write("Logs/"+file)
+if "master.log" in os.listdir("Logs/"):
+    with open("Logs/master.log", 'r') as File:
+        timestamp  = File.readline().replace(":", ".").split(" ")
+    with ZipFile("Logs/Session ("+" ".join(timestamp[0:2])+").zip", 'w') as zipFile:
+        for file in os.listdir("Logs/"):
+            if file.endswith(".log"):
+                zipFile.write("Logs/"+file)
 
 #** Setup Logging **
 logger = logging.getLogger()
