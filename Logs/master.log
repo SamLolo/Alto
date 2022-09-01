@@ -1,24 +1,8 @@
-31-08-2022 23:58:27 [INFO] root: Code Started!
-31-08-2022 23:58:27 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
-31-08-2022 23:58:27 [INFO] discord.client: logging in using static token
-31-08-2022 23:58:28 [INFO] discord: Extension Loaded: Cogs.Pagination
-31-08-2022 23:58:28 [INFO] database: Database Connection Established!
-31-08-2022 23:58:31 [INFO] spotify: Refreshing Bot Token
-31-08-2022 23:58:31 [INFO] spotify: Succesfully Fetched New Bot Token
-31-08-2022 23:58:31 [INFO] lavalink: No Previous Lavalink Client Found. Creating New Connection
-31-08-2022 23:58:31 [INFO] lavalink.nodemanager: Added node 'eu-127.0.0.1:2333'
-31-08-2022 23:58:31 [INFO] lavalink: New Client Registered
-31-08-2022 23:58:31 [INFO] lavalink: Event hooks registered
-31-08-2022 23:58:31 [INFO] discord: Extension Loaded: Cogs.Music
-31-08-2022 23:58:31 [INFO] discord: Extension Loaded: Cogs.Utility
-31-08-2022 23:58:31 [INFO] spotify: Refreshing Bot Token
-31-08-2022 23:58:31 [INFO] spotify: Succesfully Fetched New Bot Token
-31-08-2022 23:58:32 [INFO] discord: Extension Loaded: Cogs.Account
-31-08-2022 23:58:32 [INFO] discord: Extension Loaded: Cogs.Background
-31-08-2022 23:58:32 [INFO] discord: Extension Loaded: Cogs.Help
-31-08-2022 23:58:32 [INFO] lavalink.websocket: [Node:eu-127.0.0.1:2333] Attempting to establish WebSocket connection (1/3)...
-31-08-2022 23:58:32 [INFO] discord.gateway: Shard ID None has connected to Gateway (Session ID: fa573a1842d2f7a5b68e052fccf72605).
-31-08-2022 23:58:34 [WARNING] lavalink.websocket: [Node:eu-127.0.0.1:2333] Invalid response received; this may indicate that Lavalink is not running, or is running on a port different to the one you provided to `add_node`.
-31-08-2022 23:58:34 [INFO] discord: Waiting until ready...
-31-08-2022 23:58:34 [INFO] discord: Bot Is Now Online & Ready!
-31-08-2022 23:58:34 [INFO] discord.background: Started status rotation at time interval 60 seconds
+01-09-2022 01:21:05 [INFO] root: Code Started!
+01-09-2022 01:21:05 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+01-09-2022 01:21:05 [INFO] discord.client: logging in using static token
+01-09-2022 01:21:05 [INFO] discord: Extension Loaded: Cogs.Pagination
+01-09-2022 01:29:36 [INFO] root: Code Started!
+01-09-2022 01:29:36 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+01-09-2022 01:29:36 [INFO] discord.client: logging in using static token
+01-09-2022 01:29:36 [INFO] discord: Extension Loaded: Cogs.Pagination

@@ -148,13 +148,6 @@ class UserData():
                 User['recommendations']['Valance'][0], User['recommendations']['Valance'][1], User['recommendations']['Valance'][2])
         self.cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", Data)
         self.connection.commit()
-
-    
-    def PrepareLink(self, discordID):
-
-        #** Write Empty Row With DiscordID Into Spotify Table **
-        self.cursor.execute("REPLACE INTO spotify (DiscordID) VALUES ("+str(discordID)+");")
-        self.connection.commit()
     
 
     def RemoveData(self, discordID, Tables):

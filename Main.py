@@ -5,7 +5,7 @@
 import os
 import sys
 import json
-import shutil
+from zipfile import ZipFile
 import asyncio
 import logging
 import discord
@@ -19,13 +19,10 @@ from discord.ext import commands
 #** Save Previous Session Logs To Zip **
 with open("Logs/master.log", 'r') as File:
     timestamp  = File.readline().replace(":", ".").split(" ")
-os.mkdir("Logs/Session ("+" ".join(timestamp[0:2])+")")
-files = os.listdir("Logs/")
-print(files)
-for name in files[2]:
-    if name.endswith(".log"):
-        print(name)
-        shutil.move("Logs/"+name, "Logs/Session ("+" ".join(timestamp[0:2])+")/"+name)
+with ZipFile("Logs/Session ("+" ".join(timestamp[0:2])+").zip", 'w') as zipFile:
+    for file in os.listdir("Logs/"):
+        if file.endswith(".log"):
+            zipFile.write("Logs/"+file)
 
 #** Setup Logging **
 logger = logging.getLogger()
