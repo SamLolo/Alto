@@ -2,6 +2,7 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
+from distutils.log import error
 import os
 import sys
 import json
@@ -16,11 +17,20 @@ from discord.ext import commands
 
 #!--------------------------------SETUP LOGGING---------------------------------#
 
-#** Save Previous Session Logs To Zip **
+
+#** Create Logs & Backup Folders Either Are Missing **
+if not("Logs" in os.listdir("./")):
+    os.mkdir("Logs")
+if not("Backups" in os.listdir("Logs/")):
+    os.mkdir("Logs/Backups")
+
+#** Get Time Of Last Session Startup From Master File **
 if "master.log" in os.listdir("Logs/"):
     with open("Logs/master.log", 'r') as File:
         timestamp  = File.readline().replace(":", ".").split(" ")
-    with ZipFile("Logs/Session ("+" ".join(timestamp[0:2])+").zip", 'w') as zipFile:
+        
+    #** Zip Log Files & Move Zip File Into Backups Folder **
+    with ZipFile("Logs/Backups/Session ("+" ".join(timestamp[0:2])+").zip", 'w') as zipFile:
         for file in os.listdir("Logs/"):
             if file.endswith(".log"):
                 zipFile.write("Logs/"+file)
@@ -249,7 +259,7 @@ def is_admin():
     
     #** When Called, Check If User Id In List & If So Return True **
     async def predicate(ctx):
-        if ctx.author.id in [315237737538125836]:
+        if ctx.author.id in [315237737538125836, 233641884801695744]:
             return True
         return False
     return commands.check(predicate)
@@ -300,7 +310,7 @@ async def reload(ctx, CogName):
         
         #** Attempt To Reload Cog & Edit Message To User If Successful **
         try:
-            client.reload_extension(cog)
+            await client.reload_extension(cog)
             Message += "*"+cog+" Successfully Reloaded*\n"
             await Temp.edit(content=Message)
             
@@ -322,9 +332,66 @@ async def reload(ctx, CogName):
     await asyncio.sleep(10)
     await ctx.message.delete()
     await Temp.delete()
+    
+
+@client.command(hidden=True)
+@is_admin()
+async def sync(ctx, *args):
+    
+    #** If Input is Blank, Sync Application Commands To Current Guild **
+    if not(args):
+        args = ["Current Server"]
+        client.tree.copy_global_to(guild=ctx.guild)
+    
+    #** If Input = Global, Send Warning Message **
+    elif args[0].lower() == "global":
+        warning = await ctx.send("**Warning! Syncing Globally Will Make The Changes Available To __All Servers__!**\n*Are You Sure You Want To Continue?*")
+        
+        #** Add Reactions **
+        await warning.add_reaction(Emojis["True"])
+        await warning.add_reaction(Emojis["False"])
+        
+        def ReactionAdd(Reaction):
+            return (Reaction.message_id == warning.id) and (Reaction.user_id != client.user.id)
+
+        #** Wait For User To React To Tick & Stop Function Execution When Reacting With No **
+        while True:
+            Reaction = await client.wait_for("raw_reaction_add", check=ReactionAdd)
+            if Reaction.event_type == 'REACTION_ADD':
+                if str(Reaction.emoji) == Emojis['False']:
+                    await warning.delete()
+                    temp = await ctx.send("Cancelled Command Sync Operation!")
+                    await asyncio.sleep(10)
+                    await ctx.message.delete()
+                    await temp.delete()
+                    return
+                elif str(Reaction.emoji) == Emojis['True']:
+                    await warning.delete()
+                    break
+    
+    #** If Input is Integer, Check If Guild ID, & Sync To That Guild
+    elif args[0].isdecimal():
+        guild = client.get_guild(int(args[0]))
+        if guild is None:
+            raise commands.BadArgument()
+        client.tree.copy_global_to(guild=guild)
+    
+    #** If Invalid Argument Supplied, Raise Error
+    else:
+        raise commands.BadArgument()
+    
+    #** Carry Out Sync **
+    await client.tree.sync()
+        
+    #** Send Confirmation Message If Sucessfull & Delete Both Messages After 20 Seconds **
+    temp = await ctx.send(f"Sucessfully Synced Application Commands!\nScope: `{str(args[0])}`")
+    await asyncio.sleep(20)
+    await ctx.message.delete()
+    await temp.delete()
 
 
 #!--------------------------------DISCORD LOOP-----------------------------------# 
+
 
 #** Connecting To Discord **    
 client.run(os.environ["DEV_TOKEN"], log_handler=None)

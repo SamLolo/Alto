@@ -168,7 +168,7 @@ class EmbedPaginator(commands.Cog):
     async def on_raw_reaction_add(self, Reaction):
         
         #** Check Reaction Isn't Self-Reaction **
-        if Reaction.user_id != 803939964092940308:
+        if Reaction.user_id != self.client.user.id:
 
             #** Check If Reaction Added **
             if Reaction.event_type == 'REACTION_ADD':
@@ -178,25 +178,28 @@ class EmbedPaginator(commands.Cog):
                 if Channel != None:
 
                     #** Get Page And Remove Reaction Just Added **
-                    Page = await Channel.fetch_message(Reaction.message_id)
-                    await Page.remove_reaction(Reaction.emoji, Reaction.member)
+                    try:
+                        Page = await Channel.fetch_message(Reaction.message_id)
+                        await Page.remove_reaction(Reaction.emoji, Reaction.member)
 
-                    #** Check If Reaction Is Next & Get New Embed **
-                    if str(Reaction.emoji) == self.Emojis['Next']:
-                        NewEmbed = await self.get_next(Reaction.message_id)
-                    
-                    #** Check If Reaction Is Back & Get New Embed **
-                    elif str(Reaction.emoji) == self.Emojis['Back']:
-                        NewEmbed = await self.get_last(Reaction.message_id)
-                    
-                    #** If Reaction Isn't Next Or Back, Don't Get New Embed **
-                    else:
-                        NewEmbed = None
+                        #** Check If Reaction Is Next & Get New Embed **
+                        if str(Reaction.emoji) == self.Emojis['Next']:
+                            NewEmbed = await self.get_next(Reaction.message_id)
+                        
+                        #** Check If Reaction Is Back & Get New Embed **
+                        elif str(Reaction.emoji) == self.Emojis['Back']:
+                            NewEmbed = await self.get_last(Reaction.message_id)
+                        
+                        #** If Reaction Isn't Next Or Back, Don't Get New Embed **
+                        else:
+                            NewEmbed = None
 
-                    #** Format New Embed & Edit Current Page **
-                    if NewEmbed != None:
-                        NewPage = await self.format_embed(NewEmbed)
-                        await Page.edit(embed=NewPage)
+                        #** Format New Embed & Edit Current Page **
+                        if NewEmbed != None:
+                            NewPage = await self.format_embed(NewEmbed)
+                            await Page.edit(embed=NewPage)
+                    except:
+                        self.logger.debug(f"Message Not Found: {str(Reaction.message_id)}")
 
 
 #!-------------------SETUP FUNCTION-------------------#

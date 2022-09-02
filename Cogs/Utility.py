@@ -6,6 +6,7 @@ import json
 import discord
 from datetime import datetime
 from discord.ext import commands
+from discord import app_commands
 from dateutil.relativedelta import relativedelta
 
 
@@ -29,31 +30,33 @@ class UtilityCog(commands.Cog, name="Utility"):
         
         #** Output Logging **
         client.logger.info("Extension Loaded: Cogs.Utility")
-
-
-    @commands.command(aliases=['pg'], 
-                      description="Displays the bot's current latency to Discord in milliseconds.")
-    async def ping(self, ctx):
-
+        
+    
+    def cog_unload(self):
+        
+        #** Output Info That Cog Is Being Unloaded **
+        self.client.logger.info("Extension UnLoaded: Cogs.Utility")
+        
+    
+    @app_commands.command(description="Displays the bot's latency to Discord in milliseconds.")
+    async def ping(self, interaction: discord.Interaction):
+        
         #** Return Client Latency in ms **
-        await ctx.send("Pong! "+str(round(self.client.latency * 1000))+"ms")
+        await interaction.response.send_message(f'**Pong!** `{str(round(self.client.latency * 1000))} ms`')
     
 
-    @commands.command(aliases=['up', 'runtime'], 
-                      description="Displays the time since the bot last went down.")
-    async def uptime(self, ctx):
+    @app_commands.command(description="Displays the time since the bot came online.")
+    async def uptime(self, interaction: discord.Interaction):
         
         #** Calculate Time Difference Between DateTime Stored At Startup & Datetime Now **
         Uptime = relativedelta(datetime.strptime(datetime.now().strftime("%m-%d %H:%M"), "%m-%d %H:%M"), datetime.strptime(self.client.startup.strftime("%m-%d %H:%M"), "%m-%d %H:%M"))
         
         #** Format Into A Nice String & Return To User **
-        await ctx.send("The bot has been online for:\n`"+str(Uptime.months)+" Months, "+str(Uptime.days)+" Days, "+str(Uptime.hours)+
-                       " Hours & "+str(Uptime.minutes)+" Minutes`")
+        await interaction.response.send_message(f'*The bot has been online for:*\n`{str(Uptime.months)} Months, {str(Uptime.days)} Days, {str(Uptime.hours)} Hours & {str(Uptime.minutes)} Minutes`')
 
 
-    @commands.command(aliases=['inv'], 
-                      description="Displays the bot's Discord invite link.")
-    async def invite(self, ctx):
+    @app_commands.command(description="Displays the bot's Discord invite link.")
+    async def invite(self, interaction: discord.Interaction):
         
         #** Create Embed With Invite Information **
         Invite = discord.Embed(
@@ -63,7 +66,7 @@ class UtilityCog(commands.Cog, name="Utility"):
         Invite.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
 
         #** Send Embed To Discord **
-        await ctx.send(embed=Invite)
+        await interaction.response.send_message(embed=Invite)
         
 
 #!-------------------SETUP FUNCTION-------------------#

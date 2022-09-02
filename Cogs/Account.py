@@ -321,7 +321,7 @@ class AccountCog(commands.Cog, name="Account"):
 
         #** Check Function To Be Called When Checking If Correct Reaction Has Taken Place **
         def ReactionAdd(Reaction):
-            return (Reaction.message_id == SentWarning.id) and (Reaction.user_id != 803939964092940308)
+            return (Reaction.message_id == SentWarning.id) and (Reaction.user_id != self.client.user.id)
 
         #** Wait For User To React To Tick & Remove Data When Done So **
         while True:
