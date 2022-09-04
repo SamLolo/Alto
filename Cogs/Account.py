@@ -4,30 +4,12 @@
 
 import copy
 import math
-import json
 import random
 import asyncio
 import discord
 from datetime import datetime
 from discord.ext import commands
 from dateutil.relativedelta import relativedelta
-
-
-#!------------------------------IMPORT CLASSES----------------------------------#
-
-
-from Classes.Users import Users
-from Classes.Database import UserData
-from Classes.MusicUtils import Music
-from Classes.Utils import Utility
-
-
-#!------------------------INITIALISE CLASSES-------------------#
-
-
-Database = UserData()
-SongData = Music()
-Utils = Utility()
 
 
 #!------------------------UTILITY COG-----------------------#
@@ -41,20 +23,7 @@ class AccountCog(commands.Cog, name="Account"):
         self.client = client
         self.Pagination = self.client.get_cog("EmbedPaginator")
 
-        #** Load Config File **
-        with open('Config.json') as ConfigFile:
-            Config = json.load(ConfigFile)
-            ConfigFile.close()
-            
-        #** Setup Emojis **
-        self.Emojis = Config['Variables']['Emojis']
-        self.Emojis["True"] = "✅"
-        self.Emojis["False"] = "❌"
-        
-        #** Output Logging **
-        client.logger.info("Extension Loaded: Cogs.Account")
-        
-    
+ 
     @commands.command(aliases=['account', 'a'], 
                       description="Displays information about your alto profile.")
     async def profile(self, ctx):
@@ -65,13 +34,13 @@ class AccountCog(commands.Cog, name="Account"):
 
         #** If User Not In VC, Create New User Object **
         if not(ctx.author.voice) or not(ctx.author.voice.channel):
-            CurrentUser = Users(self.client, ctx.author.id)
+            CurrentUser = self.client.userClass.User(self.client, ctx.author.id)
         
         #** If In VC, Check If Player Active & If Not, Create New User Object **
         else:
             Player = self.client.lavalink.player_manager.get(ctx.author.voice.channel.guild.id)
             if Player == None:
-                CurrentUser = Users(self.client, ctx.author.id)
+                CurrentUser = self.client.userClass.User(self.client, ctx.author.id)
             
             #** If Player Active, Fetch Users Dict & Check If User In Dictionary Otherwise Create New User Object **
             else:
@@ -79,14 +48,14 @@ class AccountCog(commands.Cog, name="Account"):
                 try:
                     CurrentUser = UserDict[str(ctx.author.id)]
                 except:
-                    CurrentUser = Users(self.client, ctx.author.id)
+                    CurrentUser = self.client.userClass.User(self.client, ctx.author.id)
 
         #** Get Last Song's Data if Listening History Isn't Empty **
         if len(CurrentUser.array) > 0:
             LastSongData = CurrentUser.History[len(CurrentUser.array) - 1]
 
             #** Format Data For Song & Add Last Listened To Song To Embed As Field **
-            FormattedSong = Utils.format_song(LastSongData)
+            FormattedSong = self.client.utils.format_song(LastSongData)
             ProfileEmbed.add_field(name="Last Listened To:", value=FormattedSong, inline=False)
 
             #** Calculate Time Difference And Check What To Display **
@@ -134,13 +103,13 @@ class AccountCog(commands.Cog, name="Account"):
         
         #** If User Not In VC, Create New User Object **
         if not(ctx.author.voice) or not(ctx.author.voice.channel):
-            CurrentUser = Users(self.client, ctx.author.id)
+            CurrentUser = self.client.userClass.User(self.client, ctx.author.id)
         
         #** If In VC, Check If Player Active & If Not, Create New User Object **
         else:
             Player = self.client.lavalink.player_manager.get(ctx.author.voice.channel.guild.id)
             if Player == None:
-                CurrentUser = Users(self.client, ctx.author.id)
+                CurrentUser = self.client.userClass.User(self.client, ctx.author.id)
             
             #** If Player Active, Fetch Users Dict & Check If User In Dictionary Otherwise Create New User Object **
             else:
@@ -148,7 +117,7 @@ class AccountCog(commands.Cog, name="Account"):
                 try:
                     CurrentUser = UserDict[str(ctx.author.id)]
                 except:
-                    CurrentUser = Users(self.client, ctx.author.id)
+                    CurrentUser = self.client.userClass.User(self.client, ctx.author.id)
 
         #** Check User Has Listened To Some Songs **
         if len(CurrentUser.array) > 0:
@@ -173,7 +142,7 @@ class AccountCog(commands.Cog, name="Account"):
                         break
 
                     #** Format Song & Add Listened To Stat & Divisor **
-                    Description += Utils.format_song(NextSong)
+                    Description += self.client.utils.format_song(NextSong)
                     Description += "\n*Listened on "+NextSong['ListenedAt'].strftime('%d/%m/%y')+" at "+NextSong['ListenedAt'].strftime('%H:%M')+"*"
                     Description += "\n--------------------\n"
                 
@@ -192,8 +161,8 @@ class AccountCog(commands.Cog, name="Account"):
             
             #** If More Than One Page Being Displayed, Add Back And Next Reactions & Add To Global Pagination System **
             if math.ceil(len(CurrentUser.array) / 5) > 1:
-                await Page.add_reaction(self.Emojis['Back'])
-                await Page.add_reaction(self.Emojis['Next'])
+                await Page.add_reaction(self.client.utils.get_emoji('Back'))
+                await Page.add_reaction(self.client.utils.get_emoji('Next'))
                 await self.Pagination.add_pages(Page.id, Pages)
         
         #** Let User Know If They Have No Listening History To Display **
@@ -206,9 +175,8 @@ class AccountCog(commands.Cog, name="Account"):
                       brief="Requires you to have some listening history!")
     async def recommendations(self, ctx, *args):
         
-        #** Check Input Is Valid & If So Get User **
-        Input = "".join(args)
-        User = Users(self.client, ctx.author.id)
+        #** Get User **
+        User = self.client.userClass.User(self.client, ctx.author.id)
         
         #** Check User Actually Has Listening History To Analyse & If Not Raise Error **
         if len(User.array) > 0:
@@ -240,11 +208,11 @@ class AccountCog(commands.Cog, name="Account"):
             for SpotifyID, Data in Recommendations.items():
 
                 #** Format Embed Sections **
-                Song = Data['Name']+"\nBy: "+Utils.format_artists(Data['Artists'], Data['ArtistID'])
-                Links = self.Emojis['Spotify']+" Song: [Spotify](https://open.spotify.com/track/"+SpotifyID+")\n"
+                Song = Data['Name']+"\nBy: "+self.client.utils.format_artists(Data['Artists'], Data['ArtistID'])
+                Links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify](https://open.spotify.com/track/{SpotifyID})\n"
                 if Data['Preview'] != None:
-                    Links += self.Emojis['Preview']+" Song: [Preview]("+Data['Preview']+")\n"
-                Links += self.Emojis['Album']+" Album: ["+Data['Album']+"](https://open.spotify.com/album/"+Data['AlbumID']+")"
+                    Links += f'{self.client.utils.get_emoji("Preview")} Song: [Preview]({Data["preview"]})\n'
+                Links += f"{self.client.utils.get_emoji('Album')} Album: [{Data['Album']}](https://open.spotify.com/album/{Data['AlbumID']})"
 
                 #** Create New Embed **
                 NewPage = discord.Embed(
@@ -257,8 +225,8 @@ class AccountCog(commands.Cog, name="Account"):
                 #** Display First Recomendation To User **
                 if Count == 0:
                     await Page.edit(content=None, embed=NewPage)
-                    await Page.add_reaction(self.Emojis['Back'])
-                    await Page.add_reaction(self.Emojis['Next'])
+                    await Page.add_reaction(self.client.utils.get_emoji('Back'))
+                    await Page.add_reaction(self.client.utils.get_emoji('Next'))
                     print("Sent!")
 
                 #** Convert Embed To Dictionary and Add To Data Dictionary & Increment Counter **
@@ -313,7 +281,7 @@ class AccountCog(commands.Cog, name="Account"):
         try:
             SentWarning = await ctx.message.author.dm_channel.send(embed=WarningEmbed)
             await ctx.send("Please check your DMs!")
-            await SentWarning.add_reaction(self.Emojis['Tick'])
+            await SentWarning.add_reaction(self.client.utils.get_emoji('Tick'))
 
         #** Raise Error If Can't Send Messages To DM Channel **
         except :
@@ -327,8 +295,8 @@ class AccountCog(commands.Cog, name="Account"):
         while True:
                 Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
                 if Reaction.event_type == 'REACTION_ADD':
-                    if str(Reaction.emoji) == self.Emojis['Tick']:
-                        Database.RemoveData(ctx.author.id, Tables)
+                    if str(Reaction.emoji) == self.client.utils.get_emoji('Tick'):
+                        self.client.database.RemoveData(ctx.author.id, Tables)
                         await ctx.message.author.dm_channel.send("All requested data successfully removed!")
 
 

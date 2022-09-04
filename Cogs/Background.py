@@ -2,22 +2,9 @@
 #!---------------------------IMPORT MODULES-----------------------#
 
 
-import json
 import logging
 import discord
 from discord.ext import tasks, commands
-
-
-#!------------------------------IMPORT CLASSES----------------------------------#
-
-
-from Classes.Database import UserData
-
-
-#!------------------------INITIALISE CLASSES-------------------#
-
-
-Database = UserData()
 
 
 #!--------------------------BACKGROUND CLASS------------------------#
@@ -29,26 +16,9 @@ class BackgroundTasks(commands.Cog):
 
         #** Assign Class Objects **
         self.client = client
-
-        #** Load Config File **
-        with open('Config.json') as ConfigFile:
-            Config = json.load(ConfigFile)
-            ConfigFile.close()
-            
-        #** Setup Emojis **
-        self.Emojis = Config['Variables']['Emojis']
-        
-        #** Start Status Rotation **
-        self.CurrentStatus = 0
-        self.Status = list(Config['Status'].items())
-        self.StatusTime = Config['StatusTime']
-
-        #** Setup Database Details **
-        self.connection, self.cursor = Database.return_connection()
         
         #** Setup Logging **
         self.logger = logging.getLogger("discord.background")
-        client.logger.info("Extension Loaded: Cogs.Background")
         
     
     def cog_unload(self):
@@ -56,38 +26,41 @@ class BackgroundTasks(commands.Cog):
         #** Gently Shutdown All Current Background Tasks **
         self.StatusRotation.stop()
         self.logger.info("Status rotation stopped")
-        self.client.logger.info("Extension Unloaded: Cogs.Background")
         
         
     @commands.Cog.listener()
     async def on_ready(self):
         
         #** When Bot Startup Is Complete, Start Status Rotation & Auth Checking Background Tasks **
-        self.StatusRotation.change_interval(seconds = self.StatusTime)
+        self.StatusRotation.change_interval(seconds = self.client.config['StatusTime'])
+        self.currentStatus = 0
         self.StatusRotation.start()
-        self.logger.info("Started status rotation at time interval "+ str(self.StatusTime) +" seconds")
+        self.logger.info("Started status rotation at time interval "+ str(self.client.config['StatusTime']) +" seconds")
 
 
     @tasks.loop()
     async def StatusRotation(self):
         
+        #** Setup Status List **
+        statusList = self.client.config['Status']
+        
         #** If Current Status Is Last In List, Loop Back To The Start, Otherwise Increment Count By 1 **
-        if self.CurrentStatus == len(self.Status)-1:
-            self.CurrentStatus = 0
+        if self.currentStatus >= len(statusList)-1:
+            self.currentStatus = 0
         else:
-            self.CurrentStatus += 1
+            self.currentStatus += 1
         
         #** Set Activity Type Based Of Specified Activity Type In Config File **
-        if self.Status[self.CurrentStatus][0] == "Playing":
-            Activity = discord.ActivityType.playing
-        elif self.Status[self.CurrentStatus][0] == "Listening":
-            Activity = discord.ActivityType.listening
+        if statusList[self.currentStatus][0].lower() == "playing":
+            activity = discord.ActivityType.playing
+        elif statusList[self.currentStatus][0].lower() == "listening":
+            activity = discord.ActivityType.listening
         else:
-            Activity = discord.ActivityType.watching
+            activity = discord.ActivityType.watching
         
         #** Update Presence On Discord **
-        await self.client.change_presence(activity=discord.Activity(type=Activity, name=" "+str(self.Status[self.CurrentStatus][1])))
-        self.logger.debug("Status Changed to "+self.Status[self.CurrentStatus][0]+" "+str(self.Status[self.CurrentStatus][1]))
+        await self.client.change_presence(activity=discord.Activity(type=activity, name=f' {str(statusList[self.currentStatus][1])}'))
+        self.logger.debug(f'Status Changed To: "{statusList[self.currentStatus][0]} {statusList[self.currentStatus][1]}"')
 
 
 #!-------------------SETUP FUNCTION-------------------#

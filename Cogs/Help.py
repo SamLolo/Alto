@@ -3,7 +3,6 @@
 
 
 import math
-import json
 import copy
 import asyncio
 import discord
@@ -20,17 +19,9 @@ class HelpCog(commands.Cog):
         #** Assign Class Objects **
         self.client = client
         self.Pagination = self.client.get_cog("EmbedPaginator")
-        self.activeCogs = {'Music': 'All music-related commands, including controlling the audio player and finding out information about songs.', 
-                           'Account': 'Commands involving your Alto account, such as getting information about your account, and managing spotify connections.', 
-                           'Utility': 'Miscellaneous and utility commands, such as information about the bot and it\'s operation.'}
-        
-        #** Load Config File **
-        with open('Config.json') as ConfigFile:
-            Config = json.load(ConfigFile)
-            ConfigFile.close()
-            
-        #** Setup Emojis **
-        self.Emojis = Config['Variables']['Emojis']
+        self.cogDescriptions = {'Music': 'All music-related commands, including controlling the audio player and finding out information about songs.', 
+                                'Account': 'Commands involving your Alto account, such as getting information about your account, and managing spotify connections.', 
+                                'Utility': 'Miscellaneous and utility commands, such as information about the bot and it\'s operation.'}
         
         #** Get List Of Active Commands **
         self.activeCommands = []
@@ -38,9 +29,6 @@ class HelpCog(commands.Cog):
             if not(Command.hidden):
                 self.activeCommands.append(Command.name)
                 
-        #** Output Logging **
-        client.logger.info("Extension Loaded: Cogs.Help")
-
     
     @commands.command()
     async def help(self, ctx, *args):
@@ -55,7 +43,7 @@ class HelpCog(commands.Cog):
                                             "commands within specified catergory from below with a brief description of each.*\n**- /help <command>:"+
                                             "** *Shows a more detailed description on how to use the specified command.*\n\n__**Categories:**__",
                               colour=discord.Colour.blue())
-            for Name, Description in self.activeCogs.items():
+            for Name, Description in self.cogDescriptions.items():
                 MainMenu.add_field(name=Name, value="`/help "+Name+"`\n*"+Description+"*")
             MainMenu.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
             
@@ -63,7 +51,7 @@ class HelpCog(commands.Cog):
             
         #**--------------COMMAND CATERGORY---------------**#
         
-        elif input.title() in list(self.activeCogs.keys()):
+        elif input.title() in list(self.cogDescriptions.keys()):
             
             #** Get Cog Object **
             Cog = self.client.get_cog(input.title())

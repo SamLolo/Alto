@@ -2,10 +2,9 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
-import logging
 import os
+import logging
 import mysql.connector
-from datetime import datetime
 
 
 #!-----------------------------SETUP LOGGING------------------------------------#
@@ -52,12 +51,6 @@ class UserData():
         #** Setup Objects **
         self.cursor = cursor
         self.connection = connection
-
-
-    def return_connection(self):
-
-        #** Return Database Connection & Cursor **
-        return self.connection, self.cursor
 
 
     def GetUser(self, discordID):

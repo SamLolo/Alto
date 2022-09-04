@@ -8,12 +8,10 @@ import json
 import base64
 import random
 import logging
-import requests
 import asyncio
+import requests
 import pandas as pd
-from time import sleep
 from sklearn import tree
-from datetime import datetime
 
 
 #!--------------------------------SPOTIFY-----------------------------------#
@@ -479,10 +477,10 @@ class Spotify(object):
             return "RecommendationsNotFound"
 
 
-#!--------------------------------MUSIC-----------------------------------#
+#!--------------------------------SONG DATA-----------------------------------#
 
 
-class Music(Spotify):
+class SongData(Spotify):
     
     def __init__(self):
 

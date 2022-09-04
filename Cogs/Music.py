@@ -2,7 +2,6 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
-import json
 import copy
 import logging
 import discord
@@ -10,23 +9,6 @@ import asyncio
 import lavalink
 from datetime import datetime
 from discord.ext import commands
-
-
-#!------------------------------IMPORT CLASSES----------------------------------#
-
-
-from Classes.Users import Users
-from Classes.Database import UserData
-from Classes.MusicUtils import Music
-from Classes.Utils import Utility
-
-
-#!------------------------INITIALISE CLASSES-------------------#
-
-
-Database = UserData()
-SongData = Music()
-Utils = Utility()
 
 
 #!------------------------MUSIC COG-----------------------#
@@ -54,28 +36,14 @@ class MusicCog(commands.Cog, name="Music"):
 
         #** Add Event Hook **
         lavalink.add_event_hook(self.track_hook)
-        self.logger.info("Event hooks registered")
-        
-        #** Load Config File **
-        with open('Config.json') as ConfigFile:
-            Config = json.load(ConfigFile)
-            ConfigFile.close()
-            
-        #** Setup Emojis **
-        self.Emojis = Config['Variables']['Emojis']
-        self.Emojis["True"] = "✅"
-        self.Emojis["False"] = "❌"
-        
-        #** Output Logging **
-        client.logger.info("Extension Loaded: Cogs.Music")
+        self.logger.debug("Event hooks added")
 
 
     def cog_unload(self):
         
         #** Clear Event Hooks When Cog Unloaded **
         self.client.lavalink._event_hooks.clear()
-        self.client.logger.debug("Cleared Lavalink event hooks")
-        self.client.logger.info("Extension Unloaded: Cogs.Music")
+        self.logger.debug("Cleared event hooks")
 
 
     async def ensure_voice(self, ctx):
@@ -160,21 +128,21 @@ class MusicCog(commands.Cog, name="Music"):
             #** If Not A Stream, Add Duration Field & Source Of Music **
             if not(event.track.stream):
                 NowPlaying.set_author(name="Playing From Soundcloud", icon_url="https://cdn.discordapp.com/emojis/897135141040832563.png?size=96&quality=lossless")
-                NowPlaying.add_field(name="Duration:", value = Utils.format_time(event.track.duration))
+                NowPlaying.add_field(name="Duration:", value = self.client.utils.format_time(event.track.duration))
                 
                 #** If Track Has Spotify Info, Format List of Artists **
                 if event.track.extra['spotify'] != {}:
-                    Artists = Utils.format_artists(event.track.extra['spotify']['artists'], event.track.extra['spotify']['artistID'])
+                    Artists = self.client.utils.format_artists(event.track.extra['spotify']['artists'], event.track.extra['spotify']['artistID'])
 
                     #** Set Descrition and Thumbnail & Add By Field Above Duration Field **
-                    NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")\n"+self.Emojis['Spotify']+" ["+event.track.extra['spotify']['name']+"]("+event.track.extra['spotify']['URI']+")"
+                    NowPlaying.description = f"{self.client.utils.get_emoji('Soundcloud')} [{event.track['title']}]({event.track['uri']})\n{self.client.utils.get_emoji('Spotify')} [{event.track.extra['spotify']['name']}]({event.track.extra['spotify']['URI']})"
                     NowPlaying.set_thumbnail(url=event.track.extra['spotify']['art'])
                     NowPlaying.insert_field_at(0, name="By:", value=Artists)
 
                 #** If No Spotify Info, Create Basic Now Playing Embed **
                 else:
                     #** Set Descrition and Thumbnail & Add By Field Above Position Field **
-                    NowPlaying.description = self.Emojis['Soundcloud']+" ["+event.track["title"]+"]("+event.track["uri"]+")"
+                    NowPlaying.description = f"{self.client.utils.get_emoji('Soundcloud')} [{event.track['title']}]({event.track['uri']})"
                     NowPlaying.insert_field_at(0, name="By:", value="["+event.track.author+"]("+event.track.extra["artistURI"]+")")
             
             #** If Track Is A Stream, Add Appropriate Information For A Stream & N/A For Duration As It Is Endless **
@@ -221,7 +189,7 @@ class MusicCog(commands.Cog, name="Music"):
                 
                 #** Add New User Objects For Newly Joined Listeners & Store New User Dict Back In Player **
                 for DiscordID in UserIDs:
-                    UserDict[str(DiscordID)] = Users(self.client, DiscordID)
+                    UserDict[str(DiscordID)] = self.client.userClass.User(self.client, DiscordID)
                 event.player.store('Users', UserDict)
 
                 #** Format Current Track Data Into Dict To Be Added To History **
@@ -275,12 +243,12 @@ class MusicCog(commands.Cog, name="Music"):
             if "track" in Query:
 
                 #** Get Song From Cache & Check If It Is Cached **
-                SongInfo = Database.SearchCache(SpotifyID)
+                SongInfo = self.client.database.SearchCache(SpotifyID)
                 PlaylistInfo = None
                 if SongInfo == None:
 
                     #** If Not Cached, Get Song Info **
-                    SongInfo = SongData.GetSongInfo(SpotifyID)
+                    SongInfo = self.client.music.GetSongInfo(SpotifyID)
 
                     #** Raise Error if No Song Found Otherwise Reformat Query With New Data **
                     if SongInfo == "SongNotFound":
@@ -296,7 +264,7 @@ class MusicCog(commands.Cog, name="Music"):
             elif "playlist" in Query:
 
                 #** Get Playlist Info From Spotify Web API **
-                SongInfo = SongData.GetPlaylistSongs(SpotifyID)
+                SongInfo = self.client.music.GetPlaylistSongs(SpotifyID)
 
                 #** Raise Error If Playlist Not Found or Unexpected Error Occurs **
                 if SongInfo == "PlaylistNotFound":
@@ -314,7 +282,7 @@ class MusicCog(commands.Cog, name="Music"):
             elif "album" in Query:
 
                 #** Get Album Info From Spotify Web API **
-                SongInfo = SongData.GetAlbumInfo(SpotifyID)
+                SongInfo = self.client.music.GetAlbumInfo(SpotifyID)
                 
                 #** Raise Error If Album Not Found Or Unexpected Error **
                 if SongInfo == "AlbumNotFound":
@@ -365,13 +333,13 @@ class MusicCog(commands.Cog, name="Music"):
                 #** Format & Send Queued Embed If First Song In List To Queue **
                 if list(SongInfo.keys()).index(SpotifyID) == 0:
                     if PlaylistInfo == None:
-                        Artists = Utils.format_artists(Info['Artists'], Info['ArtistID'])
+                        Artists = self.client.utils.format_artists(Info['Artists'], Info['ArtistID'])
                         Queued = discord.Embed(
-                            title = self.Emojis["Spotify"]+" Track Added To Queue!",
+                            title = f"{self.client.utils.get_emoji('Spotify')} Track Added To Queue!",
                             description = "["+Info['Name']+"]("+Query+") \nBy: "+Artists)
                     else:
                         Queued = discord.Embed(
-                            title = self.Emojis["Spotify"]+" "+Type+" Added To Queue!",
+                            title = f"{self.client.utils.get_emoji('Spotify')} {Type} Added To Queue!",
                             description = "["+PlaylistInfo['Name']+"]("+Query+") - "+str(PlaylistInfo['Length'])+" Tracks")
                     Queued.set_footer(text="Requested By "+ctx.author.display_name+"#"+str(ctx.author.discriminator))
                     await ctx.send(embed=Queued)
@@ -391,7 +359,7 @@ class MusicCog(commands.Cog, name="Music"):
                     #** Get SoundcloudID & Primary Colour Of Album Art **
                     URI = Track.identifier.split("/")
                     ID  = URI[4].split(":")[2]
-                    RGB = Utils.get_colour(Info['Art'])
+                    RGB = self.client.utils.get_colour(Info['Art'])
                     
                     #** Create Song Info Dict With Formatted Data & Send To Database **
                     ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
@@ -400,7 +368,7 @@ class MusicCog(commands.Cog, name="Music"):
                         ToCache['Explicit'] = None
                     if ToCache['Popularity'] == 'N/A':
                         ToCache['Popularity'] = None
-                    Database.AddFullSongCache(ToCache)
+                    self.client.database.AddFullSongCache(ToCache)
         
         #** If Query Is From Soundcloud Or Is A Plain Text Input **
         elif Query.startswith("https://soundcloud.com/") or not(Query.startswith("https://") or Query.startswith("http://")):
@@ -427,7 +395,7 @@ class MusicCog(commands.Cog, name="Music"):
                     Cached = False
 
                     #** Check If Song Is In Cache & Set Cache To True If Data Found **
-                    Spotify = Database.SearchCache(ID)
+                    Spotify = self.client.database.SearchCache(ID)
                     if Spotify != None:
                         SpotifyID = list(Spotify.keys())[0]
                         Spotify = Spotify[SpotifyID]
@@ -437,7 +405,7 @@ class MusicCog(commands.Cog, name="Music"):
                     
                     #** Try To Get Spotify Info From Spotify Web API If None Found In Cache **
                     if Spotify == None:
-                        Spotify = SongData.SearchSpotify(ResultTrack['info']['title'], ResultTrack['info']['author'])
+                        Spotify = self.client.music.SearchSpotify(ResultTrack['info']['title'], ResultTrack['info']['author'])
 
                         #** Check Song Is Returned Correctly & If So, Get Spotify ID & Info Dict **
                         if Spotify in ["SongNotFound", "UnexpectedError"]:
@@ -478,11 +446,11 @@ class MusicCog(commands.Cog, name="Music"):
                     if Results['tracks'].index(ResultTrack) == 0:
                         if Results['playlist_info']['name'] == None:
                             Queued = discord.Embed(
-                                title = self.Emojis["Soundcloud"]+" Track Added To Queue!",
+                                title = f"{self.client.utils.get_emoji('Soundcloud')} Track Added To Queue!",
                                 description = "["+ResultTrack['info']['title']+"]("+ResultTrack['info']['uri']+") \nBy: ["+ResultTrack['info']['author']+"]("+ArtistURI+")")
                         else:
                             Queued = discord.Embed(
-                                title = self.Emojis["Soundcloud"]+" Playlist Added To Queue!",
+                                title = f"{self.client.utils.get_emoji('Soundcloud')} Playlist Added To Queue!",
                                 description = "["+Results['playlist_info']['name']+"]("+Query+") - "+str(len(Results['tracks']))+" Tracks")
                         Queued.set_footer(text="Requested By "+ctx.author.display_name+"#"+str(ctx.author.discriminator))
                         await ctx.send(embed=Queued)
@@ -501,19 +469,19 @@ class MusicCog(commands.Cog, name="Music"):
 
                         #** If Spotify Data Available, Add Soundcloud Info & Get Colour **
                         if Spotify != None:
-                            RGB = Utils.get_colour(Spotify['Art'])
+                            RGB = self.client.utils.get_colour(Spotify['Art'])
                             ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
                             ToCache.update(Spotify)
 
                             #** Format Explicit Column & Add Full Song Using Database Class **
                             if ToCache['Explicit'] == 'N/A':
                                 ToCache['Explicit'] = None
-                            Database.AddFullSongCache(ToCache)
+                            self.client.database.AddFullSongCache(ToCache)
 
                         #** Add Partial Class With Just Soundcloud Data If No Spotify Data Available **
                         else:
                             ToCache = {'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Name': Track.title, 'Artists': [Track.author]}
-                            Database.AddPartialSongCache(ToCache)
+                            self.client.database.AddPartialSongCache(ToCache)
             
             #** Raise Bad Argument Error If No Tracks Found **
             else:
@@ -680,10 +648,10 @@ class MusicCog(commands.Cog, name="Music"):
 
                             #** Format Data For Spotify Else Format And Add Data For SoundCloud Instead **
                             Spotify = Player.current.extra['spotify']
-                            Artists = Utils.format_artists(Spotify['artists'], Spotify['artistID'])
-                            Queue += self.Emojis['Spotify']+"["+Spotify['name']+"]("+Spotify['URI']+")\nBy: "+Artists+"\n"
+                            Artists = self.client.utils.format_artists(Spotify['artists'], Spotify['artistID'])
+                            Queue += f"{self.client.utils.get_emoji('Spotify')} [{Spotify['name']}]({Spotify['URI']})\nBy: {Artists}\n"
                         else:
-                            Queue += self.Emojis['Soundcloud']+" ["+Player.current['title']+"]("+Player.current['uri']+")\nBy: "+Player.current['author']+"\n"
+                            Queue += f"{self.client.utils.get_emoji('Soundcloud')} [{Player.current['title']}]({Player.current['uri']})\nBy: {Player.current['author']}\n"
                     
                     #** If Stream, Format Data For Stream, And Add Up Next Seperator For Rest Of Queue **
                     else:
@@ -699,10 +667,10 @@ class MusicCog(commands.Cog, name="Music"):
 
                             #** Format Data For Spotify Else Format And Add Data For SoundCloud Instead **
                             Spotify = Player.queue[i].extra['spotify']
-                            Artists = Utils.format_artists(Spotify['artists'], Spotify['artistID'])
-                            Queue += self.Emojis['Spotify']+" **"+str(i+1)+": **["+Spotify['name']+"]("+Spotify['URI']+")\nBy: "+Artists+"\n"
+                            Artists = self.client.utils.format_artists(Spotify['artists'], Spotify['artistID'])
+                            Queue += f"{self.client.utils.get_emoji('Spotify')} **{str(i+1)}: **[{Spotify['name']}]({Spotify['URI']})\nBy: {Artists}\n"
                         else:
-                            Queue += self.Emojis['Soundcloud']+" **"+str(i+1)+": **["+Player.queue[i]['title']+"]("+Player.queue[i]['uri']+")\nBy: ["+Player.queue[i]['author']+"]("+Player.queue[i].extra['artistURI']+")\n"
+                            Queue += f"{self.client.utils.get_emoji('Soundcloud')} **{str(i+1)}: **[{Player.queue[i]['title']}]({Player.queue[i]['uri']})\nBy: [{Player.queue[i]['author']}]({Player.queue[i].extra['artistURI']})\n"
                     
                     #** If Stream, Format Data For Stream & Add To String **
                     else:
@@ -714,7 +682,20 @@ class MusicCog(commands.Cog, name="Music"):
                 description = Queue,
                 colour = discord.Colour.blue())
             UpNext.set_thumbnail(url=ctx.message.guild.icon_url)
-            UpNext.set_footer(text="Shuffle: "+self.Emojis[str(Player.shuffle)]+"  Loop: "+self.Emojis[str(Player.repeat)])
+            
+            #** Format Footer Based On Whether Shuffle & Repeat Are Active **
+            if Player.shuffle:
+                footer = "Shuffle: ✅  "
+            else:
+                footer = "Shuffle: ❌  "
+            
+            if Player.repeat:
+                footer += "Loop: ✅"
+            else:
+                footer += "Loop: ❌"
+            
+            #** Set Footer & Sent Embed To Discord **
+            UpNext.set_footer(text=footer)
             await ctx.send(embed=UpNext)
         
         #** If Queue Empty, Just Send Plain Text **
@@ -849,21 +830,21 @@ class MusicCog(commands.Cog, name="Music"):
         #** If Not A Stream, Add Position Field & Source Of Music **
         if not(Player.current.stream):
             NowPlaying.set_author(name="Playing From Soundcloud", icon_url="https://cdn.discordapp.com/emojis/897135141040832563.png?size=96&quality=lossless")
-            NowPlaying.add_field(name="Position:", value = Utils.format_time(Player.position)+" / "+ Utils.format_time(Player.current.duration))
+            NowPlaying.add_field(name="Position:", value = self.client.utils.format_time(Player.position)+" / "+ self.client.utils.format_time(Player.current.duration))
             
             #** If Track Has Spotify Info, Format List of Artists **
             if Player.current.extra['spotify'] != {}:
-                Artists = Utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
+                Artists = self.client.utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
 
                 #** Set Descrition and Thumbnail & Add By Field Above Position Field **
-                NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")\n"+self.Emojis['Spotify']+" ["+Player.current.extra['spotify']['name']+"]("+Player.current.extra['spotify']['URI']+")"
+                NowPlaying.description = f"{self.client.utils.get_emoji('Soundcloud')} [{Player.current['title']}]({Player.current['uri']})\n{self.client.utils.get_emoji('Spotify')} [{Player.current.extra['spotify']['name']}]({Player.current.extra['spotify']['URI']})"
                 NowPlaying.set_thumbnail(url=Player.current.extra['spotify']['art'])
                 NowPlaying.insert_field_at(0, name="By:", value=Artists)
 
             #** If No Spotify Info, Create Basic Now Playing Embed **
             else:
                 #** Set Descrition and Thumbnail & Add By Field Above Position Field **
-                NowPlaying.description = self.Emojis['Soundcloud']+" ["+Player.current["title"]+"]("+Player.current["uri"]+")"
+                NowPlaying.description = f"{self.client.utils.get_emoji('Soundcloud')} [{Player.current['title']}]({Player.current['uri']})"
                 NowPlaying.insert_field_at(0, name="By:", value="["+Player.current.author+"]("+Player.current.extra["artistURI"]+")")
         
         #** If Track Is A Stream, Add Appropriate Information For A Stream **
@@ -894,19 +875,19 @@ class MusicCog(commands.Cog, name="Music"):
         if len(SpotifyID) == 22:
 
             #** Get Song Details And Check If Song Is Found **
-            SongInfo = SongData.GetSongDetails(SpotifyID)
-            if not(SongData in ["SongNotFound", "UnexpectedError"]):
+            SongInfo = self.client.music.GetSongDetails(SpotifyID)
+            if not(self.client.music in ["SongNotFound", "UnexpectedError"]):
 
                 #** Format Returned Data Ready To Be Put Into The Embeds **
                 SongInfo = SongInfo[SpotifyID]
-                Description = "**By: **" + Utils.format_artists(SongInfo['Artists'], SongInfo['ArtistID'])
-                Links = self.Emojis['Spotify']+" Song: [Spotify]("+SpotifyURL+")\n"
+                Description = "**By: **" + self.client.utils.format_artists(SongInfo['Artists'], SongInfo['ArtistID'])
+                Links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify]({SpotifyURL})\n"
                 if SongInfo['Preview'] != None:
-                    Links += self.Emojis['Preview']+" Song: [Preview]("+SongInfo['Preview']+")\n"
+                    Links += f"{self.client.utils.get_emoji('Preview')} Song: [Preview]({SongInfo['Preview']})\n"
                 if SongInfo['AlbumID'] != None:
-                    Links += self.Emojis['Album']+" Album: ["+SongInfo['Album']+"](https://open.spotify.com/album/"+SongInfo['AlbumID']+")"
+                    Links += f"{self.client.utils.get_emoji('Album')} Album: [{SongInfo['Album']}](https://open.spotify.com/album/{SongInfo['AlbumID']})"
                 else:
-                    Links += self.Emojis['Album']+" Album: "+SongInfo['Album']
+                    Links += f"{self.client.utils.get_emoji('Album')} Album: {SongInfo['Album']}"
                 
                 #** Setup Embed With Advanced Song Information **
                 BaseEmbed = discord.Embed(
@@ -934,8 +915,8 @@ class MusicCog(commands.Cog, name="Music"):
 
                 #** Send First Page & Setup Pagination Object **
                 Page = await ctx.send(embed=BaseEmbed)
-                await Page.add_reaction(self.Emojis['Back'])
-                await Page.add_reaction(self.Emojis['Next'])
+                await Page.add_reaction(self.client.utils.get_emoji('Back'))
+                await Page.add_reaction(self.client.utils.get_emoji('Next'))
                 await self.Pagination.add_pages(Page.id, [Basic, Advanced])
         
             #** Raise Check Failure Error If Track Can't Be Found **

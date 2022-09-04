@@ -2,55 +2,30 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
-from distutils.log import error
 import os
 import sys
 import json
 import asyncio
 import logging
 import discord
+import importlib
 import logging.handlers
 from zipfile import ZipFile
 from datetime import datetime
 from discord.ext import commands
 
 
-#!--------------------------------SETUP LOGGING---------------------------------#
+#!-------------------------------IMPORT CLASSES--------------------------------#
 
 
-#** Create Logs & Backup Folders Either Are Missing **
-if not("Logs" in os.listdir("./")):
-    os.mkdir("Logs")
-if not("Backups" in os.listdir("Logs/")):
-    os.mkdir("Logs/Backups")
+import Classes.Users
+import Classes.Utils
+import Classes.Database
+import Classes.Music
 
-#** Get Time Of Last Session Startup From Master File **
-if "master.log" in os.listdir("Logs/"):
-    with open("Logs/master.log", 'r') as File:
-        timestamp  = File.readline().replace(":", ".").split(" ")
-        
-    #** Zip Log Files & Move Zip File Into Backups Folder **
-    with ZipFile("Logs/Backups/Session ("+" ".join(timestamp[0:2])+").zip", 'w') as zipFile:
-        for file in os.listdir("Logs/"):
-            if file.endswith(".log"):
-                zipFile.write("Logs/"+file)
 
-#** Setup Logging **
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+#!--------------------------------CUSTOM LOGGING FORMAT---------------------------------#
 
-#** Setup Handlers **
-masterHandle = logging.handlers.RotatingFileHandler(
-    filename='Logs/master.log',
-    encoding='utf-8',
-    maxBytes=32 * 1024 * 1024,  # 32 MiB
-    backupCount=10)
-debugHandle = logging.handlers.RotatingFileHandler(
-    filename='Logs/debug.log',
-    encoding='utf-8',
-    maxBytes=32 * 1024 * 1024,  # 32 MiB
-    backupCount=10)
-consoleHandle = logging.StreamHandler(sys.stdout)
 
 #** Create Custom Coloured Formatter hello sam
 class ColouredFormat(logging.Formatter):
@@ -93,6 +68,41 @@ class ColouredFormat(logging.Formatter):
         formatter = logging.Formatter(logFormat, datefmt="%d-%m-%Y %H:%M:%S")
         return formatter.format(record)
     
+    
+#** Create Logs & Backup Folders Either Are Missing **
+if not("Logs" in os.listdir("./")):
+    os.mkdir("Logs")
+if not("Backups" in os.listdir("Logs/")):
+    os.mkdir("Logs/Backups")
+
+#** Get Time Of Last Session Startup From Master File **
+if "master.log" in os.listdir("Logs/"):
+    with open("Logs/master.log", 'r') as File:
+        timestamp  = File.readline().replace(":", ".").split(" ")
+        
+    #** Zip Log Files & Move Zip File Into Backups Folder **
+    with ZipFile("Logs/Backups/Session ("+" ".join(timestamp[0:2])+").zip", 'w') as zipFile:
+        for file in os.listdir("Logs/"):
+            if file.endswith(".log"):
+                zipFile.write("Logs/"+file)
+
+#** Setup Logging **
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+#** Setup Handlers **
+masterHandle = logging.handlers.RotatingFileHandler(
+    filename='Logs/master.log',
+    encoding='utf-8',
+    maxBytes=32 * 1024 * 1024,  # 32 MiB
+    backupCount=10)
+debugHandle = logging.handlers.RotatingFileHandler(
+    filename='Logs/debug.log',
+    encoding='utf-8',
+    maxBytes=32 * 1024 * 1024,  # 32 MiB
+    backupCount=10)
+consoleHandle = logging.StreamHandler(sys.stdout)
+    
 #** Set Formatters **
 masterHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
 debugHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
@@ -106,65 +116,72 @@ logger.addHandler(debugHandle)
 logger.info("Code Started!")
 
 
-#!--------------------------------DISCORD BOT-----------------------------------# 
+#!--------------------------------DISCORD CLIENT-----------------------------------# 
 
-
-#** Load Config File **
-with open('Config.json') as ConfigFile:
-    Config = json.load(ConfigFile)
-    ConfigFile.close()
 
 #** Creating Bot Client **
 class MyClient(commands.Bot):
     
-    def __init__(self, *args, intents: discord.Intents, **kwargs):
+    def __init__(self, intents: discord.Intents):
+        #** Setup Client Logger **
+        self.logger = logging.getLogger('discord')
+        
+        #** Load Config File **
+        with open('Config.json') as ConfigFile:
+            self.config = json.load(ConfigFile)
+            logger.info("Loaded Config File")
+            ConfigFile.close()
+        
         #** Initialise Discord Client Class **
-        super().__init__(*args, intents=intents, **kwargs)
+        super().__init__(intents=intents, 
+                         command_prefix=self.config['Prefix'],
+                         case_insensitive = True,
+                         help_command = None)
 
+
+    #{ Setup Hook Called When Bot Before It Connects To Discord }
     async def setup_hook(self):
         #** Work Through List Of Active Cog Names In Config File, Loading Each One As You Go **
-        for Cog in Config['Active_Extensions']:
+        for Cog in self.config['Active_Extensions']:
             await self.load_extension(Cog)
+            self.logger.info(f"Extension Loaded: {Cog}")
+
+
+    #{ Event Called Upon Bot Connection To Discord Gateway }
+    async def on_ready(self):
+
+        #** Make Sure Client Waits Until Fully Connected **
+        self.logger.info("Waiting until ready...")
+        await self.wait_until_ready()
+        
+        #** Record Startup Time As Client Object & Print Bot Is Ready **
+        self.startup = datetime.now()
+        self.logger.info("Bot Is Now Online & Ready!")
+
+  
+    #{ Event Called When Bot Joins New Guild/Server }
+    async def on_guild_join(self, Guild):
+        #** Loop Through Channels Until 
+        for Channel in Guild.channels:
+            if isinstance(Channel, discord.channel.TextChannel):
+                await Channel.send(self.config['Welcome_Message'])
+                break
+            
 
 #** Instanciate Bot Client Class **
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
-client = MyClient(command_prefix = Config['Prefix'], 
-                  case_insensitive=True, 
-                  intents=intents,
-                  help_command=None)
-client.logger = logging.getLogger('discord')
+client = MyClient(intents=intents)
 
-#** Setup Emojis **
-Emojis = Config['Variables']['Emojis']
-Emojis["True"] = "✅"
-Emojis["False"] = "❌"
+#** Instanciate Classes **
+client.database = Classes.Database.UserData()
+client.music = Classes.Music.SongData()
+client.utils = Classes.Utils.Utility(client)
+client.userClass = Classes.Users
 
 
 #!--------------------------------DISCORD EVENTS-----------------------------------# 
-
-
-#{ Event Called Upon Bot Startup }
-@client.event
-async def on_ready():
-
-    #** Make Sure Client Waits Until Fully Connected **
-    client.logger.info("Waiting until ready...")
-    await client.wait_until_ready()
-    
-    #** Record Startup Time As Client Object & Print Bot Is Ready **
-    client.startup = datetime.now()
-    client.logger.info("Bot Is Now Online & Ready!")
-
-
-#{ Event Called When Bot Joins New Guild/Server }
-@client.event
-async def on_guild_join(Guild):
-    for Channel in Guild.channels:
-        if isinstance(Channel, discord.channel.TextChannel):
-            await Channel.send(Config['Welcome_Message'])
-            break
 
 
 #{ Event Called When Discord Error Occurs During Code Execution }
@@ -270,68 +287,58 @@ def is_admin():
 
 @client.command(hidden=True)
 @is_admin()
-async def reload(ctx, CogName):
+async def reload(ctx, input):
     
-    #** Dictionary Describing What Needs To Be Reloaded For Each Class **
-    Classes = {'musicutils': ['users', 'Cogs.Account', 'Cogs.Music'], 
-               'database': ['users', 'Cogs.Account', 'Cogs.Background', 'Cogs.Music'],
-               'users': ['Cogs.Account', 'Cogs.Music'],
-               'utils': ['Cogs.Account', 'Cogs.Music']}
+    #** If Passed Name Is A Class, Use Importlib To Reload File **
+    if input.lower() in ['music', 'database', 'users', 'utils']:      
+        try:   
+            #** Re-add Attribute To Client Class **
+            if input.lower() == "database":
+                importlib.reload(Classes.Database)
+                client.database = Classes.Database.UserData()
+            elif input.lower() == "music":
+                importlib.reload(Classes.Music)
+                client.music = Classes.Music.SongData()
+            elif input.lower() == "utils":
+                importlib.reload(Classes.Utils)
+                client.utils = Classes.Utils.Utility(client)
+            else:
+                importlib.reload(Classes.Users)
+                client.userClass = Classes.Users
+
+        except Exception as e:
+            #** Return Error To User **
+            await ctx.send(f"**An Error Occured Whilst Trying To Reload The {input.title()} Class!**\n```{e}```")
+            return
     
-    #** If Passed Name Is A Class, Get Requirements From Dictionary **
-    if CogName.lower() in Classes.keys():
-        ToReload = Classes[CogName.lower()]
-        
-        #** Check If Any Requirements Are Other Classes, And Those Extra Requirements **
-        for cog in ToReload:
-            if not(cog.startswith('Cogs.')):
-                Extra = Classes[cog]
-                ToReload.remove(cog)
-                
-                #** For Each Extra Requirement, If Not Already Being Reloaded Add To List **
-                for extracog in Extra:
-                    if not(extracog in ToReload):
-                        ToReload.append(extracog)
-        
-        #** Create Initial Class Reloading Message & Send To User **
-        Message = "**Reloading Class: "+CogName.title()+"**\n-------------------------\n"
-        Temp = await ctx.send(Message)
-        
-    #** If Just One Cog, Create Single Cog List & Let User One Just One Cog Is being Reloaded **
-    else:
-        ToReload = ["Cogs."+CogName.title()]
-        Message = "**Reloading Cog: "+CogName.title()+"**\n-------------------------\n"
-        Temp = await ctx.send(Message)
-        
-    #** Loop Through Each Cog In Reload List, Waiting 1 Second Each Time & Keeping Track Of Errors **
-    Error = False
-    for cog in ToReload:
-        await asyncio.sleep(1)
-        
-        #** Attempt To Reload Cog & Edit Message To User If Successful **
+    #** If Input Is 'Config', reload Config File **
+    elif input.lower() == "config":  
         try:
-            await client.reload_extension(cog)
-            Message += "*"+cog+" Successfully Reloaded*\n"
-            await Temp.edit(content=Message)
-            
-        #** If Reload Fails, Set Error To True & Break For Loop, Letting User Know Which Cog Failed To Load **
-        except:
-            Message += "*"+cog+" Failed To Load*\n"
-            await Temp.edit(content=Message)
-            Error = True
-            break
+            #** ReLoad Config File **
+            with open('Config.json') as ConfigFile:
+                client.config = json.load(ConfigFile)
+                logger.info("Loaded Config File")
+                ConfigFile.close()
+
+        except Exception as e:
+            #** Return Error To User **
+            await ctx.send(f"**An Error Occured Whilst Trying To Reload The Config File!**\n```{e}```")
+            return
         
-    #** If Error, Let User Know Else Add Reload Complete To Message **
-    if Error:
-        Message += "**Reload Failed Due To An Error Occuring During The Reloading Process!**"
+    #** If Input Not Config Or Class, Try To Reload Cog Under Name **
     else:
-        Message += "**Reload Completed!**"
-    
-    #** Edit Message To New Completed Message, & Delete Both Messages After 10 Second Wait **
-    await Temp.edit(content=Message)
-    await asyncio.sleep(10)
-    await ctx.message.delete()
-    await Temp.delete()
+        
+        try:
+            #** ReLoad Specified Cog **
+            await client.reload_extension("Cogs."+input.title())
+
+        except Exception as e:
+            #** Return Error To User **
+            await ctx.send(f"**An Error Occured Whilst Trying To Reload {input.title()} Cog!**\n```{e}```")
+            return
+        
+    #** Send Confirmation Message **
+    await ctx.send(f"**Sucessfully Reloaded:** `{input.title()}`!")
     
 
 @client.command(hidden=True)
@@ -348,8 +355,8 @@ async def sync(ctx, *args):
         warning = await ctx.send("**Warning! Syncing Globally Will Make The Changes Available To __All Servers__!**\n*Are You Sure You Want To Continue?*")
         
         #** Add Reactions **
-        await warning.add_reaction(Emojis["True"])
-        await warning.add_reaction(Emojis["False"])
+        await warning.add_reaction(client.emojis["True"])
+        await warning.add_reaction(client.emojis["False"])
         
         def ReactionAdd(Reaction):
             return (Reaction.message_id == warning.id) and (Reaction.user_id != client.user.id)
@@ -358,14 +365,14 @@ async def sync(ctx, *args):
         while True:
             Reaction = await client.wait_for("raw_reaction_add", check=ReactionAdd)
             if Reaction.event_type == 'REACTION_ADD':
-                if str(Reaction.emoji) == Emojis['False']:
+                if str(Reaction.emoji) == client.emojis['False']:
                     await warning.delete()
                     temp = await ctx.send("Cancelled Command Sync Operation!")
                     await asyncio.sleep(10)
                     await ctx.message.delete()
                     await temp.delete()
                     return
-                elif str(Reaction.emoji) == Emojis['True']:
+                elif str(Reaction.emoji) == client.emojis['True']:
                     await warning.delete()
                     break
     
@@ -383,11 +390,8 @@ async def sync(ctx, *args):
     #** Carry Out Sync **
     await client.tree.sync()
         
-    #** Send Confirmation Message If Sucessfull & Delete Both Messages After 20 Seconds **
+    #** Send Confirmation Message If Sucessfull **
     temp = await ctx.send(f"Sucessfully Synced Application Commands!\nScope: `{str(args[0])}`")
-    await asyncio.sleep(20)
-    await ctx.message.delete()
-    await temp.delete()
 
 
 #!--------------------------------DISCORD LOOP-----------------------------------# 

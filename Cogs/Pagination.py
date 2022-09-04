@@ -2,11 +2,10 @@
 #!---------------------------IMPORT MODULES-----------------------#
 
 
-import json
 import discord
 import logging
-from discord.ext import commands
 from discord.utils import get
+from discord.ext import commands
 
 
 #!-------------------------EMBED CLASS-----------------------!#
@@ -94,17 +93,6 @@ class EmbedPaginator(commands.Cog):
         self.OpenPages = {}
         self.logger = logging.getLogger("discord.pagination")
 
-        #** Load Config File **
-        with open('Config.json') as ConfigFile:
-            Config = json.load(ConfigFile)
-            ConfigFile.close()
-            
-        #** Setup Emojis **
-        self.Emojis = Config['Variables']['Emojis']
-        
-        #** Output Logging **
-        client.logger.info("Extension Loaded: Cogs.Pagination")
-
     
     async def add_pages(self, MessageID, Pages):
         
@@ -183,11 +171,11 @@ class EmbedPaginator(commands.Cog):
                         await Page.remove_reaction(Reaction.emoji, Reaction.member)
 
                         #** Check If Reaction Is Next & Get New Embed **
-                        if str(Reaction.emoji) == self.Emojis['Next']:
+                        if str(Reaction.emoji) == self.client.utils.get_emoji('Next'):
                             NewEmbed = await self.get_next(Reaction.message_id)
                         
                         #** Check If Reaction Is Back & Get New Embed **
-                        elif str(Reaction.emoji) == self.Emojis['Back']:
+                        elif str(Reaction.emoji) == self.client.utils.get_emoji('Back'):
                             NewEmbed = await self.get_last(Reaction.message_id)
                         
                         #** If Reaction Isn't Next Or Back, Don't Get New Embed **
