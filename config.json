@@ -23,6 +23,7 @@
         "Cogs.Account",
         "Cogs.Background",
         "Cogs.Help",
-        "Cogs.Errors"
+        "Cogs.Errors",
+        "Cogs.Settings"
     ]
 }
