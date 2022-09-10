@@ -14,7 +14,7 @@ from discord.ext import commands
 
 class HelpCog(commands.Cog):
 
-    def __init__(self, client):
+    def __init__(self, client: discord.Client):
         
         #** Assign Class Objects **
         self.client = client
@@ -150,5 +150,5 @@ class HelpCog(commands.Cog):
 #!-------------------SETUP FUNCTION-------------------#
 
 
-async def setup(client):
+async def setup(client: discord.Client):
     await client.add_cog(HelpCog(client))

@@ -15,15 +15,6 @@ from datetime import datetime
 from discord.ext import commands
 
 
-#!-------------------------------IMPORT CLASSES--------------------------------#
-
-
-import Classes.Users
-import Classes.Utils
-import Classes.Database
-import Classes.Music
-
-
 #!--------------------------------CUSTOM LOGGING FORMAT---------------------------------#
 
 
@@ -166,7 +157,7 @@ class MyClient(commands.Bot):
             if isinstance(Channel, discord.channel.TextChannel):
                 await Channel.send(self.config['Welcome_Message'])
                 break
-            
+
 
 #** Instanciate Bot Client Class **
 intents = discord.Intents.default()
@@ -174,98 +165,23 @@ intents.members = True
 intents.message_content = True
 client = MyClient(intents=intents)
 
+
+#!-------------------------------IMPORT CLASSES--------------------------------#
+
+
+import Classes.Users
+import Classes.Utils
+import Classes.Database
+import Classes.MusicUtils
+
 #** Instanciate Classes **
-client.database = Classes.Database.UserData()
-client.music = Classes.Music.SongData()
+try:
+    client.database = Classes.Database.UserData()
+except:
+    logger.error("Database Functionality Unavailable!")
+client.music = Classes.MusicUtils.SongData()
 client.utils = Classes.Utils.Utility(client)
 client.userClass = Classes.Users
-
-
-#!--------------------------------DISCORD EVENTS-----------------------------------# 
-
-
-#{ Event Called When Discord Error Occurs During Code Execution }
-@client.event
-async def on_command_error(ctx, error):
-    
-    #** If Raised Error Is Command Not Found, Or Command Is Hidden Command: **
-    if isinstance(error, commands.CommandNotFound) or ctx.command.qualified_name in ['reload']:
-        
-        #** Send Error Message, & Delete Input & Error Message After 10 Seconds **
-        Temp = await ctx.message.channel.send("**Command Not Found!**\nFor a full list of commands, type `/help`")
-        await asyncio.sleep(10)
-        await ctx.message.delete()
-        await Temp.delete()
-        return
-    
-    #** If Raised Error Is Missing Required Parameter: **
-    elif isinstance(error, commands.MissingRequiredArgument):
-        
-        #** Send Error Message With Missing Parameter & Delete Input & Error Message After 10 Seconds **
-        Temp = await ctx.message.channel.send("**Missing Parameter `"+str(error.param)+"`!**\nFor a full list of commands & their parameters, type `/help`")
-        await asyncio.sleep(10)
-        await ctx.message.delete()
-        await Temp.delete()
-        return
-    
-    #** If Raised Error Is Missing Required Parameter: **
-    elif isinstance(error, commands.BadArgument):
-        
-        #** Send Error Message & Delete Input & Error Message After 10 Seconds **
-        Temp = await ctx.message.channel.send("**Oops, it seems the argument you gave was invalid!**\nFor a full list of valid arguments, type `/help "+str(error)+"`")
-        await asyncio.sleep(10)
-        await ctx.message.delete()
-        await Temp.delete()
-        return
-    
-    #** If Raised Error Is Check Failure: **
-    elif isinstance(error, commands.CheckFailure):
-        
-        #** If Error Message Is "UserVoice", Let User Know They Need To Join A VC **
-        if str(error) == "UserVoice":
-            Temp = await ctx.message.channel.send("To use this command, please join a Voice Channel!")
-            
-        #** If Error Message Is "BotVoice", Let User Know The Bot Isn't In A VC **
-        elif str(error) == "BotVoice":
-            Temp = await ctx.message.channel.send("I'm Not Currently Connected!")
-            
-        #** If Error Message Is "SameVoice", Let User Know They Need To Join A VC With The Bot **
-        elif str(error) == "SameVoice":
-            Temp = await ctx.message.channel.send("You must be in my Voice Channel to use this!")
-            
-        #** If Error Message Is "NotPlaying", Let User Know Bot Isn't Currently Playing **
-        elif str(error) == "NotPlaying":
-            Temp = await ctx.message.channel.send("I'm Not Currently Playing Anything!")
-            
-        #** If Error Message Is "History", Let User Know They Need To Get Some Listening History Before Running The Command **
-        elif str(error) == "History":
-            Temp = await ctx.message.channel.send("**You must have listened to some songs before you can run this command!**\nJoin a Voice Channel and type `/play <song>` to get listening.")
-
-        #** If Error Message Is "SongNotFound", Let User Know They Need To Double Check Their Input **
-        elif str(error) == "SongNotFound":
-            Temp = await ctx.message.channel.send("**We couldn't find any tracks for the provided input!**\nPlease check your input and try again.")
-        
-        #** If Error Message Is "DM", Let User Know They Need To Join A VC **
-        elif str(error) == "DM":
-            Temp = await ctx.message.channel.send("**DM Failed!**\nPlease turn on `Allow Server Direct Messages` in Discord settings!")
-
-        #** Called When An Unexpected Error Occurs, Shouldn't Happen Very Often **
-        elif str(error) == "UnexpectedError":
-            Temp = await ctx.message.channel.send("**An Unexpected Error Occurred!**If this error persists, open a ticket in our Discord server:* `/discord`.")
-        
-        #** If Error Message Is Not Above, Let User Know They Can't Run The Command & Try Retry **
-        else:
-            Temp = await ctx.message.channel.send("You are not able to run this command!\n*If you believe this is an error, open a ticket in our Discord server:* `/discord`.")
-        
-        #** Delete Input & Error Message After 10 Seconds **
-        await asyncio.sleep(10)
-        await ctx.message.delete()
-        await Temp.delete()
-        return
-    
-    #** If Error Isn't Caught, Raise Error To Stop Code Execution **
-    else:
-        raise error
     
 
 #!--------------------------------COMMAND CHECKS-----------------------------------#
@@ -290,15 +206,15 @@ def is_admin():
 async def reload(ctx, input):
     
     #** If Passed Name Is A Class, Use Importlib To Reload File **
-    if input.lower() in ['music', 'database', 'users', 'utils']:      
+    if input.lower() in ['musicutils', 'database', 'users', 'utils']:      
         try:   
             #** Re-add Attribute To Client Class **
             if input.lower() == "database":
                 importlib.reload(Classes.Database)
                 client.database = Classes.Database.UserData()
             elif input.lower() == "music":
-                importlib.reload(Classes.Music)
-                client.music = Classes.Music.SongData()
+                importlib.reload(Classes.MusicUtils)
+                client.music = Classes.MusicUtils.SongData()
             elif input.lower() == "utils":
                 importlib.reload(Classes.Utils)
                 client.utils = Classes.Utils.Utility(client)
@@ -331,6 +247,7 @@ async def reload(ctx, input):
         try:
             #** ReLoad Specified Cog **
             await client.reload_extension("Cogs."+input.title())
+            client.logger.info(f"Extension Loaded: Cogs.{input.title()}")
 
         except Exception as e:
             #** Return Error To User **
@@ -355,8 +272,8 @@ async def sync(ctx, *args):
         warning = await ctx.send("**Warning! Syncing Globally Will Make The Changes Available To __All Servers__!**\n*Are You Sure You Want To Continue?*")
         
         #** Add Reactions **
-        await warning.add_reaction(client.emojis["True"])
-        await warning.add_reaction(client.emojis["False"])
+        await warning.add_reaction("✅")
+        await warning.add_reaction("❌")
         
         def ReactionAdd(Reaction):
             return (Reaction.message_id == warning.id) and (Reaction.user_id != client.user.id)
@@ -365,14 +282,14 @@ async def sync(ctx, *args):
         while True:
             Reaction = await client.wait_for("raw_reaction_add", check=ReactionAdd)
             if Reaction.event_type == 'REACTION_ADD':
-                if str(Reaction.emoji) == client.emojis['False']:
+                if str(Reaction.emoji) == "❌":
                     await warning.delete()
                     temp = await ctx.send("Cancelled Command Sync Operation!")
                     await asyncio.sleep(10)
                     await ctx.message.delete()
                     await temp.delete()
                     return
-                elif str(Reaction.emoji) == client.emojis['True']:
+                elif str(Reaction.emoji) == "✅":
                     await warning.delete()
                     break
     
@@ -391,7 +308,8 @@ async def sync(ctx, *args):
     await client.tree.sync()
         
     #** Send Confirmation Message If Sucessfull **
-    temp = await ctx.send(f"Sucessfully Synced Application Commands!\nScope: `{str(args[0])}`")
+    client.logger.info(f'Synced Application Commands. Scope: "{args[0]}"')
+    temp = await ctx.send(f"Sucessfully Synced Application Commands!\nScope: `{args[0]}`")
 
 
 #!--------------------------------DISCORD LOOP-----------------------------------# 

@@ -12,7 +12,7 @@ from discord.ext import tasks, commands
 
 class BackgroundTasks(commands.Cog):
 
-    def __init__(self, client):
+    def __init__(self, client: discord.Client):
 
         #** Assign Class Objects **
         self.client = client
@@ -66,5 +66,5 @@ class BackgroundTasks(commands.Cog):
 #!-------------------SETUP FUNCTION-------------------#
 
 
-async def setup(client):
+async def setup(client: discord.Client):
     await client.add_cog(BackgroundTasks(client))

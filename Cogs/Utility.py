@@ -14,7 +14,7 @@ from dateutil.relativedelta import relativedelta
 
 class UtilityCog(commands.Cog, name="Utility"):
 
-    def __init__(self, client):
+    def __init__(self, client: discord.Client):
 
         #** Assign Discord Bot Client As Class Object **
         self.client = client 
@@ -25,7 +25,7 @@ class UtilityCog(commands.Cog, name="Utility"):
         
         #** Return Client Latency in ms **
         await interaction.response.send_message(f'**Pong!** `{round(self.client.latency * 1000)} ms`')
-    
+
 
     @app_commands.command(description="Displays the time since the bot came online.")
     async def uptime(self, interaction: discord.Interaction):
@@ -54,5 +54,5 @@ class UtilityCog(commands.Cog, name="Utility"):
 #!-------------------SETUP FUNCTION-------------------#
 
 
-async def setup(client):
+async def setup(client: discord.Client):
     await client.add_cog(UtilityCog(client))

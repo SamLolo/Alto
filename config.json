@@ -6,7 +6,7 @@
     ],
     "StatusTime": 60,
     "Prefix": "!",
-    "Welcome_Message": "Thanks for choosing my music bot! Get started by joining a vc and typing `/play <song>`. \nFor more information about the range of commands available, type `/help`.",
+    "Welcome_Message": "Thanks for choosing my music bot! Get started by joining a vc and typing `/play`. \nFor more information about the range of commands available, type `/help`.",
     "logging": {
         "directory": "Logs",
         "backupDirectory": "Logs/Backup",
@@ -22,6 +22,7 @@
         "Cogs.Utility",
         "Cogs.Account",
         "Cogs.Background",
-        "Cogs.Help"
+        "Cogs.Help",
+        "Cogs.Errors"
     ]
 }

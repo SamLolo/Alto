@@ -20,7 +20,7 @@ from sklearn import tree
 class Spotify(object):
     
     def __init__(self):
-        
+
         #** Setup Logger **
         self.logger = logging.getLogger("spotify")
 
@@ -42,18 +42,18 @@ class Spotify(object):
         #** Request a Token From Spotify Using Client Credentials **
         self.logger.info("Refreshing Bot Token")
         data = {'grant_type': 'client_credentials', 'redirect_uri': 'http://82.22.157.214:5000/', 'client_id': self.ID, 'client_secret': self.Secret}
-        
+   
         self.logger.debug("New Request: https://accounts.spotify.com/api/token")
         AuthData = requests.post("https://accounts.spotify.com/api/token", data, headers = {'Content-Type': 'application/x-www-form-urlencoded'})
-        
+
         #** Check If Request Was A Success **
         while AuthData.status_code != 200:
-            
+
             #** Check If Rate Limit Has Been Applied **
             if 429 == AuthData.status_code:
                 time = AuthData.headers['Retry-After']
                 self.logger.warning("Rate limited reached. Retrying in "+str(time)+" seconds.")
-                
+
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug("New Request: https://accounts.spotify.com/api/token")

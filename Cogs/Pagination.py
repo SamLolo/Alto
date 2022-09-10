@@ -21,19 +21,19 @@ class EmbedQueue():
         self.outPointer = 0
         self.maxSize = size
         self.full = False
-        
-    
+
+
     def check_empty(self):
-        
+
         #** Check Queue Isn't Full & Pointers Aren't The Same **
         return (not(self.full) and self.outPointer == self.inPointer)
-        
+ 
 
     def check_full(self):
-        
+
         #** Check If Queue Is Full & Pointers Are The Same **
         return (self.full and self.inPointer == self.outPointer)
-        
+
 
     def enqueue(self, page):
         
@@ -56,8 +56,8 @@ class EmbedQueue():
         #** Print Full If Queue Is Full **
         else:
             print("Queue is full!")
-            
-        
+
+
     def dequeue(self):
         
         #** Check If Queue Is Empty & Get Page Where OutPointer Currently Is ** 

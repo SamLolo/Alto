@@ -22,18 +22,22 @@ Schema = os.environ["DATABASE_TABLE"]
 Password = os.environ["DATABASE_PASS"]
 
 #** Connect To Database **
-connection = mysql.connector.connect(host = Host,
-                                    database = Schema,
-                                    user = User,
-                                    password = Password)
+try:
+    connection = mysql.connector.connect(host = Host,
+                                        database = Schema,
+                                        user = User,
+                                        password = Password)
+    
+    #** Setup Cursor and Output Successful Connection **                  
+    if connection.is_connected():
+        cursor = connection.cursor(buffered=True)
+        cursor.execute("SELECT database();")
+        logger.info("Database Connection Established!")
+    else:
+        logger.critical("Database Connection Failed!")
 
-#** Setup Cursor and Output Successful Connection **                  
-if connection.is_connected():
-    cursor = connection.cursor(buffered=True)
-    cursor.execute("SELECT database();")
-    logger.info("Database Connection Established!")
-else:
-    logger.critical("Database Connection Failed!")
+except Exception as e:
+    logger.critical(f"Database Connection Failed!\nError: {e}")
 
 #** Delete Connection Details **
 del Host
@@ -99,7 +103,7 @@ class UserData():
         #** Create Empty List & Iterate Through Returned Rows **
         List = []
         for Tuple in History:
-            
+
             #** Create Dictionary Of Song Data From Returned Tuple **
             ID = int(Tuple[0])
             Dict = {"ID": ID,
@@ -108,12 +112,12 @@ class UserData():
                     "Name": Tuple[4],
                     "Artists": Tuple[5].replace("'", "").split(", "),
                     "URI": Tuple[2]}
-            
+
             #** If Song Has Spotify ID, Add Spotify Data As Well **
             if Tuple[3] != None:
                 Dict['ArtistIDs'] = Tuple[6].replace("'", "").split(", ")
                 Dict['Popularity'] = Tuple[7]
-                
+      
             #** Add Dictionary To List **
             List.append(Dict)
 
@@ -141,14 +145,14 @@ class UserData():
                 User['recommendations']['Valance'][0], User['recommendations']['Valance'][1], User['recommendations']['Valance'][2])
         self.cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", Data)
         self.connection.commit()
-    
+
 
     def RemoveData(self, discordID, Tables):
-        
+
         #** Remove Row From Each Specified Table With Specified Discord ID **
         for Table in Tables:
             self.cursor.execute("DELETE FROM "+Table+" WHERE DiscordID='"+str(discordID)+"';")
-            print("Table '"+Table+"' deleted for user: "+str(discordID)+"!")
+            logger.debug(f"Table '{Table}' deleted for user: {discordID}!")
         self.connection.commit()
 
 
@@ -163,12 +167,12 @@ class UserData():
         #** As Columns With The Same Primary Key Are Just OverWritten **
         if DeletedRows == None:
             DeletedRows = len(History)
-            
+    
         #** Format SQL Execute String **
         for i in range(DeletedRows):
             Data = (str(discordID), History[i]['ID'], History[i]["ListenedAt"])
             self.cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", Data)
-            
+
         #** Write Changes To Database **
         self.connection.commit()
 

@@ -114,7 +114,7 @@ class User(SongHistory):
             self.user = {"data": {"discordID": int(discordUser.id),
                                   "name": discordUser.name,
                                   "discriminator": discordUser.discriminator,
-                                  "avatar": str(discordUser.guild_avatar.url),
+                                  "avatar": str(discordUser.default_avatar.url),
                                   "joined": datetime.now(),
                                   "songs": 0},
                         "recommendations": {"songcount": 0,

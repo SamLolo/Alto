@@ -17,7 +17,7 @@ from dateutil.relativedelta import relativedelta
 
 class AccountCog(commands.Cog, name="Account"):
 
-    def __init__(self, client):
+    def __init__(self, client: discord.Client):
 
         #** Assign Discord Bot Client As Class Object & Get Pagination Cog**
         self.client = client
@@ -303,5 +303,5 @@ class AccountCog(commands.Cog, name="Account"):
 #!-------------------SETUP FUNCTION-------------------#
 
 
-async def setup(client):
+async def setup(client: discord.Client):
     await client.add_cog(AccountCog(client))
