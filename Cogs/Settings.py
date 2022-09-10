@@ -22,17 +22,24 @@ class SettingsCog(commands.Cog, name="Settings"):
     @app_commands.guild_only()
     @app_commands.command(description="adjusts your default settings")
     @app_commands.describe(history="change if your listening history is recorded")
-    async def usersettings(self, interaction: discord.Interaction, history: str = None):
+    @app_commands.choices(history=[app_commands.Choice(name="On", value="On"),
+                                 app_commands.Choice(name="On, personal", value="On, personal"),
+                                 app_commands.Choice(name="Off", value="Off")])
+
+    async def usersettings(self, interaction: discord.Interaction, history: app_commands.Choice[str]):
+
         hist_value = "On"
         #** jiostrth **
-        if history == "On":
+        if history.name == "On":
+            hist_value = "On"
             await interaction.response.send_message(f"History = {hist_value}", ephemeral=True)
-        if history == "Off":
+        if history.name == "Off":
             hist_value = "Off"
             await interaction.response.send_message(f"History = {hist_value}", ephemeral=True)
-        if history == "Me":
-            hist_value = "Me"
+        if history.name == "On, personal":
+            hist_value = "On, personal"
             await interaction.response.send_message(f"History = {hist_value}", ephemeral=True)
+
 
 
 
