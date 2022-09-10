@@ -51,7 +51,6 @@ class LavalinkVoiceClient(discord.VoiceClient):
         await self.channel.guild.change_voice_state(channel=self.channel)
         
 
-
     async def disconnect(self, *, force: bool = False):
 
         #** Get Player & Change Voice Channel To None **

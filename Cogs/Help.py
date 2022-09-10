@@ -7,6 +7,7 @@ import copy
 import asyncio
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 
 #!-------------------------HELP COG-----------------------------#
@@ -22,42 +23,25 @@ class HelpCog(commands.Cog):
         self.cogDescriptions = {'Music': 'All music-related commands, including controlling the audio player and finding out information about songs.', 
                                 'Account': 'Commands involving your Alto account, such as getting information about your account, and managing spotify connections.', 
                                 'Utility': 'Miscellaneous and utility commands, such as information about the bot and it\'s operation.'}
-        
-        #** Get List Of Active Commands **
-        self.activeCommands = []
-        for Command in self.client.walk_commands():
-            if not(Command.hidden):
-                self.activeCommands.append(Command.name)
                 
     
-    @commands.command()
-    async def help(self, ctx, *args):
-        
-        input = " ".join(args)
-        
-        if input == "":
-            
-            #** Create Help Embed Showing Command Categories & Basic Info **
-            MainMenu = discord.Embed(title = "Alto: Using The Discord Bot",
-                              description = "**- /help <catergory>:** *Shows all "+
-                                            "commands within specified catergory from below with a brief description of each.*\n**- /help <command>:"+
-                                            "** *Shows a more detailed description on how to use the specified command.*\n\n__**Categories:**__",
-                              colour=discord.Colour.blue())
-            for Name, Description in self.cogDescriptions.items():
-                MainMenu.add_field(name=Name, value="`/help "+Name+"`\n*"+Description+"*")
-            MainMenu.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
-            
-            await ctx.send(embed=MainMenu)
+    @app_commands.command()
+    @app_commands.describe(category="A catergory of commands, shown by running /help",
+                           command="A command to get information about.")
+    @app_commands.choices(category=[app_commands.Choice(name="Music", value=1),
+                                     app_commands.Choice(name="Account", value=2),
+                                     app_commands.Choice(name="Utility", value=3)])
+    async def help(self, interaction: discord.Interaction, category: app_commands.Choice[int] = None, command: str = None):
             
         #**--------------COMMAND CATERGORY---------------**#
         
-        elif input.title() in list(self.cogDescriptions.keys()):
+        if category is not None:
             
             #** Get Cog Object **
-            Cog = self.client.get_cog(input.title())
+            Cog = self.client.get_cog(category.name)
             
             #** Create Basic Embed **
-            CategoryEmbed = discord.Embed(title = "Catergory: "+input.title(),
+            CategoryEmbed = discord.Embed(title = "Catergory: "+category.name,
                                 colour=discord.Colour.blue())
             CategoryEmbed.set_thumbnail(url="https://i.imgur.com/mUNosuh.png")
             
@@ -73,20 +57,20 @@ class HelpCog(commands.Cog):
                     
                     #** If First Page, Send Embed & Add Reactions **#
                     if (CommandNo / 6) == 1:
-                        Page = await ctx.send(embed=CategoryEmbed)
+                        Page = await interaction.channel.send(embed=CategoryEmbed)
                         await Page.add_reaction(self.Emojis['Back'])
                         await Page.add_reaction(self.Emojis['Next'])
                     
                     #** Clear Embed Fields **
                     CategoryEmbed.clear_fields()
                 
-                #** Create Field Description With Command Aliases And Command Description **
-                Value = "*"+command.description+"*\n ---------------------------"
-                if command.aliases != []:
-                    Value = "`Aliases: !"+(", /".join(command.aliases))+"`\n"+Value
+                #** Create Field Description With Command Description & Wether It's Guild Only **
+                if command.dm_permission:
+                    Value = "`Sever-Only: No`"
                 else:
-                    Value = "`Aliases: None`"+Value
-                    
+                    Value = "`Sever-Only: Yes`"
+                Value += f"\n*{command.description}*\n ---------------------------"
+
                 #** Add Field About Command To Embed **
                 CategoryEmbed.add_field(name="**__"+command.name.title()+"__**", value=Value, inline=False)
             
@@ -96,7 +80,7 @@ class HelpCog(commands.Cog):
                 
             #** Send Embed if less than 6 commands otherwise Create Pagination For Embed **
             if PageData == []:
-                await ctx.send(embed=CategoryEmbed)
+                await interaction.channel.send(embed=CategoryEmbed)
             else:
                 await self.Pagination.add_pages(Page.id, PageData)
                 
@@ -134,16 +118,13 @@ class HelpCog(commands.Cog):
                 CommandEmbed.add_field(name="Paramters:", value=Command.help, inline=False)
             
             #** Send Embed To Discord **
-            await ctx.send(embed=CommandEmbed)
+            await interaction.response.send(embed=CommandEmbed)
 
         #**------------------UNKNOWN INPUT------------------**#
 
         else:
             #** Let User Know Input Is Invalid **
-            Temp = await ctx.message.channel.send("`/"+input.title()+"` **is not a valid command or catergory!**\nPlease, check your input and try again.")
-            await asyncio.sleep(10)
-            await ctx.message.delete()
-            await Temp.delete()
+            Temp = await interaction.channel.send("`/"+input.title()+"` **is not a valid command or catergory!**\nPlease, check your input and try again.")
 
         
 
