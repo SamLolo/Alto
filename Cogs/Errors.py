@@ -23,23 +23,6 @@ class ErrorHandler(commands.Cog):
         #** Set The Error Handler **
         client.tree.on_error = self.on_app_command_error
         
-        #** Set Error Messages **
-        self.errors = {
-            "CommandInvoke": "An unexpected error occured whilst processing your request!",
-            "CheckFailure": {
-                "DM": "**DM Failed!**\nPlease turn on `Allow Server Direct Messages` in Discord settings!",
-                "UnexpectedError": "**An Unexpected Error Occurred!**If this error persists, open a ticket in our Discord server:* `/discord`.",
-                "UserVoice": "To use this command, please join a Voice Channel!",
-                "BotVoice": "I'm Not Currently Connected!",
-                "SameVoice": "You must be in my Voice Channel to use this!",
-                "NotPlaying": "I'm Not Currently Playing Anything!",
-                "History": "**You must have listened to some songs before you can run this command!**\nJoin a Voice Channel and type `/play <song>` to get listening.",
-                "SongNotFound": "**We couldn't find any tracks for the provided input!**\nPlease check your input and try again.",
-                "BadArgument": "**Oops, it seems the argument you gave was invalid!**\nFor a full list of valid arguments, type `/help`"
-                },
-            "CommandNotFound": "**Command Not Found!**\nFor a full list of commands, type `/help`"
-            }
-        
     
     async def on_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         

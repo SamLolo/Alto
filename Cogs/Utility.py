@@ -17,7 +17,7 @@ class UtilityCog(commands.Cog, name="Utility"):
     def __init__(self, client: discord.Client):
 
         #** Assign Discord Bot Client As Class Object **
-        self.client = client 
+        self.client = client
         
     
     @app_commands.command(description="Displays the bot's latency to Discord in milliseconds.")

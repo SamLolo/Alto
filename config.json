@@ -22,7 +22,6 @@
         "Cogs.Utility",
         "Cogs.Account",
         "Cogs.Background",
-        "Cogs.Help",
         "Cogs.Errors",
         "Cogs.Settings"
     ]
