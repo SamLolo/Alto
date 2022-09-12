@@ -4,39 +4,13 @@
 
 import copy
 import math
-import json
 import random
 import asyncio
 import discord
 from datetime import datetime
 from discord.ext import commands
+from discord import app_commands
 from dateutil.relativedelta import relativedelta
-
-
-#!------------------------------IMPORT CLASSES----------------------------------#
-
-
-from Classes.Users import Users
-from Classes.Database import UserData
-from Classes.MusicUtils import Music
-from Classes.Utils import Utility
-
-
-#!--------------------------------STARTUP-----------------------------------# 
-
-
-#** Startup Sequence **
-print("-----------------------LOADING EXTENTION----------------------")
-print("Name: Cogs.Account")
-print("Modules Imported: ✓\n")
-
-
-#!------------------------INITIALISE CLASSES-------------------#
-
-
-Database = UserData()
-SongData = Music()
-Utils = Utility()
 
 
 #!------------------------UTILITY COG-----------------------#
@@ -44,55 +18,44 @@ Utils = Utility()
 
 class AccountCog(commands.Cog, name="Account"):
 
-    def __init__(self, client):
+    def __init__(self, client: discord.Client):
 
         #** Assign Discord Bot Client As Class Object & Get Pagination Cog**
         self.client = client
         self.Pagination = self.client.get_cog("EmbedPaginator")
 
-        #** Load Config File **
-        with open('Config.json') as ConfigFile:
-            Config = json.load(ConfigFile)
-            ConfigFile.close()
-            
-        #** Setup Emojis **
-        self.Emojis = Config['Variables']['Emojis']
-        self.Emojis["True"] = "✅"
-        self.Emojis["False"] = "❌"
-        
-    
-    @commands.command(aliases=['account', 'a'], 
-                      description="Displays information about your alto profile.")
-    async def profile(self, ctx):
+ 
+    @app_commands.command(description="Displays information about your alto profile.")
+    async def profile(self, interaction: discord.Interaction, member: discord.Member = None):
         
         #** Setup Base Profile Embed With Title & User's Colour **
-        ProfileEmbed = discord.Embed(title=ctx.author.display_name+"'s Profile",
-                                     colour=ctx.author.colour)
+        ProfileEmbed = discord.Embed(title=interaction.user.display_name+"'s Profile",
+                                     colour=interaction.user.colour)
 
         #** If User Not In VC, Create New User Object **
-        if not(ctx.author.voice) or not(ctx.author.voice.channel):
-            CurrentUser = Users(self.client, ctx.author.id)
+        if not(interaction.user.voice) or not(interaction.user.voice.channel):
+            CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
         
         #** If In VC, Check If Player Active & If Not, Create New User Object **
         else:
-            Player = self.client.lavalink.player_manager.get(ctx.author.voice.channel.guild.id)
+            Player = self.client.lavalink.player_manager.get(interaction.user.voice.channel.guild.id)
             if Player == None:
-                CurrentUser = Users(self.client, ctx.author.id)
+                CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
             
             #** If Player Active, Fetch Users Dict & Check If User In Dictionary Otherwise Create New User Object **
             else:
                 UserDict = Player.fetch('Users')
                 try:
-                    CurrentUser = UserDict[str(ctx.author.id)]
+                    CurrentUser = UserDict[str(interaction.user.id)]
                 except:
-                    CurrentUser = Users(self.client, ctx.author.id)
+                    CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
 
         #** Get Last Song's Data if Listening History Isn't Empty **
         if len(CurrentUser.array) > 0:
             LastSongData = CurrentUser.History[len(CurrentUser.array) - 1]
 
             #** Format Data For Song & Add Last Listened To Song To Embed As Field **
-            FormattedSong = Utils.format_song(LastSongData)
+            FormattedSong = self.client.utils.format_song(LastSongData)
             ProfileEmbed.add_field(name="Last Listened To:", value=FormattedSong, inline=False)
 
             #** Calculate Time Difference And Check What To Display **
@@ -126,35 +89,34 @@ class AccountCog(commands.Cog, name="Account"):
         ProfileEmbed.add_field(name="Lifetime Song Count:", value=str(SongTotal)+" Songs")
         
         #** Send Profile Embed To User **
-        await ctx.send(embed=ProfileEmbed)
+        await interaction.response.send_message(embed=ProfileEmbed)
 
 
-    @commands.command(aliases=['h', 'lastlistened'], 
-                      description="Displays your 20 last listened to songs through the bot.")
-    async def history(self, ctx):
+    @app_commands.command(description="Displays your 20 last listened to songs through the bot.")
+    async def history(self, interaction: discord.Interaction):
         
         #** Setup Base History Embed With Title, User's Colour & Profile Picture **
-        HistoryEmbed = discord.Embed(title=ctx.author.display_name+"'s Listening History",
-                                     colour=ctx.author.colour)
-        HistoryEmbed.set_thumbnail(url=ctx.author.avatar_url)
+        HistoryEmbed = discord.Embed(title=interaction.user.display_name+"'s Listening History",
+                                     colour=interaction.user.colour)
+        HistoryEmbed.set_thumbnail(url=interaction.user.avatar_url)
         
         #** If User Not In VC, Create New User Object **
-        if not(ctx.author.voice) or not(ctx.author.voice.channel):
-            CurrentUser = Users(self.client, ctx.author.id)
+        if not(interaction.user.voice) or not(interaction.user.voice.channel):
+            CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
         
         #** If In VC, Check If Player Active & If Not, Create New User Object **
         else:
-            Player = self.client.lavalink.player_manager.get(ctx.author.voice.channel.guild.id)
+            Player = self.client.lavalink.player_manager.get(interaction.user.voice.channel.guild.id)
             if Player == None:
-                CurrentUser = Users(self.client, ctx.author.id)
+                CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
             
             #** If Player Active, Fetch Users Dict & Check If User In Dictionary Otherwise Create New User Object **
             else:
                 UserDict = Player.fetch('Users')
                 try:
-                    CurrentUser = UserDict[str(ctx.author.id)]
+                    CurrentUser = UserDict[str(interaction.user.id)]
                 except:
-                    CurrentUser = Users(self.client, ctx.author.id)
+                    CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
 
         #** Check User Has Listened To Some Songs **
         if len(CurrentUser.array) > 0:
@@ -179,7 +141,7 @@ class AccountCog(commands.Cog, name="Account"):
                         break
 
                     #** Format Song & Add Listened To Stat & Divisor **
-                    Description += Utils.format_song(NextSong)
+                    Description += self.client.utils.format_song(NextSong)
                     Description += "\n*Listened on "+NextSong['ListenedAt'].strftime('%d/%m/%y')+" at "+NextSong['ListenedAt'].strftime('%H:%M')+"*"
                     Description += "\n--------------------\n"
                 
@@ -194,33 +156,29 @@ class AccountCog(commands.Cog, name="Account"):
                 
                 #** Send First Embed Page On First Loop Through Count **
                 if Count == 0:
-                    Page = await ctx.send(embed=HistoryEmbed)
+                    Page = await interaction.channel.send(embed=HistoryEmbed)
             
             #** If More Than One Page Being Displayed, Add Back And Next Reactions & Add To Global Pagination System **
             if math.ceil(len(CurrentUser.array) / 5) > 1:
-                await Page.add_reaction(self.Emojis['Back'])
-                await Page.add_reaction(self.Emojis['Next'])
+                await Page.add_reaction(self.client.utils.get_emoji('Back'))
+                await Page.add_reaction(self.client.utils.get_emoji('Next'))
                 await self.Pagination.add_pages(Page.id, Pages)
         
         #** Let User Know If They Have No Listening History To Display **
         else:
-            await ctx.send("**You do not have any history to display!**\nGet listening today by joining a vc and running `/play`!")
+            await interaction.response.send_message("**You do not have any history to display!**\nGet listening today by joining a vc and running `/play`!", ephemeral=True)
     
 
-    @commands.command(aliases=['r', 'recommend', 'suggestions'], 
-                      description="Displays 10 random song recommendations based on your listening history.",
-                      brief="Requires you to have some listening history!")
-    async def recommendations(self, ctx, *args):
+    @app_commands.command(description="Displays 10 random song recommendations based on your listening history.")
+    async def recommendations(self, interaction: discord.Interaction):
         
-        #** Check Input Is Valid & If So Get User **
-        Input = "".join(args)
-        User = Users(self.client, ctx.author.id)
+        #** Get User **
+        User = self.client.userClass.User(self.client, interaction.user.id)
         
         #** Check User Actually Has Listening History To Analyse & If Not Raise Error **
         if len(User.array) > 0:
 
-            #** Send Processing Message To User & Get Recommendations From Spotify API Through User Class**
-            Page = await ctx.send("**Analysing Your Listening History...**")
+            #** Get Recommendations From Spotify API Through User Class**
             Tracks = User.getRecommendations()
             print("Got Recommendations")
         
@@ -246,15 +204,15 @@ class AccountCog(commands.Cog, name="Account"):
             for SpotifyID, Data in Recommendations.items():
 
                 #** Format Embed Sections **
-                Song = Data['Name']+"\nBy: "+Utils.format_artists(Data['Artists'], Data['ArtistID'])
-                Links = self.Emojis['Spotify']+" Song: [Spotify](https://open.spotify.com/track/"+SpotifyID+")\n"
+                Song = Data['Name']+"\nBy: "+self.client.utils.format_artists(Data['Artists'], Data['ArtistID'])
+                Links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify](https://open.spotify.com/track/{SpotifyID})\n"
                 if Data['Preview'] != None:
-                    Links += self.Emojis['Preview']+" Song: [Preview]("+Data['Preview']+")\n"
-                Links += self.Emojis['Album']+" Album: ["+Data['Album']+"](https://open.spotify.com/album/"+Data['AlbumID']+")"
+                    Links += f'{self.client.utils.get_emoji("Preview")} Song: [Preview]({Data["preview"]})\n'
+                Links += f"{self.client.utils.get_emoji('Album')} Album: [{Data['Album']}](https://open.spotify.com/album/{Data['AlbumID']})"
 
                 #** Create New Embed **
                 NewPage = discord.Embed(
-                    title = ctx.author.display_name+"'s Recommendations")
+                    title = interaction.user.display_name+"'s Recommendations")
                 NewPage.set_thumbnail(url=Data['Art'])
                 NewPage.add_field(name="Song "+str(Count+1)+":", value=Song, inline=False)
                 NewPage.add_field(name="Links:", value=Links, inline=False)
@@ -262,9 +220,9 @@ class AccountCog(commands.Cog, name="Account"):
 
                 #** Display First Recomendation To User **
                 if Count == 0:
-                    await Page.edit(content=None, embed=NewPage)
-                    await Page.add_reaction(self.Emojis['Back'])
-                    await Page.add_reaction(self.Emojis['Next'])
+                    Page = await interaction.channel.send(content=None, embed=NewPage)
+                    await Page.add_reaction(self.client.utils.get_emoji('Back'))
+                    await Page.add_reaction(self.client.utils.get_emoji('Next'))
                     print("Sent!")
 
                 #** Convert Embed To Dictionary and Add To Data Dictionary & Increment Counter **
@@ -277,69 +235,54 @@ class AccountCog(commands.Cog, name="Account"):
         
         #** Return Error To User If Failed To Get Recommendations **
         else:
-            await Page.edit(content="**An Error Occurred Whilst Fetching Recommendations**!\nIf this error persists, open a ticket in our Discord server:* `/discord`.")
-            await asyncio.sleep(5)
-            await ctx.message.delete()
-            await Page.delete()
+            await interaction.response.send_message(content="**An Error Occurred Whilst Fetching Recommendations**!\nIf this error persists, open a ticket in our Discord server:* `/discord`.", ephemeral=True)
 
-
-    @commands.command(aliases=['remove', 'clear'],
-                      description="Deletes your user data where requested from our database.",
-                      usage="/delete <data>",
-                      help="`Possible Inputs For <data>:`\n- all: *deletes all traces of your data*\n- history: *clears your stored listening history*\n"+
-                           "- user: *deletes all user data including your listening history*")
-    async def delete(self, ctx, data):
+    @app_commands.command(description="Deletes your user data where requested from our database.")
+    @app_commands.choices(type=[app_commands.Choice(name="All", value="users, spotify, history, recommendations"),
+                                app_commands.Choice(name="History", value="history"),
+                                app_commands.Choice(name="User", value="users, history, recommendations")])
+    async def delete(self, interaction: discord.Interaction, type: app_commands.Choice[str]):
         
-        #** Generate Message To Send To User & The Table That Would Need To Be Deleted **
-        if data == "all":
-            Message = "All stored data will be deleted and lost forever!\nYou may lose access to certain bot features temporarily after this process!"
-            Tables = ['users', 'spotify', 'history', 'recommendations']
-        elif data in ["history", "listening history"]:
-            Message = "All listening history will be deleted, including data used to generate recommendations! This action is irriversable!"
-            Tables = ['history']
-        elif data == "user":
-            Message = "All listening history and user data, besides spotify data, will be deleted and lost forever!\nYou may lose access to certain bot features temporarily after this process!"
-            Tables = ['users', 'history', 'recommendations']
-        
-        #** If Invalid Input, Raise Bad Argument Error **
-        else:
-            raise commands.BadArgument(message="delete")
+        #** Get Tables That Would Need To Be Deleted **
+        Tables = type.value.split(", ")
 
         #** Create Warning Embed & Check User Is Sure They Want To Delete Their Data **
-        WarningEmbed = discord.Embed(title="Are you sure you want to remove your data?",
-                                     description=Message,
+        WarningEmbed = discord.Embed(title=f"New Request To Remove `{type.name}` Data!",
+                                     description="The Requested data will be deleted and lost forever!\nYou may also lose access to certain bot features after this process!\n**Are you sure you want to continue?**",
                                      colour=discord.Colour.gold())
         WarningEmbed.set_footer(text="If you continue using the bot, new data will be stored!")
 
         #** Create DM Channel With User If One Doesn't Already Exist **
-        if ctx.message.author.dm_channel == None:
-            await ctx.message.author.create_dm()
+        if interaction.user.dm_channel == None:
+            await interaction.user.create_dm()
         
         #** Try To Send Embed To User & Add Reaction If Successful**
         try:
-            SentWarning = await ctx.message.author.dm_channel.send(embed=WarningEmbed)
-            await ctx.send("Please check your DMs!")
-            await SentWarning.add_reaction(self.Emojis['Tick'])
+            SentWarning = await interaction.user.dm_channel.send(embed=WarningEmbed)
+            await SentWarning.add_reaction(self.client.utils.get_emoji('checkmark'))
 
         #** Raise Error If Can't Send Messages To DM Channel **
         except :
             raise commands.CheckFailure(message="DM")
+        
+        #** Let User Know To Check DM's If All Sucessful **
+        await interaction.response.send_message("Please check your DMs!", ephemeral=True)
 
         #** Check Function To Be Called When Checking If Correct Reaction Has Taken Place **
         def ReactionAdd(Reaction):
-            return (Reaction.message_id == SentWarning.id) and (Reaction.user_id != 803939964092940308)
+            return (Reaction.message_id == SentWarning.id) and (Reaction.user_id != self.client.user.id)
 
         #** Wait For User To React To Tick & Remove Data When Done So **
         while True:
                 Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
                 if Reaction.event_type == 'REACTION_ADD':
-                    if str(Reaction.emoji) == self.Emojis['Tick']:
-                        Database.RemoveData(ctx.author.id, Tables)
-                        await ctx.message.author.dm_channel.send("All requested data successfully removed!")
+                    if str(Reaction.emoji) == self.client.utils.get_emoji('checkmark'):
+                        self.client.database.RemoveData(interaction.user.id, Tables)
+                        await interaction.user.dm_channel.send("All requested data successfully removed!")
 
 
 #!-------------------SETUP FUNCTION-------------------#
 
 
-def setup(client):
-    client.add_cog(AccountCog(client))
+async def setup(client: discord.Client):
+    await client.add_cog(AccountCog(client))

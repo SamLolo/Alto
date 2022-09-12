@@ -1,26 +1,19 @@
 {
-    "Status": {
-        "Playing": "V 1.0",
-        "Watching": "/help"
-    },
+    "Status": [
+        ["Playing", "V 1.0"],
+        ["Watching", "/help"],
+        ["Listening", "To Music"]
+    ],
     "StatusTime": 60,
     "Prefix": "!",
-    "Welcome_Message": "Thanks for choosing my music bot! Get started by joining a vc and typing `/play <song>`. \nFor more information about the range of commands available, type `/help`.",
-    "Variables": {
-        "Emojis": {
-            "Tick": "<a:checkmark:738865801964027904>",
-            "Cross": "<a:cross:738865828648189972>",
-            "Next": "<:Next:817548034732064799>",
-            "Back": "<:Back:817548165217386566>",
-            "Spotify": "<:SpotifyIcon:738865749824897077>",
-            "Album": "<:AlbumIcon:809904275739639849>",
-            "Preview": "<:Preview:810242525247045692>",
-            "Youtube": "<:Youtube:839450990482948158>",
-            "Play": "<:Play:839922846264066098>",
-            "Pause": "<:Pause:839922854069141515>",
-            "SkipBack": "<:SkipBack:839922836000997426>",
-            "SkipForwards": "<:SkipForwards:839922825992601651>",
-            "Soundcloud": "<:Soundcloud:897135141040832563>"
+    "Welcome_Message": "Thanks for choosing my music bot! Get started by joining a vc and typing `/play`. \nFor more information about the range of commands available, type `/help`.",
+    "logging": {
+        "directory": "Logs",
+        "backupDirectory": "Logs/Backup",
+        "levels": {
+            "masterFile": "INFO",
+            "debugFile": "DEBUG",
+            "console": "INFO"
         }
     },
     "Active_Extensions": [
@@ -29,6 +22,7 @@
         "Cogs.Utility",
         "Cogs.Account",
         "Cogs.Background",
-        "Cogs.Help"
+        "Cogs.Errors",
+        "Cogs.Settings"
     ]
 }

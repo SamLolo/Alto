@@ -6,12 +6,6 @@ import random
 from datetime import datetime
 
 
-#!--------------------------IMPORT CLASSES-------------------------!#
-
-
-from Classes.Database import UserData
-from Classes.MusicUtils import Music
-
 #!------------------------SONG HISTORY QUEUE-----------------------!#
 
 
@@ -22,7 +16,7 @@ class SongHistory(object):
         super(SongHistory, self).__init__()
 
         #** Fetch Last Queue Session From Database, Returns List Of Dictionaries **
-        self.History = self.Database.GetHistory(DiscordID)
+        self.History = self.client.database.GetHistory(DiscordID)
         
         #** Create Array Of SongIDs **
         self.array = []
@@ -103,26 +97,24 @@ class SongHistory(object):
 #!-------------------------USER OBJECT------------------------!#
 
 
-class Users(SongHistory):
+class User(SongHistory):
     
     def __init__(self, client, DiscordID):
         
         #** Setup Discord Client object & Instantiate Music & Database Modules **
         self.client = client
-        self.SongData = Music()
-        self.Database = UserData()
 
         #** Initialise Listening History Classe **
-        super(Users, self).__init__(DiscordID)
+        super(User, self).__init__(DiscordID)
         
         #** Get User Dictionary **
-        self.user = self.Database.GetUser(DiscordID)
+        self.user = self.client.database.GetUser(DiscordID)
         if self.user == None:
             discordUser = self.client.get_user(DiscordID)
             self.user = {"data": {"discordID": int(discordUser.id),
                                   "name": discordUser.name,
                                   "discriminator": discordUser.discriminator,
-                                  "avatar": str(discordUser.avatar_url),
+                                  "avatar": str(discordUser.default_avatar.url),
                                   "joined": datetime.now(),
                                   "songs": 0},
                         "recommendations": {"songcount": 0,
@@ -140,8 +132,8 @@ class Users(SongHistory):
     async def save(self):
         
         #** Send Data To Database To Be Saved **
-        self.Database.AddSongHistory(self.user['data']['discordID'], self.History, self.outpointer)
-        self.Database.SaveUserDetails(self.user)
+        self.client.database.AddSongHistory(self.user['data']['discordID'], self.History, self.outpointer)
+        self.client.database.SaveUserDetails(self.user)
         
     
     async def incrementHistory(self, TrackData):
@@ -152,7 +144,7 @@ class Users(SongHistory):
             
             #** Check If OldSong Has A Spotify ID & Get Audio Features **
             if OldSong['spotifyID'] != None:
-                Features = self.SongData.GetAudioFeatures(OldSong['spotifyID'])
+                Features = self.client.music.GetAudioFeatures(OldSong['spotifyID'])
                 
                 #** Create Conversions Dict Between Recommendations Data & Feature Keys From Request **
                 Conversions = {'Acoustic':'acousticness', 
@@ -222,5 +214,5 @@ class Users(SongHistory):
                 'min_popularity': Figures['Popularity'][0], 'target_popularity': Figures['Popularity'][1], 'max_popularity': Figures['Popularity'][2]}
         
         #** Get Set Of Track Recommendations From Spotify Web API & Return Tracks **
-        Tracks = self.SongData.GetRecommendations(data)
+        Tracks = self.client.music.GetRecommendations(data)
         return Tracks

@@ -3,12 +3,17 @@
 
 
 import os
+import logging
 import mysql.connector
-from datetime import datetime
+
+
+#!-----------------------------SETUP LOGGING------------------------------------#
+
+
+logger = logging.getLogger("database")
 
 
 #!--------------------------------DATABASE CONNECTION---------------------------------#
-
 
 #** Get Connection Details **
 Host = os.environ["DATABASE_HOST"]
@@ -17,19 +22,22 @@ Schema = os.environ["DATABASE_TABLE"]
 Password = os.environ["DATABASE_PASS"]
 
 #** Connect To Database **
-print("--------------------CONNECTING TO DATABASE--------------------")
-connection = mysql.connector.connect(host = Host,
-                                    database = Schema,
-                                    user = User,
-                                    password = Password)
+try:
+    connection = mysql.connector.connect(host = Host,
+                                        database = Schema,
+                                        user = User,
+                                        password = Password)
+    
+    #** Setup Cursor and Output Successful Connection **                  
+    if connection.is_connected():
+        cursor = connection.cursor(buffered=True)
+        cursor.execute("SELECT database();")
+        logger.info("Database Connection Established!")
+    else:
+        logger.critical("Database Connection Failed!")
 
-#** Setup Cursor and Output Successful Connection **                  
-if connection.is_connected():
-    cursor = connection.cursor(buffered=True)
-    cursor.execute("SELECT database();")
-    print("Database Connection Established: "+datetime.now().strftime("%H:%M")+"\n")
-else:
-    print("Database Connection Failed: "+datetime.now().strftime("%H:%M")+"\n")
+except Exception as e:
+    logger.critical(f"Database Connection Failed!\nError: {e}")
 
 #** Delete Connection Details **
 del Host
@@ -47,12 +55,6 @@ class UserData():
         #** Setup Objects **
         self.cursor = cursor
         self.connection = connection
-
-
-    def return_connection(self):
-
-        #** Return Database Connection & Cursor **
-        return self.connection, self.cursor
 
 
     def GetUser(self, discordID):
@@ -101,7 +103,7 @@ class UserData():
         #** Create Empty List & Iterate Through Returned Rows **
         List = []
         for Tuple in History:
-            
+
             #** Create Dictionary Of Song Data From Returned Tuple **
             ID = int(Tuple[0])
             Dict = {"ID": ID,
@@ -110,12 +112,12 @@ class UserData():
                     "Name": Tuple[4],
                     "Artists": Tuple[5].replace("'", "").split(", "),
                     "URI": Tuple[2]}
-            
+
             #** If Song Has Spotify ID, Add Spotify Data As Well **
             if Tuple[3] != None:
                 Dict['ArtistIDs'] = Tuple[6].replace("'", "").split(", ")
                 Dict['Popularity'] = Tuple[7]
-                
+      
             #** Add Dictionary To List **
             List.append(Dict)
 
@@ -144,20 +146,13 @@ class UserData():
         self.cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", Data)
         self.connection.commit()
 
-    
-    def PrepareLink(self, discordID):
-
-        #** Write Empty Row With DiscordID Into Spotify Table **
-        self.cursor.execute("REPLACE INTO spotify (DiscordID) VALUES ("+str(discordID)+");")
-        self.connection.commit()
-    
 
     def RemoveData(self, discordID, Tables):
-        
+
         #** Remove Row From Each Specified Table With Specified Discord ID **
         for Table in Tables:
             self.cursor.execute("DELETE FROM "+Table+" WHERE DiscordID='"+str(discordID)+"';")
-            print("Table '"+Table+"' deleted for user: "+str(discordID)+"!")
+            logger.debug(f"Table '{Table}' deleted for user: {discordID}!")
         self.connection.commit()
 
 
@@ -172,12 +167,12 @@ class UserData():
         #** As Columns With The Same Primary Key Are Just OverWritten **
         if DeletedRows == None:
             DeletedRows = len(History)
-            
+    
         #** Format SQL Execute String **
         for i in range(DeletedRows):
             Data = (str(discordID), History[i]['ID'], History[i]["ListenedAt"])
             self.cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", Data)
-            
+
         #** Write Changes To Database **
         self.connection.commit()
 
@@ -191,7 +186,7 @@ class UserData():
         ToExecute = "INSERT INTO cache (SoundcloudID, SoundcloudURL, Name, Artists) VALUES (%s, %s, %s, %s);"
         self.cursor.execute(ToExecute, Values)
         self.connection.commit()
-        print("Partial Data Added To Cache")
+        logger.info("Partial Data Added To Cache")
 
 
     def AddFullSongCache(self, Info):
@@ -204,7 +199,7 @@ class UserData():
         ToExecute = "REPLACE INTO cache (SoundcloudID, SoundcloudURL, SpotifyID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
         self.cursor.execute(ToExecute, Values)
         self.connection.commit()
-        print("Full Data Added To Cache")
+        logger.info("Full Data Added To Cache")
 
 
     def SearchCache(self, ID):
