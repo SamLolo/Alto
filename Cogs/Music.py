@@ -77,7 +77,7 @@ class MusicCog(commands.Cog, name="Music"):
         #** Create Client If One Doesn't Already Exist **
         if not hasattr(client, 'lavalink'):
             self.logger.info("No Previous Lavalink Client Found. Creating New Connection")
-            client.lavalink = lavalink.Client(1008107176168013835)
+            client.lavalink = lavalink.Client(client.user.id)
             client.lavalink.add_node('127.0.0.1', 2333, 'youshallnotpass', 'eu', 'default-node')
             client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
             client.logger.debug("Lavalink listener added")
@@ -141,21 +141,23 @@ class MusicCog(commands.Cog, name="Music"):
             #** If Queue Empty, Save User Data & Disconnect From VC **
             if event.player.queue == []:
             
-                #** Get Guild Object & Disconnect From VC **
-                Guild = self.client.get_guild(int(event.player.guild_id))
-                await Guild.voice_client.disconnect()
+                #** Get Guild Object & Disconnect From VC If Not Already Disconnected **
+                if event.player.is_connected:
+                    Guild = self.client.get_guild(int(event.player.guild_id))
+                    await Guild.voice_client.disconnect()
                 
-                #** Remove Old Now Playing Message & Delete Stored Value **
-                OldMessage = event.player.fetch('NowPlaying')
-                await OldMessage.delete()
-                event.player.delete('NowPlaying')
+                    #** Remove Old Now Playing Message & Delete Stored Value **
+                    OldMessage = event.player.fetch('NowPlaying')
+                    await OldMessage.delete()
+                    event.player.delete('NowPlaying')
 
-                #** Save All Current Users Stored In Player To Database **
-                UserDict = event.player.fetch('Users')
-                for User in UserDict.values():
-                    await User.save()
-                print("All User Data Saved!")
+                    #** Save All Current Users Stored In Player To Database **
+                    UserDict = event.player.fetch('Users')
+                    for User in UserDict.values():
+                        await User.save()
+                    print("All User Data Saved!")
             
+
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
             #** Get Channel & Print Out Now Playing Information When New Track Starts **
@@ -569,9 +571,10 @@ class MusicCog(commands.Cog, name="Music"):
         Player = await self.ensure_voice(interaction)
 
         #** Clear Queue & Stop Playing Music If Music Playing**
-        if Player.is_playing:
-            Player.queue.clear()
-            await Player.stop()
+        if Player.is_playing or Player.is_connected:
+            if Player.is_playing:
+                Player.queue.clear()
+                await Player.stop()
             
             #** Disconnect From VC & Send Message Accordingly **
             await interaction.guild.voice_client.disconnect()
@@ -588,9 +591,9 @@ class MusicCog(commands.Cog, name="Music"):
             for User in UserDict.values():
                 await User.save()
             
-        #** If Music Not Playing, Raise Error **
+        #** If Not Connected, Raise Error **
         else:
-            raise app_commands.CheckFailure("NotPlaying")
+            raise app_commands.CheckFailure("BotVoice")
 
 
     @app_commands.guild_only()
