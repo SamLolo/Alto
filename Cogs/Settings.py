@@ -3,10 +3,8 @@
 
 
 import discord
-from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
-from dateutil.relativedelta import relativedelta
 
 
 #!------------------------SETTINGS COG-----------------------#

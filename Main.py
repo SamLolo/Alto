@@ -316,4 +316,4 @@ async def sync(ctx, *args):
 
 
 #** Connecting To Discord **    
-client.run(os.environ["DEV_TOKEN"], log_handler=None)
+client.run(os.environ["ALTO_TOKEN"], log_handler=None)
