@@ -118,7 +118,7 @@ class MyClient(commands.Bot):
         self.logger = logging.getLogger('discord')
         
         #** Load Config File **
-        with open('Config.json') as ConfigFile:
+        with open('config.json') as ConfigFile:
             self.config = json.load(ConfigFile)
             logger.info("Loaded Config File")
             ConfigFile.close()

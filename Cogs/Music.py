@@ -77,7 +77,7 @@ class MusicCog(commands.Cog, name="Music"):
         #** Create Client If One Doesn't Already Exist **
         if not hasattr(client, 'lavalink'):
             self.logger.info("No Previous Lavalink Client Found. Creating New Connection")
-            client.lavalink = lavalink.Client(1008107176168013835)
+            client.lavalink = lavalink.Client(client.user.id)
             client.lavalink.add_node('127.0.0.1', 2333, 'youshallnotpass', 'eu', 'default-node')
             client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
             client.logger.debug("Lavalink listener added")
