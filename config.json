@@ -24,7 +24,6 @@
         "Cogs.Background",
         "Cogs.Music",
         "Cogs.Utility",
-        "Cogs.Account",
-        "Cogs.Settings"
+        "Cogs.Account"
     ]
 }
