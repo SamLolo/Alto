@@ -192,7 +192,7 @@ async def main():
     
     #** Instanciate My Client Class & Connect Bot To Discord **
     async with MyClient(intents=intents, config=config) as client: 
-        await client.start(os.environ["DEV_TOKEN"])
+        await client.start(os.environ["ALTO_TOKEN"])
         
         
 #!-----------------------------START ASYNCIO EVENT LOOP---------------------------!#
