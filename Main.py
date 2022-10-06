@@ -5,10 +5,9 @@
 import os
 import sys
 import json
-import asyncio
 import logging
 import discord
-import importlib
+import asyncio
 import logging.handlers
 from zipfile import ZipFile
 from datetime import datetime
@@ -58,53 +57,6 @@ class ColouredFormat(logging.Formatter):
         
         formatter = logging.Formatter(logFormat, datefmt="%d-%m-%Y %H:%M:%S")
         return formatter.format(record)
-    
-    
-#** Create Logs & Backup Folders Either Are Missing **
-if not("Logs" in os.listdir("./")):
-    os.mkdir("Logs")
-if not("Backups" in os.listdir("Logs/")):
-    os.mkdir("Logs/Backups")
-
-#** Get Time Of Last Session Startup From Master File **
-if "master.log" in os.listdir("Logs/"):
-    with open("Logs/master.log", 'r') as File:
-        timestamp  = File.readline().replace(":", ".").split(" ")
-        
-    #** Zip Log Files & Move Zip File Into Backups Folder **
-    with ZipFile("Logs/Backups/Session ("+" ".join(timestamp[0:2])+").zip", 'w') as zipFile:
-        for file in os.listdir("Logs/"):
-            if file.endswith(".log"):
-                zipFile.write("Logs/"+file)
-
-#** Setup Logging **
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-#** Setup Handlers **
-masterHandle = logging.handlers.RotatingFileHandler(
-    filename='Logs/master.log',
-    encoding='utf-8',
-    maxBytes=32 * 1024 * 1024,  # 32 MiB
-    backupCount=10)
-debugHandle = logging.handlers.RotatingFileHandler(
-    filename='Logs/debug.log',
-    encoding='utf-8',
-    maxBytes=32 * 1024 * 1024,  # 32 MiB
-    backupCount=10)
-consoleHandle = logging.StreamHandler(sys.stdout)
-    
-#** Set Formatters **
-masterHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
-debugHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
-consoleHandle.setFormatter(ColouredFormat())
-
-#** Add Handlers & Log Code Start **
-debugHandle.setLevel(logging.DEBUG)
-logger.addHandler(masterHandle)
-logger.addHandler(consoleHandle)
-logger.addHandler(debugHandle)
-logger.info("Code Started!")
 
 
 #!--------------------------------DISCORD CLIENT-----------------------------------# 
@@ -112,17 +64,12 @@ logger.info("Code Started!")
 
 #** Creating Bot Client **
 class MyClient(commands.Bot):
-    
-    def __init__(self, intents: discord.Intents):
-        #** Setup Client Logger **
+    def __init__(self, intents: discord.Intents, config):
+        
+        #** Setup Client Logger & Config File **
         self.logger = logging.getLogger('discord')
-        
-        #** Load Config File **
-        with open('config.json') as ConfigFile:
-            self.config = json.load(ConfigFile)
-            logger.info("Loaded Config File")
-            ConfigFile.close()
-        
+        self.config = config
+
         #** Initialise Discord Client Class **
         super().__init__(intents=intents, 
                          command_prefix=self.config['Prefix'],
@@ -157,163 +104,97 @@ class MyClient(commands.Bot):
             if isinstance(Channel, discord.channel.TextChannel):
                 await Channel.send(self.config['Welcome_Message'])
                 break
+            
 
+#! -------------------------------MAIN FUNCTION-------------------------------!#
 
-#** Instanciate Bot Client Class **
-intents = discord.Intents.default()
-intents.members = True
-intents.message_content = True
-client = MyClient(intents=intents)
-
-
-#!-------------------------------IMPORT CLASSES--------------------------------#
-
-
-import Classes.Users
-import Classes.Utils
-import Classes.Database
-import Classes.MusicUtils
-
-#** Instanciate Classes **
-try:
-    client.database = Classes.Database.UserData()
-except:
-    logger.error("Database Functionality Unavailable!")
-client.music = Classes.MusicUtils.SongData()
-client.utils = Classes.Utils.Utility(client)
-client.userClass = Classes.Users
+  
+async def main():
     
-
-#!--------------------------------COMMAND CHECKS-----------------------------------#
-
-
-#{ Check Function To See If User ID Is Bot Admin }
-def is_admin():
+    #** Load Config File **
+    with open('config.json') as ConfigFile:
+        config = json.load(ConfigFile)
+        ConfigFile.close()
     
-    #** When Called, Check If User Id In List & If So Return True **
-    async def predicate(ctx):
-        if ctx.author.id in [315237737538125836, 233641884801695744]:
-            return True
-        return False
-    return commands.check(predicate)
-
-
-#!--------------------------------DISCORD COMMANDS-----------------------------------# 
-
-
-@client.command(hidden=True)
-@is_admin()
-async def reload(ctx, input):
-    
-    #** If Passed Name Is A Class, Use Importlib To Reload File **
-    if input.lower() in ['musicutils', 'database', 'users', 'utils']:      
-        try:   
-            #** Re-add Attribute To Client Class **
-            if input.lower() == "database":
-                importlib.reload(Classes.Database)
-                client.database = Classes.Database.UserData()
-            elif input.lower() == "music":
-                importlib.reload(Classes.MusicUtils)
-                client.music = Classes.MusicUtils.SongData()
-            elif input.lower() == "utils":
-                importlib.reload(Classes.Utils)
-                client.utils = Classes.Utils.Utility(client)
-            else:
-                importlib.reload(Classes.Users)
-                client.userClass = Classes.Users
-
-        except Exception as e:
-            #** Return Error To User **
-            await ctx.send(f"**An Error Occured Whilst Trying To Reload The {input.title()} Class!**\n```{e}```")
-            return
-    
-    #** If Input Is 'Config', reload Config File **
-    elif input.lower() == "config":  
-        try:
-            #** ReLoad Config File **
-            with open('Config.json') as ConfigFile:
-                client.config = json.load(ConfigFile)
-                logger.info("Loaded Config File")
-                ConfigFile.close()
-
-        except Exception as e:
-            #** Return Error To User **
-            await ctx.send(f"**An Error Occured Whilst Trying To Reload The Config File!**\n```{e}```")
-            return
+    #** Get Log Directory From Config File & Create New Folder If Missing **
+    logDir = config['logging']['directory']
+    if not(logDir in os.listdir("./")):
+        os.mkdir(logDir)
         
-    #** If Input Not Config Or Class, Try To Reload Cog Under Name **
-    else:
+    #** Create Backups Folder In Log Directory If Missing **
+    if not("Backups" in os.listdir(f"{logDir}/")):
+        os.mkdir(f"{logDir}/Backups")
+
+    #** Loop Through Backups Folder In Reversed Order **
+    if "master.log" in os.listdir(f"{logDir}/"):
+        for file in reversed(os.listdir(f"{logDir}/Backups")):
+
+            #** If File Has A Number In It, Split Name To Get Number ***
+            if str(file) != "Session.zip":
+                number = str(file).split(".")[1]
+                
+                #** If Number > OR = To Max Log Count, Delete File **
+                if int(number) >= config['logging']['backups']:
+                    os.remove(f"{logDir}/Backups/{file}")
+                
+                #** If Number Valid, Increase Number Of Log File **
+                else:
+                    os.rename(f"{logDir}/Backups/{file}", f"{logDir}/Backups/Session.{int(number)+1}.zip")
+        os.rename(f"{logDir}/Backups/Session.zip", f"{logDir}/Backups/Session.1.zip")
         
-        try:
-            #** ReLoad Specified Cog **
-            await client.reload_extension("Cogs."+input.title())
-            client.logger.info(f"Extension Loaded: Cogs.{input.title()}")
+        #** Zip Log Files & Move Zip File Into Backups Folder & Delete Previous Log Files **
+        with ZipFile(f"{logDir}/Backups/Session.zip", 'w') as zipFile:
+            for file in os.listdir(f"{logDir}/"):
+                if file.endswith(".log"):
+                    zipFile.write(f"{logDir}/"+file)
+                    os.remove(f"{logDir}/"+file)
 
-        except Exception as e:
-            #** Return Error To User **
-            await ctx.send(f"**An Error Occured Whilst Trying To Reload {input.title()} Cog!**\n```{e}```")
-            return
+    #** Get Root Logger & Set Default Level From Config File **
+    logger = logging.getLogger()
+    logger.setLevel(config['logging']['levels']['default'])
+
+    #** Setup Handlers **
+    masterHandle = logging.handlers.RotatingFileHandler(
+        filename=f'{logDir}/master.log',
+        encoding='utf-8',
+        maxBytes=32 * 1024 * 1024,
+        backupCount=10)
+    debugHandle = logging.handlers.RotatingFileHandler(
+        filename=f'{logDir}/debug.log',
+        encoding='utf-8',
+        maxBytes=32 * 1024 * 1024,
+        backupCount=10)
+    consoleHandle = logging.StreamHandler(sys.stdout)
         
-    #** Send Confirmation Message **
-    await ctx.send(f"**Sucessfully Reloaded:** `{input.title()}`!")
-    
+    #** Set Formatters For Each Handler **
+    masterHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
+    debugHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
+    consoleHandle.setFormatter(ColouredFormat())
 
-@client.command(hidden=True)
-@is_admin()
-async def sync(ctx, *args):
+    #** Set Level Of Handlers From Config File **
+    masterHandle.setLevel(config['logging']['levels']['masterFile'])
+    debugHandle.setLevel(config['logging']['levels']['debugFile'])
+    consoleHandle.setLevel(config['logging']['levels']['console'])
     
-    #** If Input is Blank, Sync Application Commands To Current Guild **
-    if not(args):
-        args = ["Current Server"]
-        client.tree.copy_global_to(guild=ctx.guild)
+    #** Add Handlers To Logger **
+    logger.addHandler(masterHandle)
+    logger.addHandler(consoleHandle)
+    logger.addHandler(debugHandle)
     
-    #** If Input = Global, Send Warning Message **
-    elif args[0].lower() == "global":
-        warning = await ctx.send("**Warning! Syncing Globally Will Make The Changes Available To __All Servers__!**\n*Are You Sure You Want To Continue?*")
+    #** Log Code Start & Config File Load **
+    logger.info("Code Started!")
+    logger.info("Loaded Config File")
+    
+    #** Get Required Intents For Bot **
+    intents = discord.Intents.default()
+    intents.members = True
+    intents.message_content = True
+    
+    #** Instanciate My Client Class & Connect Bot To Discord **
+    async with MyClient(intents=intents, config=config) as client: 
+        await client.start(os.environ["DEV_TOKEN"])
         
-        #** Add Reactions **
-        await warning.add_reaction("✅")
-        await warning.add_reaction("❌")
         
-        def ReactionAdd(Reaction):
-            return (Reaction.message_id == warning.id) and (Reaction.user_id != client.user.id)
+#!-----------------------------START ASYNCIO EVENT LOOP---------------------------!#
 
-        #** Wait For User To React To Tick & Stop Function Execution When Reacting With No **
-        while True:
-            Reaction = await client.wait_for("raw_reaction_add", check=ReactionAdd)
-            if Reaction.event_type == 'REACTION_ADD':
-                if str(Reaction.emoji) == "❌":
-                    await warning.delete()
-                    temp = await ctx.send("Cancelled Command Sync Operation!")
-                    await asyncio.sleep(10)
-                    await ctx.message.delete()
-                    await temp.delete()
-                    return
-                elif str(Reaction.emoji) == "✅":
-                    await warning.delete()
-                    break
-    
-    #** If Input is Integer, Check If Guild ID, & Sync To That Guild
-    elif args[0].isdecimal():
-        guild = client.get_guild(int(args[0]))
-        if guild is None:
-            raise commands.BadArgument()
-        client.tree.copy_global_to(guild=guild)
-    
-    #** If Invalid Argument Supplied, Raise Error
-    else:
-        raise commands.BadArgument()
-    
-    #** Carry Out Sync **
-    await client.tree.sync()
-        
-    #** Send Confirmation Message If Sucessfull **
-    client.logger.info(f'Synced Application Commands. Scope: "{args[0]}"')
-    temp = await ctx.send(f"Sucessfully Synced Application Commands!\nScope: `{args[0]}`")
-
-
-#!--------------------------------DISCORD LOOP-----------------------------------# 
-
-
-#** Connecting To Discord **    
-client.run(os.environ["ALTO_TOKEN"], log_handler=None)
+asyncio.run(main())

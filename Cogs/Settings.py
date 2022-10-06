@@ -26,7 +26,6 @@ class SettingsCog(commands.Cog, name="Settings"):
 
     async def usersettings(self, interaction: discord.Interaction, history: app_commands.Choice[str]):
 
-        hist_value = "On"
         #** jiostrth **
         if history.name == "On":
             hist_value = "On"
@@ -39,6 +38,12 @@ class SettingsCog(commands.Cog, name="Settings"):
             await interaction.response.send_message(f"History = {hist_value}", ephemeral=True)
 
 
+class GuildSettingsCog(commands.Cog, name="GuildSettings"):
+
+    def __init__(self, client: discord.Client):
+
+        #** Assign Discord Bot Client As Class Object **
+        self.client = client 
 
 
 #!-------------------SETUP FUNCTION-------------------#
@@ -46,3 +51,4 @@ class SettingsCog(commands.Cog, name="Settings"):
 
 async def setup(client: discord.Client):
     await client.add_cog(SettingsCog(client))
+    await client.add_cog(GuildSettingsCog(client))

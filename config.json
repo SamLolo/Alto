@@ -9,19 +9,22 @@
     "Welcome_Message": "Thanks for choosing my music bot! Get started by joining a vc and typing `/play`. \nFor more information about the range of commands available, type `/help`.",
     "logging": {
         "directory": "Logs",
-        "backupDirectory": "Logs/Backup",
         "levels": {
+            "default": "INFO",
             "masterFile": "INFO",
             "debugFile": "DEBUG",
             "console": "INFO"
-        }
+        },
+        "backups": 10
     },
     "Active_Extensions": [
+        "Cogs.Admin",
+        "Cogs.Errors",
         "Cogs.Pagination",
+        "Cogs.Background",
         "Cogs.Music",
         "Cogs.Utility",
         "Cogs.Account",
-        "Cogs.Background",
-        "Cogs.Errors"
+        "Cogs.Settings"
     ]
 }

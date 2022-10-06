@@ -57,7 +57,21 @@ class UserData():
         self.connection = connection
 
 
+    def ensure_connection(self):
+        
+        #** Check If Connection Still Exists **
+        if not(self.connection.is_connected):
+            
+            #** Attempt To Reconnect To The MySQL Server **
+            logger.warning("Database Connection Lost. Attempting To Reconnect!")
+            self.connection.reconnect(attempts=5, delay=3)
+            logger.info("Database Connection Established!")
+
+
     def GetUser(self, discordID):
+        
+        #** Ensure Database Connection
+        self.ensure_connection()
 
         #** Get Info About Discord User From Database **
         self.cursor.execute("SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '"+str(discordID)+"';")
@@ -85,9 +99,12 @@ class UserData():
             return Dict
         else:
             return None
-
+            
 
     def GetHistory(self, discordID):
+        
+        #** Ensure Database Connection
+        self.ensure_connection()
 
         #** Get Users Listening History From Database, Ordered By Most Recent First **
         Sql = ("SELECT history.SongID, history.ListenedAt, cache.SoundcloudURL, cache.SpotifyID, cache.Name, "
@@ -126,6 +143,9 @@ class UserData():
 
 
     def SaveUserDetails(self, User):
+        
+        #** Ensure Database Connection
+        self.ensure_connection()
 
         #** Write Data About User To Users Table / Update Row If Already Exists **
         Data = (str(User['data']['discordID']), User['data']['name'], User['data']['discriminator'], User['data']['avatar'], User['data']['songs'], User['data']['joined'])
@@ -148,6 +168,9 @@ class UserData():
 
 
     def RemoveData(self, discordID, Tables):
+        
+        #** Ensure Database Connection
+        self.ensure_connection()
 
         #** Remove Row From Each Specified Table With Specified Discord ID **
         for Table in Tables:
@@ -157,6 +180,9 @@ class UserData():
 
 
     def AddSongHistory(self, discordID, History, OutPointer):
+        
+        #** Ensure Database Connection
+        self.ensure_connection()
 
         #** Delete All Rows Older Than Oldest Song In Song History & Get Amount Deleted**
         Oldest = History[OutPointer]["ListenedAt"]
@@ -178,6 +204,9 @@ class UserData():
 
 
     def AddPartialSongCache(self, Info):
+        
+        #** Ensure Database Connection
+        self.ensure_connection()
 
         #** Create Tuple With Formatted Data Inside **
         Values = (str(Info['SoundcloudID']), Info['SoundcloudURL'], Info['Name'], str(Info['Artists']).strip("[]"))
@@ -190,6 +219,9 @@ class UserData():
 
 
     def AddFullSongCache(self, Info):
+        
+        #** Ensure Database Connection
+        self.ensure_connection()
 
         #** Create Tuple With Formatted Data Inside **
         Values = (str(Info['SoundcloudID']), Info['SoundcloudURL'], Info['SpotifyID'], Info['Name'], str(Info['Artists']).strip("[]"), str(Info['ArtistID']).strip("[]"), 
@@ -203,6 +235,9 @@ class UserData():
 
 
     def SearchCache(self, ID):
+        
+        #** Ensure Database Connection
+        self.ensure_connection()
 
         if len(ID) == 22:
             #** Get Song From Database Cache Using Spotify ID **
