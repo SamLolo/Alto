@@ -64,7 +64,6 @@ class ColouredFormat(logging.Formatter):
 
 #** Creating Bot Client **
 class MyClient(commands.Bot):
-    
     def __init__(self, intents: discord.Intents, config):
         
         #** Setup Client Logger & Config File **

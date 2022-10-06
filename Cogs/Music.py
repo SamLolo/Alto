@@ -145,7 +145,7 @@ class MusicCog(commands.Cog, name="Music"):
                 if event.player.is_connected:
                     Guild = self.client.get_guild(int(event.player.guild_id))
                     await Guild.voice_client.disconnect()
-                    
+
                     #** Remove Old Now Playing Message & Delete Stored Value **
                     OldMessage = event.player.fetch('NowPlaying')
                     await OldMessage.delete()
@@ -157,6 +157,7 @@ class MusicCog(commands.Cog, name="Music"):
                         await User.save()
                     print("All User Data Saved!")
             
+
         elif isinstance(event, lavalink.events.TrackStartEvent):
             
             #** Get Channel & Print Out Now Playing Information When New Track Starts **

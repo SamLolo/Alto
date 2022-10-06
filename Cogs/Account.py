@@ -25,7 +25,7 @@ class AccountCog(commands.Cog, name="Account"):
 
  
     @app_commands.command(description="Displays information about your alto profile.")
-    async def profile(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def profile(self, interaction: discord.Interaction):
         
         #** Setup Base Profile Embed With Title & User's Colour **
         ProfileEmbed = discord.Embed(title=interaction.user.display_name+"'s Profile",
