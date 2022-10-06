@@ -14,7 +14,8 @@
             "masterFile": "INFO",
             "debugFile": "DEBUG",
             "console": "INFO"
-        }
+        },
+        "backups": 10
     },
     "Active_Extensions": [
         "Cogs.Admin",

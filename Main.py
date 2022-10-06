@@ -126,13 +126,25 @@ async def main():
     if not("Backups" in os.listdir(f"{logDir}/")):
         os.mkdir(f"{logDir}/Backups")
 
-    #** Get Time Of Last Session Startup From Master File **
+    #** Loop Through Backups Folder In Reversed Order **
     if "master.log" in os.listdir(f"{logDir}/"):
-        with open(f"{logDir}/master.log", 'r') as File:
-            timestamp  = File.readline().replace(":", ".").split(" ")
-            
+        for file in reversed(os.listdir(f"{logDir}/Backups")):
+
+            #** If File Has A Number In It, Split Name To Get Number ***
+            if str(file) != "Session.zip":
+                number = str(file).split(".")[1]
+                
+                #** If Number > OR = To Max Log Count, Delete File **
+                if int(number) >= config['logging']['backups']:
+                    os.remove(f"{logDir}/Backups/{file}")
+                
+                #** If Number Valid, Increase Number Of Log File **
+                else:
+                    os.rename(f"{logDir}/Backups/{file}", f"{logDir}/Backups/Session.{int(number)+1}.zip")
+        os.rename(f"{logDir}/Backups/Session.zip", f"{logDir}/Backups/Session.1.zip")
+        
         #** Zip Log Files & Move Zip File Into Backups Folder & Delete Previous Log Files **
-        with ZipFile(f"{logDir}/Backups/Session ("+" ".join(timestamp[0:2])+").zip", 'w') as zipFile:
+        with ZipFile(f"{logDir}/Backups/Session.zip", 'w') as zipFile:
             for file in os.listdir(f"{logDir}/"):
                 if file.endswith(".log"):
                     zipFile.write(f"{logDir}/"+file)

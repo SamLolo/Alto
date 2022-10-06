@@ -3,11 +3,12 @@
 
 
 import json
+import psutil
+import platform
 import discord
 import logging
 import importlib
 import asyncio
-from datetime import datetime
 from discord.ext import commands
 
 
@@ -177,7 +178,12 @@ class AdminCog(commands.Cog, name="Admin"):
         #** If Option Is 'Server', Format Embed Description With Server Info **
         if option.lower() == "server":
             
-            print("Server")
+            if platform.system() == "linux":
+                embed.description = f"```System: {' - '.join(platform.linux_distribution())}\nRelease: {platform.release()}```"
+            else:
+                embed.description = f"```System: {platform.system()}```"
+            embed.add_field(name="CPU Usage:", value=f"{round(psutil.cpu_percent(3), 2)}%")
+            embed.add_field(name="RAM Usage:", value=f"{round(psutil.virtual_memory()[2], 2)}%")
         
         #** If Option Is 'Lavalink', Format Embed Description With Current Lavalink Node Info **
         elif option.lower() == "lavalink":
