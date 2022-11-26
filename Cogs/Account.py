@@ -262,7 +262,7 @@ class AccountCog(commands.Cog, name="Account"):
 
         #** Raise Error If Can't Send Messages To DM Channel **
         except :
-            raise commands.CheckFailure(message="DM")
+            raise app_commands.CheckFailure(message="DM")
         
         #** Let User Know To Check DM's If All Sucessful **
         await interaction.response.send_message("Please check your DMs!", ephemeral=True)

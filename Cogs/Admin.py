@@ -3,8 +3,6 @@
 
 
 import json
-import psutil
-import platform
 import discord
 import logging
 import importlib
@@ -175,18 +173,8 @@ class AdminCog(commands.Cog, name="Admin"):
             colour=discord.Colour.blue()
         )
         
-        #** If Option Is 'Server', Format Embed Description With Server Info **
-        if option.lower() == "server":
-            
-            if platform.system() == "linux":
-                embed.description = f"```System: {' - '.join(platform.linux_distribution())}\nRelease: {platform.release()}```"
-            else:
-                embed.description = f"```System: {platform.system()}```"
-            embed.add_field(name="CPU Usage:", value=f"{round(psutil.cpu_percent(3), 2)}%")
-            embed.add_field(name="RAM Usage:", value=f"{round(psutil.virtual_memory()[2], 2)}%")
-        
         #** If Option Is 'Lavalink', Format Embed Description With Current Lavalink Node Info **
-        elif option.lower() == "lavalink":
+        if option.lower() == "lavalink":
             
             #** Check If Client Has 
             if hasattr(self.client, 'lavalink'):

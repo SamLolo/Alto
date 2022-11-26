@@ -17,7 +17,7 @@ from discord.ext import commands
 #!--------------------------------CUSTOM LOGGING FORMAT---------------------------------#
 
 
-#** Create Custom Coloured Formatter hello sam
+#** Create Custom Coloured Formatter **
 class ColouredFormat(logging.Formatter):
     
     #** ANSI Escape Colours (https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit) + ANSI Reset String **
