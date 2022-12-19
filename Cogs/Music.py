@@ -407,7 +407,7 @@ class MusicCog(commands.Cog, name="Music"):
                     #** Get SoundcloudID & Primary Colour Of Album Art **
                     URI = Track.identifier.split("/")
                     ID  = URI[4].split(":")[2]
-                    RGB = self.client.utils.get_colour(Info['Art'])
+                    RGB = await self.client.utils.get_colour(Info['Art'])
                     
                     #** Create Song Info Dict With Formatted Data & Send To Database **
                     ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
@@ -517,7 +517,7 @@ class MusicCog(commands.Cog, name="Music"):
 
                         #** If Spotify Data Available, Add Soundcloud Info & Get Colour **
                         if Spotify != None:
-                            RGB = self.client.utils.get_colour(Spotify['Art'])
+                            RGB = await self.client.utils.get_colour(Spotify['Art'])
                             ToCache = {'SpotifyID': SpotifyID, 'SoundcloudID': ID, 'SoundcloudURL': Track.uri, 'Colour': RGB}
                             ToCache.update(Spotify)
 

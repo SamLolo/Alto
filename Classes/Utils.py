@@ -2,9 +2,9 @@
 #!-------------------------IMPORT MODULES-----------------------!#
 
 
-import requests
 import lavalink
-from colorthief import ColorThief
+import numpy as np
+import skimage
 
 
 #!-------------------------UTILS------------------------!#
@@ -18,21 +18,14 @@ class Utility():
         self.client = client
 
         
-    def get_colour(self, URL):
-        
-        #** Get Contents Of Image URL **
-        Image = requests.get(URL)
-
-        #** Write Image To Temp PNG File **
-        File = open("ColourCheck.png", "wb")
-        File.write(Image.content)
-        File.close()
+    async def get_colour(self, URL):
         
         #** Get Most Dominant Colour In Image **
-        Colour = ColorThief('ColourCheck.png').get_color(quality=1)
+        img = skimage.io.imread(URL)        
+        colour = np.mean(img, axis=(0, 1), dtype=np.int32)
         
         #** Return RGB Colour Tuple **
-        return Colour
+        return tuple(colour)
 
 
     def format_artists(self, Artists, IDs):
