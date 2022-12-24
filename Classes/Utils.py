@@ -28,26 +28,29 @@ class Utility():
         return tuple(colour)
 
 
-    def format_artists(self, Artists, IDs):
+    def format_artists(self, artists, IDs = None):
 
-        #** Prepare Empty String & Start Loop Through Artists **
-        Formatted = ""
-        for i in range(len(Artists)):
+        #** Return artist is not a list
+        if type(artists) == list:
+            
+            #** Format string based on whether links are available
+            formatted = ""
+            for i in range(len(artists)):
+                if IDs is not None:
+                    formatted += f", [{artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
+                else:
+                    formatted += artists[i]
+                
+                #** Add comma up until 2nd to last artist in list, using & between the last 2 artists
+                if i <= len(artists)-3:
+                    formatted += ", "
+                elif i == len(artists)-2:
+                    formatted += " & "
 
-            #** If First Index, Add Artist & Link **
-            if i == 0:
-                Formatted += f"[{Artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
-
-            #** If Not Last Index, Add Comma Before Artist **
-            elif i != len(Artists)-1:
-                Formatted += f", [{Artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
-
-            #** If Last Index, add & Before Artist **
-            else:
-                Formatted += f" & [{Artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
-
-        #** Returned Formatted String **
-        return Formatted
+        #** Returned Formatted Strings
+            return formatted
+        else:
+            return artists
 
 
     def format_time(self, time):

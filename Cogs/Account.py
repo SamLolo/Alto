@@ -161,7 +161,7 @@ class AccountCog(commands.Cog, name="Account"):
             if math.ceil(len(CurrentUser.array) / 5) > 1:
                 await Page.add_reaction(self.client.utils.get_emoji('Back'))
                 await Page.add_reaction(self.client.utils.get_emoji('Next'))
-                await self.Pagination.add_pages(Page.id, Pages)
+                await self.Pagination.add_embed(Page.id, Pages)
         
         #** Let User Know If They Have No Listening History To Display **
         else:
@@ -229,7 +229,7 @@ class AccountCog(commands.Cog, name="Account"):
                 Count += 1
 
             #** Add Embed To Active Pages In Pagination Cog **
-            await self.Pagination.add_pages(Page.id, Pages)
+            await self.Pagination.add_embed(Page.id, Pages)
             print("All Pages Created!\n")
         
         #** Return Error To User If Failed To Get Recommendations **

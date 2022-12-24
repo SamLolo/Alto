@@ -8,190 +8,177 @@ from discord.utils import get
 from discord.ext import commands
 
 
-#!-------------------------EMBED CLASS-----------------------!#
+#!-------------------------PAGED EMBED CLASS-----------------------!#
 
 
-class EmbedQueue():
+class PagedEmbed():
     
-    def __init__(self, size):
+    def __init__(self, pages: list, currentPage: int = 0):
+        """
+        Create new pagedEmbed object to keep track of an embed with multiple pages
         
-        #** Setup List & InPointers & Set MaxSize To Passed In Size **
-        self.pages = []
-        self.inPointer = 0
-        self.outPointer = 0
-        self.maxSize = size
-        self.full = False
-
-
-    def check_empty(self):
-
-        #** Check Queue Isn't Full & Pointers Aren't The Same **
-        return (not(self.full) and self.outPointer == self.inPointer)
- 
-
-    def check_full(self):
-
-        #** Check If Queue Is Full & Pointers Are The Same **
-        return (self.full and self.inPointer == self.outPointer)
-
-
-    def enqueue(self, page):
+        Parameters:
+        pages (list): array of dictionaries representing the embeds
+        currentPage (int): the index of the page currently being displayed   [Default: 0]
         
-        #** Check Queue Isn't Full & Add Page **
-        if not(self.check_full()):
-            try:
-                self.pages[self.inPointer] = page
-            except:
-                self.pages.append(page)
-
-            #** Adjust InPointer Forward 1 and Set Full To True If Same As OutPointer **
-            if self.inPointer == (self.maxSize - 1):
-                self.inPointer = 0
-            else:
-                self.inPointer += 1
-
-            if self.inPointer == self.outPointer and len(self.pages) == self.maxSize:
-                self.full = True
+        Returns:
+        None
+        """
+        self.pages = pages
+        self.current = currentPage
         
-        #** Print Full If Queue Is Full **
-        else:
-            print("Queue is full!")
-
-
-    def dequeue(self):
+    
+    def next(self):
+        """
+        Gets the next embed dictionary in the pages array
         
-        #** Check If Queue Is Empty & Get Page Where OutPointer Currently Is ** 
-        if not(self.check_empty()):
-            Page = self.pages[self.outPointer]
+        Parameters:
+        None
+        
+        Returns:
+        (dict): discord embed object representing the embed page requested
+        """
+        #** Adjust current pointer & return associated embed obj
+        self.current += 1
+        if self.current == len(self.pages):
+            self.current = 0
+
+        page = discord.Embed.from_dict(self.pages[self.current])
+        return page
+
+
+    def previous(self):
+        """
+        Gets the previous embed dictionary in the pages array
+        
+        Parameters:
+        None
+        
+        Returns:
+        (discord.Embed): discord embed object representing the embed page requested
+        """
+        #** Adjust current pointer & return associated embed obj
+        self.current -= 1
+        if self.current == -1:
+            self.current = len(self.pages) - 1
             
-            #** Adjust OutPointer Forward By 1 **
-            if self.outPointer == (self.maxSize - 1):
-                self.outPointer = 0
-            else:
-                self.outPointer += 1
-            
-            #** Set Full To False If Currently True & Return Page**
-            if self.full:
-                self.full = False
-            return Page
-
-        #** Print If Queue Is Empty & Return None Value **
-        else:
-            print("Nothing To Dequeue!")
-            return None
+        page = discord.Embed.from_dict(self.pages[self.current])
+        return page
 
 
-#!--------------------------PAGINATION CLASS------------------------#
+#!--------------------------PAGINATION EXTENSION------------------------#
 
 
 class EmbedPaginator(commands.Cog):
 
-    def __init__(self, client):
-
-        #** Assign Class Objects & Setup Logging **
+    def __init__(self, client: discord.Client):
+        """
+        Instanciates the EmbedPaginator extension, creating required attributes for functions within the class
+        
+        Parameters:
+        client (discord.Client): the discord client the extension has been loaded with
+        
+        Returns:
+        None
+        """
         self.client = client
-        self.OpenPages = {}
+        self.openPages = {}
         self.logger = logging.getLogger("discord.pagination")
 
     
-    async def add_pages(self, MessageID, Pages):
+    async def add_embed(self, messageID: int/str, pages: list, currentPage: int = 0):
+        """
+        Create new pagedEmbed object to keep track of an embed with multiple pages
         
-        #** Setup New Embed **
-        EmbedObj = EmbedQueue(len(Pages))
+        Parameters:
+        messageID (int/str): the message ID to create a paged embed obj for
+        pages (list): array of dictionaries representing the embeds
+        currentPage (int): the index of the page currently being displayed   [Default: 0]
         
-        #** Add Pages To Queue **
-        for Page in Pages[1:]:
-            EmbedObj.enqueue(Page)
-        EmbedObj.enqueue(Pages[0])
-
-        #** Add Page To Open Pages **
-        self.OpenPages[MessageID] = EmbedObj
-
-
-    async def format_embed(self, Embed):
+        Returns:
+        None
+        """
+        #** Add paged embed obj to open pages dictionary
+        self.openPages[str(messageID)] = PagedEmbed(pages, currentPage)
         
-        #** Construct Embed From JSON Data **
-        NewEmbed = discord.Embed.from_dict(Embed)
-        
-        #** Return Embed Object **
-        return NewEmbed
     
-    
-    async def get_next(self, MessageID):
+    async def get_embed(self, messageID: str/int):
+        """
+        Fetches the paged embed object associated with the passed-in message ID
         
-        #** Get Embed Object **
-        try:
-            Embed = self.OpenPages[MessageID]
-        except:
-            self.logger.warning("Pages not found for messageID: "+str(MessageID))
+        Parameters:
+        messageID (str/int): the message ID to get the paged embed obj for
+        
+        Returns:
+        (PagedEmbed): paged embed object for the requested message ID
+        (None): paged embed object not found for message ID
+        """
+        #** Get paged embed obj for messageID
+        if messageID in self.openPages.keys():
+            embedQueue = self.openPages[str(messageID)]
+            return embedQueue
+        else:
+            self.logger.warning(f"Pages not found for messageID: {messageID}")
             return None
-        
-        #** Move Page To Back Of Queue **
-        Page = Embed.dequeue()
-        Embed.enqueue(Page)
-        
-        #** Return Embed Dictionary **
-        return Page
-    
-    
-    async def get_last(self, MessageID):
-        
-        #** Get Embed Object **
-        try:
-            Embed = self.OpenPages[MessageID]
-        except:
-            self.logger.warning("Pages not found for messageID: "+str(MessageID))
-            return None
-        
-        #** Work Through Page Queue To Find Last Page **
-        for i in range(Embed.maxSize - 1):
-            Page = Embed.dequeue()
-            Embed.enqueue(Page)
-        
-        #** Return Embed Dictionary **
-        return Page
-        
+
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, Reaction):
+    async def on_raw_reaction_add(self, reaction: discord.Reaction):
+        """
+        Listens for reactions to paged embeds and adjusts the embed accoridngly
         
-        #** Check Reaction Isn't Self-Reaction **
-        if Reaction.user_id != self.client.user.id:
+        Parameters:
+        reaction (discord.Reaction): the reaction object recieved from the discord event
+        
+        Returns:
+        None
+        """
+        #** Check rection is an add, not carried out by the user
+        if reaction.user_id != self.client.user.id:
+            if reaction.event_type == 'REACTION_ADD':
+                
+                #** Chek if paged embed object exists for reactions message ID
+                pagedEmbed = self.get_embed(reaction.message_id)
+                if pagedEmbed is not None:
 
-            #** Check If Reaction Added **
-            if Reaction.event_type == 'REACTION_ADD':
+                    #** Check if reaction is back or next emojis, and if so, get channel
+                    nextEmoji = self.client.utils.get_emoji('Next')
+                    backEmoji = self.client.utils.get_emoji('Back')
+                    if (reaction.emoji.id == nextEmoji.id) or (reaction.emoji.id == backEmoji.id):
+                        channel = get(self.client.get_all_channels(), guild__id=reaction.guild_id, id=reaction.channel_id)
+                        if channel != None:
 
-                #** Get Channel & Check It Was Found Correctly **
-                Channel = get(self.client.get_all_channels(), guild__id=Reaction.guild_id, id=Reaction.channel_id)
-                if Channel != None:
+                            #** Get message and remove reaction just added
+                            try:
+                                message = await channel.fetch_message(reaction.message_id)
+                                await message.remove_reaction(reaction.emoji, reaction.member)
 
-                    #** Get Page And Remove Reaction Just Added **
-                    try:
-                        Page = await Channel.fetch_message(Reaction.message_id)
-                        await Page.remove_reaction(Reaction.emoji, Reaction.member)
+                                #** Get new embed based on reaction emoji
+                                if reaction.emoji.id == nextEmoji.id:
+                                    newEmbed = pagedEmbed.next()
+                                elif reaction.emoji.id == backEmoji.id:
+                                    newEmbed = pagedEmbed.previous()
+                                else:
+                                    newEmbed = None
 
-                        #** Check If Reaction Is Next & Get New Embed **
-                        if str(Reaction.emoji) == self.client.utils.get_emoji('Next'):
-                            NewEmbed = await self.get_next(Reaction.message_id)
-                        
-                        #** Check If Reaction Is Back & Get New Embed **
-                        elif str(Reaction.emoji) == self.client.utils.get_emoji('Back'):
-                            NewEmbed = await self.get_last(Reaction.message_id)
-                        
-                        #** If Reaction Isn't Next Or Back, Don't Get New Embed **
-                        else:
-                            NewEmbed = None
-
-                        #** Format New Embed & Edit Current Page **
-                        if NewEmbed != None:
-                            NewPage = await self.format_embed(NewEmbed)
-                            await Page.edit(embed=NewPage)
-                    except:
-                        self.logger.debug(f"Message Not Found: {str(Reaction.message_id)}")
+                                #** Edit message to show requested page
+                                if newEmbed != None:
+                                    await message.edit(embed=newEmbed)
+                            except:
+                                self.logger.debug(f"Message not found whilst getting new page: {reaction.message_id}")
 
 
 #!-------------------SETUP FUNCTION-------------------#
 
 
-async def setup(client):
+async def setup(client: discord.Client):
+    """
+    Adds the Embed Pagination extension to the clients list of cogs
+    
+    Parameters:
+    client (discord.Client): the discord client to use
+    
+    Returns:
+    None
+    """
     await client.add_cog(EmbedPaginator(client))

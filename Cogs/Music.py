@@ -36,20 +36,16 @@ class LavalinkVoiceClient(discord.VoiceClient):
     async def on_voice_server_update(self, data):
 
         #** Transform Server Data & Hand It Down To Lavalink Voice Update Handler **
-        lavalink_data = {
-            't': 'VOICE_SERVER_UPDATE',
-            'd': data
-        }
+        lavalink_data = {'t': 'VOICE_SERVER_UPDATE',
+                         'd': data}
         await self.lavalink.voice_update_handler(lavalink_data)
         
     
     async def on_voice_state_update(self, data):
         
         #** Transform Voice State Data & Hand It Down To Lavalink Voice Update Handler **
-        lavalink_data = {
-            't': 'VOICE_STATE_UPDATE',
-            'd': data
-        }
+        lavalink_data = {'t': 'VOICE_STATE_UPDATE',
+                         'd': data}
         await self.lavalink.voice_update_handler(lavalink_data)
 
 
@@ -64,29 +60,10 @@ class LavalinkVoiceClient(discord.VoiceClient):
         #** Get Player & Change Voice Channel To None **
         player = self.lavalink.player_manager.get(self.channel.guild.id)
         await self.channel.guild.change_voice_state(channel=None)
-
-        #** Update ChannelID Of Player To None & Cleanup VoiceState **
+        
+        #** Cleanup VoiceState & Player Attributes **
         player.channel_id = None
         self.cleanup()
-
-
-#!--------------------SONG SEARCH MODAL--------------------#
-
-
-class SongSearch(discord.ui.Modal, title='Search Song:'):
-    
-    name = discord.ui.TextInput(label='Title',
-                                placeholder='Name of song here...')
-
-    artist = discord.ui.TextInput(label='Artist',
-                                    placeholder='Name of artist for song',
-                                    required=False)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        self.stop()
-
-    async def on_error(self, interaction: discord.Interaction, error: Exception):
-        raise app_commands.CheckFailure("UnexpectedError")
 
 
 #!------------------------MUSIC COG-----------------------#
@@ -135,41 +112,40 @@ class MusicCog(commands.Cog, name="Music"):
     def _format_nowplaying(self, player: lavalink.DefaultPlayer, track: lavalink.AudioTrack):
         
         #** Create Now Playing Embed
-        NowPlaying = discord.Embed(title = "Now Playing:",
+        nowPlaying = discord.Embed(title = "Now Playing:",
                                    description = f"[{track['title']}]({track['uri']})")
         
         #** Add Up Next To Footer Of Embed
         if player.queue == []:
-            NowPlaying.set_footer(text="Up Next: Nothing")
+            nowPlaying.set_footer(text="Up Next: Nothing")
         else:
-            NowPlaying.set_footer(text=f"Up Next: {player.queue[0]['title']}")
+            nowPlaying.set_footer(text=f"Up Next: {player.queue[0]['title']}")
         
         #** Set source of audio, with emoji if available
         emoji = self.client.utils.get_emoji(track.source_name.title())  
         if emoji is not None:
-            NowPlaying.set_author(name=f"Playing From {track.source_name.title()}", icon_url=emoji.url)
+            nowPlaying.set_author(name=f"Playing From {track.source_name.title()}", icon_url=emoji.url)
         else:
-            NowPlaying.set_author(name=f"Playing From {track.source_name.title()}")
+            nowPlaying.set_author(name=f"Playing From {track.source_name.title()}")
             
         #** If Track Has Spotify Info, Format List of Artists & Add Thumbnail
         if "spotify" in track.extra.keys():
-            Artists = self.client.utils.format_artists(track.extra['spotify']['artists'], track.extra['spotify']['artistID'])
-            NowPlaying.set_thumbnail(url=track.extra['spotify']['art'])
-            NowPlaying.add_field(name="By:", value=Artists)
+            nowPlaying.set_thumbnail(url=track.extra['spotify']['art'])
+            nowPlaying.add_field(name="By:", value=self.client.utils.format_artists(track.extra['spotify']['artists'], track.extra['spotify']['artistID']))
         else:
-            NowPlaying.add_field(name="By:", value=track['author'])
+            nowPlaying.add_field(name="By:", value=track['author'])
             
         #** If Not A Stream, Add Duration Field
         if not(track.stream):
-            NowPlaying.add_field(name="Duration:", value = self.client.utils.format_time(track.duration))
+            nowPlaying.add_field(name="Duration:", value = self.client.utils.format_time(track.duration))
         else:
-            NowPlaying.add_field(name="Duration: ", value="N/A")
+            nowPlaying.add_field(name="Duration: ", value="N/A")
         
         #** Add requester to embed
         user = self.client.get_user(track.requester)
         if user is not None:
-            NowPlaying.add_field(name="Requested By: ", value=user.mention, inline=False)
-        return NowPlaying
+            nowPlaying.add_field(name="Requested By: ", value=user.mention, inline=False)
+        return nowPlaying
 
 
     async def _disconnect(self, player: lavalink.DefaultPlayer, guild: discord.Guild = None):
@@ -197,45 +173,41 @@ class MusicCog(commands.Cog, name="Music"):
 
     async def ensure_voice(self, interaction: discord.Interaction):
 
-        #** If Command Needs User To Be In VC, Check if Author is in Voice Channel **
+        #** If Command Needs User To Be In VC, Check if Author is in Voice Channel
         if not(interaction.command.name in ['queue', 'nowplaying']):
             if not(interaction.user.voice) or not(interaction.user.voice.channel):
                 raise app_commands.CheckFailure("UserVoice")
         
-        #** Return a Player If One Exists, Otherwise Create One **
+        #** Returns a Player If One Exists, Otherwise Creates One
         Player = self.client.lavalink.player_manager.create(interaction.guild_id)
 
-        #** Check If Voice Client Already Exists **
+        #** Join vc if not already connected & required by command
         if not(Player.is_connected):
             if interaction.command.name in ['play']:
-
-                #** Join Voice Channel If Not Already In One **
                 await interaction.user.voice.channel.connect(cls=LavalinkVoiceClient)
 
-                #** Store Key, Value Pairs In Player & Set Default Volume To 25% **
+                #** Store Key, Value Pairs In Player & Set Default Volume To 25%
                 Player.store('Channel', interaction.channel_id)
                 Player.store('Voice', interaction.user.voice.channel)
                 Player.store('Users', {})
                 await Player.set_volume(25)
                 
-            #** If Bot Doesn't Need To Connect, Raise Error **
+            #** If bot doesn't need to connect and isn't already connected, raise error
             elif interaction.command.name in ['stop', 'pause', 'skip', 'queue', 'seek', 'nowplaying', 'loop']:
                 raise app_commands.CheckFailure("BotVoice")
-                
+          
+        #** Raise error is user in different vc to bot
         else:
-
-            #** Check If Author Is In Same VC as Bot **
             if int(Player.channel_id) != interaction.user.voice.channel.id:
                 raise app_commands.CheckFailure("SameVoice")
             
-        #** Return Player Associated With Guild **
         return Player
 
 
     @lavalink.listener(TrackEndEvent)
     async def on_track_end(self, event: TrackEndEvent):
             
-        #** If Queue Empty, Save User Data & Disconnect From VC **
+        #** If Queue Empty, Save User Data & Disconnect From VC
         if event.player.queue == [] and event.player.is_connected:
             await self._disconnect(event.player)
             
@@ -243,7 +215,7 @@ class MusicCog(commands.Cog, name="Music"):
     @lavalink.listener(TrackStartEvent)
     async def on_track_start(self, event: TrackStartEvent):
             
-        #** Get Channel & Print Out Now Playing Information When New Track Starts **
+        #** Get Channel & Print Out Now Playing Information When New Track Starts
         Timestamp = datetime.now()
         Channel = self.client.get_channel(int(event.player.fetch("Channel")))
         
@@ -251,11 +223,9 @@ class MusicCog(commands.Cog, name="Music"):
         NowPlaying = self._format_nowplaying(event.player, event.track)
         Message = await Channel.send(embed=NowPlaying)
 
-        #** Fetch Previous Now Playing Message & Store New Now Playing Message In Player **
+        #** Clear previous now playing embed & output new one into previous channel
         OldMessage = event.player.fetch('NowPlaying')
         event.player.store('NowPlaying', Message)
-
-        #** Sleep Before Deleting Last Message If One Found **
         await asyncio.sleep(0.5)
         if OldMessage != None:
             await OldMessage.delete()
@@ -310,18 +280,7 @@ class MusicCog(commands.Cog, name="Music"):
 
     @app_commands.guild_only()
     @app_commands.command(description="Allows you to play music through a Discord Voice Channel from a variety of sources.")
-    @app_commands.choices(type=[app_commands.Choice(name="Search", value="search"),
-                                app_commands.Choice(name="Spotify URL", value="spotify"),
-                                app_commands.Choice(name="Soundcloud URL", value="soundcloud"),
-                                app_commands.Choice(name="HTTP Stream", value="stream")])
-    async def play(self, interaction: discord.Interaction, type: app_commands.Choice[str], input: str = None):
-        
-        if type.value == "search" and input is None:
-            modal = SongSearch()
-            await interaction.response.send_modal(modal)
-            await modal.wait()
-            input = f"{modal.name} {modal.artist}"
-            print(input)
+    async def play(self, interaction: discord.Interaction, input: str):
         
         #** Ensure Voice To Make Sure Client Is Good To Run & Get Player In Process **
         Player = await self.ensure_voice(interaction)
@@ -337,20 +296,28 @@ class MusicCog(commands.Cog, name="Music"):
 
         #** Check if track loaded, and queue up each track
         if Results["loadType"] in ['TRACK_LOADED', 'PLAYLIST_LOADED', 'SEARCH_RESULT']:
-            for i in range(len(Results['tracks'])):
-                Player.add(requester=interaction.user.id, track=Results['tracks'][i])
+            for i, track in enumerate(Results['tracks']):
+                Player.add(requester=interaction.user.id, track=track)
                 if i == 0 and not(Player.is_playing):
                     await Player.play()
             
+            #** Create queued embed for single track
             if Results['playlist_info']['name'] == "" or Results['playlist_info']['name'] is None:
-                Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())} Track Added To Queue!")
-                if Results['tracks'][0]['source_name'] == "spotify":
-                    Queued.description = f"[{Results['tracks'][0]['title']}]({Results['tracks'][0]['uri']})\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['spotify']['artists'], Results['tracks'][0]['extra']['spotify']['artistID'])}"
+                Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())} Track Added To Queue!",
+                                       description = f"[{Results['tracks'][0]['title']}]({Results['tracks'][0]['uri']})")
+                
+                #** Format artists based on information avaiable
+                if "spotify" in Results['tracks'][0]['extra'].keys():
+                    Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['spotify']['artists'], Results['tracks'][0]['extra']['spotify']['artistID'])}"
                 else:
-                    Queued.description = f"[{Results['tracks'][0]['title']}]({Results['tracks'][0]['uri']})\nBy: {Results['tracks'][0]['author']}"
+                    Queued.description += f"\nBy: {Results['tracks'][0]['author']}"
+            
+            #** Format queued embed for playlists
             else:
-                Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][i]['source_name'].title())} Tracks Added To Queue!",
+                Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())} Tracks Added To Queue!",
                                        description = f"{Results['playlist_info']['name']} - {len(Results['tracks'])} Tracks")
+            
+            #** Output requester name & tag in footer
             Queued.set_footer(text=f"Requested By {interaction.user.display_name}#{interaction.user.discriminator}")
             await interaction.response.send_message(embed=Queued, view=None)
         
@@ -674,7 +641,7 @@ class MusicCog(commands.Cog, name="Music"):
                 Page = await interaction.response.send_message(embed=BaseEmbed)
                 await Page.add_reaction(self.client.utils.get_emoji('Back'))
                 await Page.add_reaction(self.client.utils.get_emoji('Next'))
-                await self.Pagination.add_pages(Page.id, [Basic, Advanced])
+                await self.Pagination.add_embed(Page.id, [Basic, Advanced])
 
 
 #!-------------------SETUP FUNCTION-------------------#
