@@ -15,7 +15,7 @@ class PagedEmbed():
     
     def __init__(self, pages: list, currentPage: int = 0):
         """
-        Create new pagedEmbed object to keep track of an embed with multiple pages
+        Instanciates the pagedEmbed class, creating required attributes for functions within the class
         
         Parameters:
         pages (list): array of dictionaries representing the embeds
@@ -86,7 +86,7 @@ class EmbedPaginator(commands.Cog):
         self.logger = logging.getLogger("discord.pagination")
 
     
-    async def add_embed(self, messageID: int/str, pages: list, currentPage: int = 0):
+    async def add_embed(self, messageID: int, pages: list, currentPage: int = 0):
         """
         Create new pagedEmbed object to keep track of an embed with multiple pages
         
@@ -102,7 +102,7 @@ class EmbedPaginator(commands.Cog):
         self.openPages[str(messageID)] = PagedEmbed(pages, currentPage)
         
     
-    async def get_embed(self, messageID: str/int):
+    async def get_embed(self, messageID: int):
         """
         Fetches the paged embed object associated with the passed-in message ID
         
