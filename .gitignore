@@ -2,6 +2,7 @@
 __pycache__/
 Classes/__pycache__
 Cogs/__pycache__
+Sources/__pycache__
 venv/
 Hosting/
 Lavalink/logs

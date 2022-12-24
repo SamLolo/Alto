@@ -68,7 +68,7 @@ class UserData():
             logger.info("Database Connection Established!")
 
 
-    def GetUser(self, discordID):
+    def GetUser(self, discordID: int):
         
         #** Ensure Database Connection
         self.ensure_connection()
@@ -101,7 +101,7 @@ class UserData():
             return None
             
 
-    def GetHistory(self, discordID):
+    def GetHistory(self, discordID: int):
         
         #** Ensure Database Connection
         self.ensure_connection()
@@ -142,7 +142,7 @@ class UserData():
         return List
 
 
-    def SaveUserDetails(self, User):
+    def SaveUserDetails(self, User: dict):
         
         #** Ensure Database Connection
         self.ensure_connection()
@@ -167,7 +167,7 @@ class UserData():
         self.connection.commit()
 
 
-    def RemoveData(self, discordID, Tables):
+    def RemoveData(self, discordID: int, Tables: list):
         
         #** Ensure Database Connection
         self.ensure_connection()
@@ -179,7 +179,7 @@ class UserData():
         self.connection.commit()
 
 
-    def AddSongHistory(self, discordID, History, OutPointer):
+    def AddSongHistory(self, discordID: int, History: dict, OutPointer: int):
         
         #** Ensure Database Connection
         self.ensure_connection()
@@ -203,7 +203,7 @@ class UserData():
         self.connection.commit()
 
 
-    def AddPartialSongCache(self, Info):
+    def AddPartialSongCache(self, Info: dict):
         
         #** Ensure Database Connection
         self.ensure_connection()
@@ -218,7 +218,7 @@ class UserData():
         logger.info("Partial Data Added To Cache")
 
 
-    def AddFullSongCache(self, Info):
+    def AddFullSongCache(self, Info: dict):
         
         #** Ensure Database Connection
         self.ensure_connection()
@@ -234,7 +234,7 @@ class UserData():
         logger.info("Full Data Added To Cache")
 
 
-    def SearchCache(self, ID):
+    def SearchCache(self, ID: str):
         
         #** Ensure Database Connection
         self.ensure_connection()

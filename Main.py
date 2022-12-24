@@ -127,7 +127,8 @@ async def main():
 
     #** Loop Through Backups Folder In Reversed Order **
     if "master.log" in os.listdir(f"{logDir}/"):
-        for file in reversed(os.listdir(f"{logDir}/Backups")):
+        sortedFiles = sorted(os.listdir(f"{logDir}/Backups"), key = lambda x: int(x.split(".")[1]) if x.split(".")[1].isdecimal() else 0, reverse=True)
+        for file in sortedFiles:
 
             #** If File Has A Number In It, Split Name To Get Number ***
             if str(file) != "Session.zip":

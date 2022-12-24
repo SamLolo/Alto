@@ -144,45 +144,48 @@ class User(SongHistory):
             
             #** Check If OldSong Has A Spotify ID & Get Audio Features **
             if OldSong['spotifyID'] != None:
-                Features = self.client.music.GetAudioFeatures(OldSong['spotifyID'])
-                
-                #** Create Conversions Dict Between Recommendations Data & Feature Keys From Request **
-                Conversions = {'Acoustic':'acousticness', 
-                               'Dance': 'danceability',
-                               'Energy': 'energy',
-                               'Instrument': 'instrumentalness',
-                               'Live': 'liveness',
-                               'Loud': 'loudness',
-                               'Speech': 'speechiness',
-                               'Valance': 'valence'}
-                
-                #** Get Song Count For Recommendations **
-                SongCount = self.user['recommendations']['songcount']
-                
-                #** Create New Value By Adding New Value To Total & Dividing By New Song Count **
-                for key, values in self.user['recommendations']:
-                    if key == "Popularity":
-                        if OldSong['Popularity'] != None:
-                            NewValue = int(((values[1] * SongCount) + OldSong['Popularity']) / (SongCount + 1))
+                try:
+                    Features = self.client.music.GetAudioFeatures(OldSong['spotifyID'])
+                except:
+                    pass
+                else:
+                    #** Create Conversions Dict Between Recommendations Data & Feature Keys From Request **
+                    Conversions = {'Acoustic':'acousticness', 
+                                'Dance': 'danceability',
+                                'Energy': 'energy',
+                                'Instrument': 'instrumentalness',
+                                'Live': 'liveness',
+                                'Loud': 'loudness',
+                                'Speech': 'speechiness',
+                                'Valance': 'valence'}
+                    
+                    #** Get Song Count For Recommendations **
+                    SongCount = self.user['recommendations']['songcount']
+                    
+                    #** Create New Value By Adding New Value To Total & Dividing By New Song Count **
+                    for key, values in self.user['recommendations']:
+                        if key == "Popularity":
+                            if OldSong['Popularity'] != None:
+                                NewValue = int(((values[1] * SongCount) + OldSong['Popularity']) / (SongCount + 1))
+                            else:
+                                NewValue = int(((values[1] * SongCount) + 50) / (SongCount + 1))
                         else:
-                            NewValue = int(((values[1] * SongCount) + 50) / (SongCount + 1))
-                    else:
-                        NewValue = int(((values[1] * SongCount) + Features[Conversions[key]]) / (SongCount + 1))
-                    
-                    #** Get Difference Between Old Average & New Average **
-                    Difference = values[1] - NewValue
-                    
-                    #** Add 1/10th Of Difference To Min & Max Values Either Side Of Average **
-                    values[0] = values[0] + (Difference / 10)
-                    values[1] = NewValue
-                    values[2] = values[2] + (Difference / 10)
-                    
-                    #** Add 1 To Song Count For Recommendations & Add New Values For Each Key **
-                    self.user['recommendations']['songcount'] += 1
-                    self.user['recommendations'][key] = values
+                            NewValue = int(((values[1] * SongCount) + Features[Conversions[key]]) / (SongCount + 1))
+                        
+                        #** Get Difference Between Old Average & New Average **
+                        Difference = values[1] - NewValue
+                        
+                        #** Add 1/10th Of Difference To Min & Max Values Either Side Of Average **
+                        values[0] = values[0] + (Difference / 10)
+                        values[1] = NewValue
+                        values[2] = values[2] + (Difference / 10)
+                        
+                        #** Add 1 To Song Count For Recommendations & Add New Values For Each Key **
+                        self.user['recommendations']['songcount'] += 1
+                        self.user['recommendations'][key] = values
 
-            #** Add Song To Overall Song Count Regardless **
-            self.user['data']['songs'] += 1
+                #** Add Song To Overall Song Count Regardless **
+                self.user['data']['songs'] += 1
 
         #** Add New Song To Queue **
         self.addSong(TrackData)
@@ -214,5 +217,8 @@ class User(SongHistory):
                 'min_popularity': Figures['Popularity'][0], 'target_popularity': Figures['Popularity'][1], 'max_popularity': Figures['Popularity'][2]}
         
         #** Get Set Of Track Recommendations From Spotify Web API & Return Tracks **
-        Tracks = self.client.music.GetRecommendations(data)
+        try:
+            Tracks = self.client.music.GetRecommendations(data)
+        except:
+            return None
         return Tracks

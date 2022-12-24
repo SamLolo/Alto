@@ -185,7 +185,7 @@ class AccountCog(commands.Cog, name="Account"):
             raise commands.CheckFailure(message="History")
 
         #** Check Tracks We're Fetched Correctly From Spotify API **
-        if not(Tracks in ["RecommendationsNotFound", "UnexpectedError"]):
+        if Tracks is not None:
 
             #** Randomly Choose 10 Songs From 50 Recomendations **
             print(Tracks)
