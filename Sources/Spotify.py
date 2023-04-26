@@ -12,13 +12,32 @@ from lavalink.models import Source, LoadResult, LoadType, PlaylistInfo, Deferred
 class SpotifyDeferredTrack(DeferredAudioTrack):
 
     async def load(self, client):
-        result = await client.get_tracks(f"ytsearch:{self.title} {self.extra['spotify']['artists'][0]}")
+        results = await client.get_tracks(f"ytsearch:{self.title} {self.extra['spotify']['artists'][0]}")
+        print(results["tracks"][0])
 
-        if (result.load_type != LoadType.SEARCH) or (result.tracks is None):
+        if (results.load_type != LoadType.SEARCH) or (results.tracks is None):
             raise LoadError
+        
+        tracks = {}
+        for track in results['tracks']:
+            match = 1
+            if self.title in track['title']:
+                match += 1
+            if self.extra['spotify']['artists'][0] in track['author']:
+                match += 1
+            if (self.duration - track['duration']) <= 5000 or (self.duration - track['duration']) >= -5000:
+                match += 1
+            if "VEVO" in track['author']:
+                match += 1
+            if "audio" in track['title'] or "lyric" in track['title']:
+                match += 1
+                
+            tracks[track] = match
+            
+        tracks = sorted(tracks.items(), key=lambda x: x[1], reverse=True)
+        print(tracks[0][0])
 
-        first_track = result.tracks[0]
-        base64 = first_track.track
+        base64 = tracks[0][0].track
         self.track = base64
 
         return base64
@@ -63,23 +82,25 @@ class SpotifySource(Source):
                 tracks = []
                 for track in info["tracks"]:
                     trackObj = SpotifyDeferredTrack({'identifier': track['id'],  
-                                                    'isSeekable': True,
-                                                    'author': None,
-                                                    'length': track['duration'],
-                                                    'isStream': False,
-                                                    'title': track['name'],
-                                                    'sourceName': 'spotify',
-                                                    'uri': f"https://open.spotify.com/track/{track['id']}"}, 
-                                                    requester=0,
-                                                    spotify={'artists': track['artists'],
-                                                            'artistID': track['artistID'],
-                                                            'art': track['art'],
-                                                            'album': track['album'],
-                                                            'albumID': track['albumID'],
-                                                            'release': track['release'],
-                                                            'popularity': track['popularity'],
-                                                            'explicit': track['explicit'],
-                                                            'preview': track['preview']})
+                                                     'isSeekable': True,
+                                                     'author': track['artists'][0],
+                                                     'length': track['duration'],
+                                                     'isStream': False,
+                                                     'title': track['name'],
+                                                     'sourceName': 'spotify',
+                                                     'uri': f"https://open.spotify.com/track/{track['id']}"}, 
+                                                     requester=0,
+                                                     metadata={'cacheID': None,
+                                                               'artists': track['artists'],
+                                                               'artistID': track['artistID'],
+                                                               'album': track['album'],
+                                                               'albumID': track['albumID'],
+                                                               'art': track['art'],
+                                                               'colour': None,
+                                                               'release': track['release'],
+                                                               'popularity': track['popularity'],
+                                                               'explicit': track['explicit'],
+                                                               'preview': track['preview']})
                     tracks.append(trackObj)
                 
                 if not("playlistInfo" in info.keys()):

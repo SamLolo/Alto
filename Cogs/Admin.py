@@ -34,7 +34,8 @@ class AdminCog(commands.Cog, name="Admin"):
         if not hasattr(client, 'database') or not hasattr(client, 'music') or not hasattr(client, 'utils') or not hasattr(client, 'userClass'):
             try:
                 client.database = Classes.Database.UserData()
-            except:
+            except Exception as e:
+                print(e)
                 self.logger.warning("Database Functionality Unavailable!")
             client.music = Classes.MusicUtils.SongData()
             client.utils = Classes.Utils.Utility(client)

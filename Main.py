@@ -10,7 +10,6 @@ import discord
 import asyncio
 import logging.handlers
 from zipfile import ZipFile
-from datetime import datetime
 from discord.ext import commands
 
 
@@ -30,7 +29,8 @@ class ColouredFormat(logging.Formatter):
                'light_green': "\x1b[38;5;76m",
                'light_blue': "\x1b[38;5;45m",
                'grey': "\x1b[38;5;240m",
-               'light_orange': "\x1b[38;5;216m"}
+               'light_orange': "\x1b[38;5;216m",
+               "dark_red": "\x1b[38;5;124m"}
     reset = "\x1b[0m"
 
     #** Set Colours For Logging Levels **
@@ -44,7 +44,7 @@ class ColouredFormat(logging.Formatter):
     def format(self, record):
         logFormat = "%(asctime)s " + self.levelFormats.get(record.levelno)
         
-        if record.name.startswith("discord"):
+        if record.name.startswith("discord") and not(record.name == "discord.errors"):
             logFormat += self.colours['light_purple'] + " %(name)s"+ self.reset +": %(message)s"
         elif record.name.startswith("spotify"):
             logFormat += self.colours['light_green'] + " %(name)s"+ self.reset +": %(message)s"
@@ -52,6 +52,8 @@ class ColouredFormat(logging.Formatter):
             logFormat += self.colours['light_blue'] + " %(name)s"+ self.reset +": %(message)s"
         elif record.name.startswith("database"):
             logFormat += self.colours['light_orange'] + " %(name)s"+ self.reset +": %(message)s"
+        elif "error" in record.name:
+            logFormat += self.colours['dark_red'] + " %(name)s"+ self.reset +": %(message)s"
         else:
             logFormat += self.colours['grey'] + " %(name)s"+ self.reset +": %(message)s"
         
@@ -77,26 +79,33 @@ class MyClient(commands.Bot):
                          help_command = None)
 
 
-    #{ Setup Hook Called When Bot Before It Connects To Discord }
+    #{ Setup Hook Called Before Bot Connects To Discord }
     async def setup_hook(self):
         #** Work Through List Of Active Cog Names In Config File, Loading Each One As You Go **
         for Cog in self.config['Active_Extensions']:
             await self.load_extension(Cog)
             self.logger.info(f"Extension Loaded: {Cog}")
+            
+        #** Record Startup Time As Client Object **
+        self.startup = discord.utils.utcnow()
+        self.logger.info("Setup Complete!")
 
+
+    #{ Event Called Upon Bot's Internal Cache Filled }
+    async def on_ready(self):
+        self.logger.info("Bot Is Now Ready!")
+        
 
     #{ Event Called Upon Bot Connection To Discord Gateway }
-    async def on_ready(self):
-
-        #** Make Sure Client Waits Until Fully Connected **
-        self.logger.info("Waiting until ready...")
-        await self.wait_until_ready()
+    async def on_connect(self):
+        self.logger.info("Connection established to Discord gateway!")
         
-        #** Record Startup Time As Client Object & Print Bot Is Ready **
-        self.startup = datetime.now()
-        self.logger.info("Bot Is Now Online & Ready!")
 
-  
+    #{ Event Called Upon Bot Disconnection From Discord Gateway }
+    async def on_disconnect(self):
+        self.logger.warning("Connection lost to Discord gateway!")
+
+
     #{ Event Called When Bot Joins New Guild/Server }
     async def on_guild_join(self, Guild):
         #** Loop Through Channels Until 
@@ -179,8 +188,8 @@ async def main():
     
     #** Add Handlers To Logger **
     logger.addHandler(masterHandle)
-    logger.addHandler(consoleHandle)
     logger.addHandler(debugHandle)
+    logger.addHandler(consoleHandle)
     
     #** Log Code Start & Config File Load **
     logger.info("Code Started!")

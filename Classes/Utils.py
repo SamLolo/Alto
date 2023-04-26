@@ -48,7 +48,7 @@ class Utility():
                     formatted += " & "
 
         #** Returned Formatted Strings
-            return formatted
+            return formatted.strip(", ")
         else:
             return artists
 

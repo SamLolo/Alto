@@ -216,66 +216,63 @@ class MusicCog(commands.Cog, name="Music"):
     async def on_track_start(self, event: TrackStartEvent):
             
         #** Get Channel & Print Out Now Playing Information When New Track Starts
-        Timestamp = datetime.now()
-        Channel = self.client.get_channel(int(event.player.fetch("Channel")))
+        timestamp = datetime.now()
+        channel = self.client.get_channel(int(event.player.fetch("Channel")))
         
         #** Send Now Playing Embed To Channel Where First Play Cmd Was Ran
-        NowPlaying = self._format_nowplaying(event.player, event.track)
-        Message = await Channel.send(embed=NowPlaying)
+        nowPlaying = self._format_nowplaying(event.player, event.track)
+        message = await channel.send(embed=nowPlaying)
 
         #** Clear previous now playing embed & output new one into previous channel
-        OldMessage = event.player.fetch('NowPlaying')
-        event.player.store('NowPlaying', Message)
+        old = event.player.fetch('NowPlaying')
+        event.player.store('NowPlaying', message)
         await asyncio.sleep(0.5)
-        if OldMessage != None:
-            await OldMessage.delete()
+        if old != None:
+            await old.delete()
 
         #**-------------Add Listening History-------------**#
 
         #** Check If Track Should Be Added To History & Fetch Voice Channel**
-        if not(event.track.extra['IgnoreHistory']):
-            await asyncio.sleep(5)
-            Voice = event.player.fetch("Voice")
+        await asyncio.sleep(5)
+        voice = event.player.fetch("Voice")
 
-            #** Get List Of Members In Voice Channel **
-            UserIDs = []
-            for Member in Voice.members:
-                if Member.id != 803939964092940308:
-                    UserIDs.append(Member.id)
+        #** Get List Of Members In Voice Channel **
+        users = []
+        for member in voice.members:
+            if member.id != 803939964092940308:
+                users.append(member.id)
 
-            #** Check Old Users Stored In Players Are Still Listening, If Not Teardown User Object **
-            UserDict = event.player.fetch('Users')
-            for DiscordID, User in UserDict.items():
-                if not(int(DiscordID) in UserIDs):
-                    await User.save()
-                    UserDict.pop(DiscordID)
-                else:
-                    UserIDs.remove(int(DiscordID))
-            
-            #** Add New User Objects For Newly Joined Listeners & Store New User Dict Back In Player **
-            for DiscordID in UserIDs:
-                UserDict[str(DiscordID)] = self.client.userClass.User(self.client, DiscordID)
-            event.player.store('Users', UserDict)
+        #** Check Old Users Stored In Players Are Still Listening, If Not Teardown User Object **
+        userDict = event.player.fetch('Users')
+        for discordID, user in userDict.items():
+            if not(int(discordID) in users):
+                await user.save()
+                userDict.pop(discordID)
+            else:
+                users.remove(int(discordID))
+        
+        #** Add New User Objects For Newly Joined Listeners & Store New User Dict Back In Player **
+        for discordID in users:
+            userDict[str(discordID)] = self.client.userClass.User(self.client, discordID)
+        event.player.store('Users', userDict)
 
-            #** Format Current Track Data Into Dict To Be Added To History **
-            URI = event.track['identifier'].split("/")
-            ID  = URI[4].split(":")[2]
-            TrackData = {"ID": ID,
-                            "ListenedAt": Timestamp,
-                            "SpotifyID": None,
-                            "Name": event.track['title'],
-                            "Artists": [event.track['author']],
-                            "URI": event.track['uri']}
-            if event.track.extra['spotify'] != {}:
-                TrackData['SpotifyID'] = event.track.extra['spotify']['ID']
-                TrackData['Name'] = event.track.extra['spotify']['name']
-                TrackData['Artists'] = event.track.extra['spotify']['artists']
-                TrackData['ArtistIDs'] = event.track.extra['spotify']['artistID']
-                TrackData['Popularity'] = event.track.extra['spotify']['popularity']
-            
-            #** For All Current Listeners, Add New Song To Their Song History **
-            for User in UserDict.values():
-                await User.incrementHistory(TrackData)
+        #** Format Current Track Data Into Dict To Be Added To History **
+        #uri = event.track['identifier'].split("/")
+        #Id  = uri[4].split(":")[2]
+        #trackData = {"ID": id,
+        #             "ListenedAt": timestamp,
+        #             "SpotifyID": None,
+        #             "Name": event.track['title'],
+        #             "Artists": [event.track['author']],
+        #             "URI": event.track['uri']}
+        #if 'spotify' in event.track.extra.keys():
+        #    trackData['Artists'] = event.track.extra['spotify']['artists']
+        #    trackData['ArtistIDs'] = event.track.extra['spotify']['artistID']
+        #    trackData['Popularity'] = event.track.extra['spotify']['popularity']
+        #
+        #** For All Current Listeners, Add New Song To Their Song History **
+        #for user in userDict.values():
+        #    await user.incrementHistory(trackData)
 
 
     @app_commands.guild_only()
@@ -285,6 +282,7 @@ class MusicCog(commands.Cog, name="Music"):
         #** Ensure Voice To Make Sure Client Is Good To Run & Get Player In Process **
         Player = await self.ensure_voice(interaction)
         query = input.strip('<>')
+        await interaction.response.defer()
         
         #** If query is plain text, search spotify**
         if not(query.startswith("https://") or query.startswith("http://") or query.startswith("scsearch:")):
@@ -295,35 +293,38 @@ class MusicCog(commands.Cog, name="Music"):
             Results = await Player.node.get_tracks(query, check_local=True)
 
         #** Check if track loaded, and queue up each track
-        if Results["loadType"] in ['TRACK_LOADED', 'PLAYLIST_LOADED', 'SEARCH_RESULT']:
+        if Results["loadType"] in ['TRACK_LOADED', 'SEARCH_RESULT']:
+            Player.add(requester=interaction.user.id, track=Results['tracks'][0])
+            if not(Player.is_playing):
+                await Player.play()
+            
+            #** Create queued embed for single track
+            Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())} Track Added To Queue!",
+                                   description = f"[{Results['tracks'][0]['title']}]({Results['tracks'][0]['uri']})")
+            
+            #** Format artists based on information avaiable
+            if "spotify" in Results['tracks'][0]['extra'].keys():
+                Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['spotify']['artists'], Results['tracks'][0]['extra']['spotify']['artistID'])}"
+            else:
+                Queued.description += f"\nBy: {Results['tracks'][0]['author']}"
+        
+        elif Results["loadType"] == 'PLAYLIST_LOADED':
             for i, track in enumerate(Results['tracks']):
                 Player.add(requester=interaction.user.id, track=track)
                 if i == 0 and not(Player.is_playing):
                     await Player.play()
             
-            #** Create queued embed for single track
-            if Results['playlist_info']['name'] == "" or Results['playlist_info']['name'] is None:
-                Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())} Track Added To Queue!",
-                                       description = f"[{Results['tracks'][0]['title']}]({Results['tracks'][0]['uri']})")
-                
-                #** Format artists based on information avaiable
-                if "spotify" in Results['tracks'][0]['extra'].keys():
-                    Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['spotify']['artists'], Results['tracks'][0]['extra']['spotify']['artistID'])}"
-                else:
-                    Queued.description += f"\nBy: {Results['tracks'][0]['author']}"
-            
             #** Format queued embed for playlists
-            else:
-                Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())} Tracks Added To Queue!",
-                                       description = f"{Results['playlist_info']['name']} - {len(Results['tracks'])} Tracks")
-            
-            #** Output requester name & tag in footer
-            Queued.set_footer(text=f"Requested By {interaction.user.display_name}#{interaction.user.discriminator}")
-            await interaction.response.send_message(embed=Queued, view=None)
+            Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())} Playlist Added To Queue!",
+                                   description = f"{Results['playlist_info']['name']} - {len(Results['tracks'])} Tracks")
         
         #** If URL Can't Be Loaded, Raise Error
         else:
             raise app_commands.CheckFailure("SongNotFound")
+        
+        #** Output requester name & tag in footer
+        Queued.set_footer(text=f"Requested By {interaction.user.display_name}#{interaction.user.discriminator}")
+        await interaction.followup.send(embed=Queued)
         
 
     @app_commands.guild_only()
@@ -424,9 +425,22 @@ class MusicCog(commands.Cog, name="Music"):
             
             pages = [copy.deepcopy(queueEmbed.to_dict()) for x in range(math.ceil(len(Player.queue)/10))]
             print(pages)
-
+            print(Player.current)
+            print(Player.queue)
+            
             #** Format body of each page of 
             body = "__**NOW PLAYING:**__\n"
+            
+            #** If Not Stream, Check If Has Spotify Data **
+            emoji = self.client.utils.get_emoji(Player.current.source_name.title())
+            if "spotify" in Player.current.extra.keys():
+
+                #** Format Data For Spotify Else Format And Add Data For SoundCloud Instead **
+                Artists = self.client.utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
+                body += f"{self.client.utils.get_emoji('Spotify')} [{Player.current['title']}]({Player.current['uri']})\nBy: {Artists}\n"
+            else:
+                body += f"{self.client.utils.get_emoji('Soundcloud')} [{Player.current['title']}]({Player.current['uri']})\nBy: {Player.current['author']}\n"
+            body += "--------------------\n__**UP NEXT:**__\n"
 
             #** Loop Through Queue **
             for i in range(-1, len(Player.queue)):

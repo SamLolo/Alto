@@ -26,13 +26,13 @@ class Spotify(object):
         self.logger = logging.getLogger("spotify")
 
         #** Get Spotify Tokens From Environment Variables **
-        self.ID = os.environ["SPOTIFY_CLIENT"]
-        self.Secret = os.environ["SPOTIFY_SECRET"]
+        self.CLIENT = "6d32b18995b542c59183be193900f1d5"
+        self.SECRET = os.environ["DEV_SPOTIFY_SECRET"]
 
         #** Setup Header For Authentication **
-        ClientData = self.ID+":"+self.Secret
-        AuthStr =  base64.urlsafe_b64encode(ClientData.encode()).decode()
-        self.AuthHead = {"Content-Type": "application/x-www-form-urlencoded", 'Authorization': 'Basic {0}'.format(AuthStr)}
+        clientStr = self.CLIENT+":"+self.SECRET
+        authStr =  base64.urlsafe_b64encode(clientStr.encode()).decode()
+        self.authHead = {'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': 'Basic {0}'.format(authStr)}
 
         #** Get An Initial Bot Token For API Calls **
         self.RefreshBotToken()
@@ -42,43 +42,43 @@ class Spotify(object):
 
         #** Request a Token From Spotify Using Client Credentials **
         self.logger.info("Refreshing Bot Token")
-        data = {'grant_type': 'client_credentials', 'redirect_uri': 'http://82.22.157.214:5000/', 'client_id': self.ID, 'client_secret': self.Secret}
+        data = {'grant_type': 'client_credentials', 'redirect_uri': 'http://82.22.157.214:5000/', 'client_id': self.CLIENT, 'client_secret': self.SECRET}
    
         self.logger.debug("New Request: https://accounts.spotify.com/api/token")
-        AuthData = requests.post("https://accounts.spotify.com/api/token", data, headers = {'Content-Type': 'application/x-www-form-urlencoded'})
+        response = requests.post("https://accounts.spotify.com/api/token", data, headers=self.authHead)
 
         #** Check If Request Was A Success **
-        while AuthData.status_code != 200:
+        while response.status_code != 200:
 
             #** Check If Rate Limit Has Been Applied **
-            if 429 == AuthData.status_code:
-                time = AuthData.headers['Retry-After']
-                self.logger.warning("Rate limited reached. Retrying in "+str(time)+" seconds.")
+            if 429 == response.status_code:
+                time = response.headers['Retry-After']
+                self.logger.warning(f"Rate limited reached! Retrying in {time} seconds.")
 
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug("New Request: https://accounts.spotify.com/api/token")
-                AuthData = requests.post("https://accounts.spotify.com/api/token", data, headers = {'Content-Type': 'application/x-www-form-urlencoded'})
+                response = requests.post("https://accounts.spotify.com/api/token", data, headers=self.authHead)
                 
             #** If Other Error Occurs, Raise Error **
             else:
-                self.logger.error("[RefreshBotToken] Unexpected Error Code '"+str(AuthData.status_code)+"'")
+                self.logger.error(f"[RefreshBotToken] Unexpected Error Code '{response.status_code}'")
                 self.logger.critical("Spotify Web API Connection Lost!")
                 return "UnexpectedError"
         
-        AuthData = AuthData.json()
-        self.BotToken = AuthData['access_token']
+        authData = response.json()
+        token = authData['access_token']
 
         #** Setup Header For Requests Using Client Credentials  **
-        self.BotHead = {'Accept': "application/json", 'Content-Type': "application/json", 'Authorization': "Bearer "+self.BotToken}
-        self.logger.info("Succesfully Fetched New Bot Token")
+        self.botHead = {'Accept': "application/json", 'Content-Type': "application/json", 'Authorization': f"Bearer {token}"}
+        self.logger.info("New bot token active!")
 
 
     def GetPlaylistSongs(self, PlaylistID: str):
 
         #** Get A Playlists Songs **
         self.logger.debug("New Request: https://api.spotify.com/v1/playlists/"+str(PlaylistID))
-        SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.BotHead)
+        SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.botHead)
 
         #** Check If Request Was A Success **
         while SongData.status_code != 200:
@@ -90,7 +90,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug("New Request: https://api.spotify.com/v1/playlists/"+str(PlaylistID))
-                SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.BotHead)
+                SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == SongData.status_code:
@@ -100,7 +100,7 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug("New Request: https://api.spotify.com/v1/playlists/"+str(PlaylistID))
-                SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.BotHead)
+                SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.botHead)
                 
             #** Check If Playlist Not Found, and Return "PlaylistNotFound" **
             elif 404 == SongData.status_code:
@@ -135,7 +135,7 @@ class Spotify(object):
 
         #** Get An Albums Songs **
         self.logger.debug('New Request: https://api.spotify.com/v1/albums/'+str(AlbumID))
-        AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.BotHead)
+        AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.botHead)
 
         #** Check If Request Was A Success **
         while AlbumData.status_code != 200:
@@ -147,7 +147,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug('New Request: https://api.spotify.com/v1/albums/'+str(AlbumID))
-                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.BotHead)
+                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == AlbumData.status_code:
@@ -157,7 +157,7 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug('New Request: https://api.spotify.com/v1/albums/'+str(AlbumID))
-                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.BotHead)
+                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.botHead)
                 
             #** Check If Album Not Found, and Return "AlbumNotFound" **
             elif 404 == AlbumData.status_code:
@@ -194,7 +194,7 @@ class Spotify(object):
 
         #** Get Information About A Song **
         self.logger.debug("New Request: https://api.spotify.com/v1/tracks/"+str(SongID))
-        Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.BotHead)
+        Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.botHead)
 
         #** Check If Request Was A Success **
         while Song.status_code != 200:
@@ -206,7 +206,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug("New Request: https://api.spotify.com/v1/tracks/"+str(SongID))
-                Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.BotHead)
+                Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Song.status_code:
@@ -216,7 +216,7 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug("New Request: https://api.spotify.com/v1/tracks/"+str(SongID))
-                Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.BotHead)
+                Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.botHead)
                 
             #** Check If Song Not Found, and Return "SongNotFound" **
             elif 404 == Song.status_code:
@@ -249,7 +249,7 @@ class Spotify(object):
         #** Request Audio Features For a List of Spotify IDs **
         SongIDs = ",".join(SongIDs)
         self.logger.debug("New Request: https://api.spotify.com/v1/audio-features?ids="+str(SongIDs))
-        Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.BotHead)
+        Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.botHead)
 
         #** Check If Request Was A Success **
         while Features.status_code != 200:
@@ -261,7 +261,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug("New Request: https://api.spotify.com/v1/audio-features?ids="+str(SongIDs))
-                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.BotHead)
+                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Features.status_code:
@@ -271,7 +271,7 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug("New Request: https://api.spotify.com/v1/audio-features?ids="+str(SongIDs))
-                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.BotHead)
+                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.botHead)
                 
             #** Check If Features Not Found, and Return "FeaturesNotFound" **
             elif 404 == Features.status_code:
@@ -361,7 +361,7 @@ class Spotify(object):
         #** Fetch Top Search Result From Spotify **
         Data = {'type': 'track', 'limit': '1', 'include_external': 'audio'}
         self.logger.debug('New Request: https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist)
-        Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.BotHead)
+        Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.botHead)
 
         #** Check If Request Was A Success **
         while Result.status_code != 200:
@@ -373,7 +373,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug('New Request: https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist)
-                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.BotHead)
+                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Result.status_code:
@@ -383,7 +383,7 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug('New Request: https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist)
-                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.BotHead)
+                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.botHead)
                 
             #** Check If Song Not Found, and Return "SongNotFound" **
             elif 404 == Result.status_code:
@@ -423,7 +423,7 @@ class Spotify(object):
         
         #** Requests Recommendations From Spotify With The Data Provided **
         self.logger.debug('New Request: https://api.spotify.com/v1/recommendations')
-        Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
+        Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.botHead)
 
         #** Check If Request Was A Success **
         while Recommendations.status_code != 200:
@@ -435,7 +435,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug('New Request: https://api.spotify.com/v1/recommendations')
-                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
+                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Recommendations.status_code:
@@ -445,7 +445,7 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug('New Request: https://api.spotify.com/v1/recommendations')
-                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
+                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.botHead)
                 
             #** Check If Recommendations Not Found, and Return "RecommendationsNotFound" **
             elif 404 == Recommendations.status_code:

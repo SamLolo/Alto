@@ -53,8 +53,13 @@ class UtilityCog(commands.Cog, name="Utility"):
         None
         """
         #** Calculate Time Difference Between DateTime Stored At Startup & Datetime Now
-        uptime = relativedelta(datetime.strptime(datetime.now().strftime("%m-%d %H:%M"), "%m-%d %H:%M"), datetime.strptime(self.client.startup.strftime("%m-%d %H:%M"), "%m-%d %H:%M"))
-        await interaction.response.send_message(f'*The bot has been online for:*\n`{uptime.months} Months, {uptime.days} Days, {uptime.hours} Hours & {uptime.minutes} Minutes`')
+        uptime = relativedelta(discord.utils.utcnow(), self.client.startup)
+        if uptime.years == 0:
+            await interaction.response.send_message(f'*The bot has been online for:*\n`{uptime.months} Months, {uptime.days} Days, {uptime.hours} Hours & {uptime.minutes} Minutes`')
+        elif uptime.years == 1:
+            await interaction.response.send_message(f'*The bot has been online for:*\n`{uptime.years} Year, {uptime.months} Months, {uptime.days} Days, {uptime.hours} Hours & {uptime.minutes} Minutes`')
+        else:
+            await interaction.response.send_message(f'*The bot has been online for:*\n`{uptime.years} Years, {uptime.months} Months, {uptime.days} Days, {uptime.hours} Hours & {uptime.minutes} Minutes`')
 
 
     @app_commands.command()

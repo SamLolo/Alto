@@ -97,7 +97,7 @@ class AccountCog(commands.Cog, name="Account"):
         #** Setup Base History Embed With Title, User's Colour & Profile Picture **
         HistoryEmbed = discord.Embed(title=interaction.user.display_name+"'s Listening History",
                                      colour=interaction.user.colour)
-        HistoryEmbed.set_thumbnail(url=interaction.user.avatar_url)
+        HistoryEmbed.set_thumbnail(url=interaction.user.avatar.url)
         
         #** If User Not In VC, Create New User Object **
         if not(interaction.user.voice) or not(interaction.user.voice.channel):
@@ -182,7 +182,7 @@ class AccountCog(commands.Cog, name="Account"):
             print("Got Recommendations")
         
         else:
-            raise commands.CheckFailure(message="History")
+            raise app_commands.CheckFailure(message="History")
 
         #** Check Tracks We're Fetched Correctly From Spotify API **
         if Tracks is not None:

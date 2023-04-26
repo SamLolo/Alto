@@ -7,96 +7,76 @@ import logging
 import mysql.connector
 
 
-#!-----------------------------SETUP LOGGING------------------------------------#
-
-
-logger = logging.getLogger("database")
-
-
-#!--------------------------------DATABASE CONNECTION---------------------------------#
-
-#** Get Connection Details **
-Host = os.environ["DATABASE_HOST"]
-User = os.environ["DATABASE_USER"]
-Schema = os.environ["DATABASE_TABLE"]
-Password = os.environ["DATABASE_PASS"]
-
-#** Connect To Database **
-try:
-    connection = mysql.connector.connect(host = Host,
-                                        database = Schema,
-                                        user = User,
-                                        password = Password)
-    
-    #** Setup Cursor and Output Successful Connection **                  
-    if connection.is_connected():
-        cursor = connection.cursor(buffered=True)
-        cursor.execute("SELECT database();")
-        logger.info("Database Connection Established!")
-    else:
-        logger.critical("Database Connection Failed!")
-
-except Exception as e:
-    logger.critical(f"Database Connection Failed!\nError: {e}")
-
-#** Delete Connection Details **
-del Host
-del User
-del Password
-
-
 #!--------------------------------DATABASE OPERATIONS-----------------------------------#
 
 
 class UserData():
     
     def __init__(self):
+        
+        #** Get Connection Details **
+        user = os.environ["DATABASE_USER"]
+        password = os.environ["DATABASE_PASS"]
+            
+        #** Create Connection Pool For Database **
+        self.pool = mysql.connector.pooling.MySQLConnectionPool(pool_name = "bot",
+                                                                pool_size = 5,
+                                                                host = "localhost",
+                                                                database = "alto",
+                                                                user = user,
+                                                                password = password)
 
-        #** Setup Objects **
-        self.cursor = cursor
-        self.connection = connection
+        #** Delete Connection Details **
+        del user
+        del password
+        
+        #** Get Logger For Database **
+        self.logger = logging.getLogger("database")
 
 
     def ensure_connection(self):
         
-        #** Check If Connection Still Exists **
-        if not(self.connection.is_connected):
-            
-            #** Attempt To Reconnect To The MySQL Server **
-            logger.warning("Database Connection Lost. Attempting To Reconnect!")
-            self.connection.reconnect(attempts=5, delay=3)
-            logger.info("Database Connection Established!")
+        try:
+            connection = self.pool.get_connection()
+            self.logger.debug("New connection established!")
+            cursor = connection.cursor(buffered=True)
+            return (connection, cursor)
+        
+        except Exception as e:
+            self.logger.error("Failed to get new connection from pool!")
+            self.logger.exception(e)
+            return (None, None)
 
 
     def GetUser(self, discordID: int):
         
         #** Ensure Database Connection
-        self.ensure_connection()
+        connection, cursor = self.ensure_connection()
 
         #** Get Info About Discord User From Database **
-        self.cursor.execute("SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '"+str(discordID)+"';")
-        Data = self.cursor.fetchone()
-        self.connection.commit()
+        cursor.execute(f"SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '{discordID}';")
+        result = cursor.fetchone()
+        connection.close()
 
-        #** Format UserData To Dictionary & Return Values **
-        if Data != None:
-            Dict = {"data": {"discordID": int(Data[0]),
-                             "name": Data[1],
-                             "discriminator": Data[2],
-                             "avatar": Data[3],
-                             "joined": Data[5],
-                             "songs": Data[4]},
-                    "recommendations": {"songcount": Data[7],
-                                        "Popularity": [Data[8], Data[9], Data[10]],
-                                        "Acoustic": [Data[11], Data[12], Data[13]],
-                                        "Dance": [Data[14], Data[15], Data[16]],
-                                        "Energy": [Data[17], Data[18], Data[19]],
-                                        "Instrument": [Data[20], Data[21], Data[22]],
-                                        "Live": [Data[23], Data[24], Data[25]],
-                                        "Loud": [Data[26], Data[27], Data[28]],
-                                        "Speech": [Data[29], Data[30], Data[31]],
-                                        "Valance": [Data[32], Data[33], Data[34]]}}
-            return Dict
+        #** Format Userdata To Dictionary & Return Values **
+        if result != None:
+            data = {"result": {"discordID": int(result[0]),
+                               "name": result[1],
+                               "discriminator": result[2],
+                               "avatar": result[3],
+                               "joined": result[5],
+                               "songs": result[4]},
+                    "recommendations": {"songcount": result[7],
+                                        "Popularity": [result[8], result[9], result[10]],
+                                        "Acoustic": [result[11], result[12], result[13]],
+                                        "Dance": [result[14], result[15], result[16]],
+                                        "Energy": [result[17], result[18], result[19]],
+                                        "Instrument": [result[20], result[21], result[22]],
+                                        "Live": [result[23], result[24], result[25]],
+                                        "Loud": [result[26], result[27], result[28]],
+                                        "Speech": [result[29], result[30], result[31]],
+                                        "Valance": [result[32], result[33], result[34]]}}
+            return data
         else:
             return None
             
@@ -104,176 +84,172 @@ class UserData():
     def GetHistory(self, discordID: int):
         
         #** Ensure Database Connection
-        self.ensure_connection()
+        connection, cursor = self.ensure_connection()
 
         #** Get Users Listening History From Database, Ordered By Most Recent First **
-        Sql = ("SELECT history.SongID, history.ListenedAt, cache.SoundcloudURL, cache.SpotifyID, cache.Name, "
-               "cache.Artists, cache.ArtistID, cache.Popularity "
+        sql = ("SELECT history.SongID, history.ListenedAt, cache.SoundcloudURL, cache.SpotifyID, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity "
                "FROM history "
                "INNER JOIN cache ON history.SongID = cache.SoundcloudID "
-               "WHERE DiscordID = '"+str(discordID)+"' "
+              f"WHERE DiscordID = '{discordID}' "
                "ORDER BY ListenedAt ASC;")
-        self.cursor.execute(Sql)
-        History = self.cursor.fetchall()
-        self.connection.commit()
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        connection.close()
 
         #** Create Empty List & Iterate Through Returned Rows **
-        List = []
-        for Tuple in History:
+        history = []
+        for row in result:
 
             #** Create Dictionary Of Song Data From Returned Tuple **
-            ID = int(Tuple[0])
-            Dict = {"ID": ID,
-                    "ListenedAt": Tuple[1],
-                    "SpotifyID": Tuple[3],
-                    "Name": Tuple[4],
-                    "Artists": Tuple[5].replace("'", "").split(", "),
-                    "URI": Tuple[2]}
+            data = {"ID": int(row[0]),
+                    "ListenedAt": row[1],
+                    "SpotifyID": row[3],
+                    "Name": row[4],
+                    "Artists": row[5].replace("'", "").split(", "),
+                    "URI": row[2]}
 
             #** If Song Has Spotify ID, Add Spotify Data As Well **
-            if Tuple[3] != None:
-                Dict['ArtistIDs'] = Tuple[6].replace("'", "").split(", ")
-                Dict['Popularity'] = Tuple[7]
+            if row[3] != None:
+                data['ArtistIDs'] = row[6].replace("'", "").split(", ")
+                data['Popularity'] = row[7]
       
             #** Add Dictionary To List **
-            List.append(Dict)
+            history.append(data)
 
         #** Return List Of Ordered Song Dictionaries **
-        return List
+        return history
 
 
-    def SaveUserDetails(self, User: dict):
+    def SaveUserDetails(self, user: dict):
         
         #** Ensure Database Connection
-        self.ensure_connection()
+        connection, cursor = self.ensure_connection()
 
         #** Write Data About User To Users Table / Update Row If Already Exists **
-        Data = (str(User['data']['discordID']), User['data']['name'], User['data']['discriminator'], User['data']['avatar'], User['data']['songs'], User['data']['joined'])
-        self.cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s, %s);", Data)
-        self.connection.commit()
+        userdata = user['data']
+        data = (str(userdata['discordID']), userdata['name'], userdata['discriminator'], userdata['avatar'], userdata['songs'], userdata['joined'])
+        cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s, %s);", data)
 
         #** Write Data About User Recommendation Data To Recommendations Table / Update If Already Exists **
-        Data = (User['data']['discordID'], User['recommendations']['songcount'], 
-                User['recommendations']['Popularity'][0], User['recommendations']['Popularity'][1], User['recommendations']['Popularity'][2],
-                User['recommendations']['Acoustic'][0], User['recommendations']['Acoustic'][1], User['recommendations']['Acoustic'][2],
-                User['recommendations']['Dance'][0], User['recommendations']['Dance'][1], User['recommendations']['Dance'][2],
-                User['recommendations']['Energy'][0], User['recommendations']['Energy'][1], User['recommendations']['Energy'][2],
-                User['recommendations']['Instrument'][0], User['recommendations']['Instrument'][1], User['recommendations']['Instrument'][2],
-                User['recommendations']['Live'][0], User['recommendations']['Live'][1], User['recommendations']['Live'][2],
-                User['recommendations']['Loud'][0], User['recommendations']['Loud'][1], User['recommendations']['Loud'][2],
-                User['recommendations']['Speech'][0], User['recommendations']['Speech'][1], User['recommendations']['Speech'][2],
-                User['recommendations']['Valance'][0], User['recommendations']['Valance'][1], User['recommendations']['Valance'][2])
-        self.cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", Data)
-        self.connection.commit()
+        recommendations = user['recommendations']
+        data = (userdata['discordID'], recommendations['songcount'], 
+                recommendations['Popularity'][0], recommendations['Popularity'][1], recommendations['Popularity'][2],
+                recommendations['Acoustic'][0], recommendations['Acoustic'][1], recommendations['Acoustic'][2],
+                recommendations['Dance'][0], recommendations['Dance'][1], recommendations['Dance'][2],
+                recommendations['Energy'][0], recommendations['Energy'][1], recommendations['Energy'][2],
+                recommendations['Instrument'][0], recommendations['Instrument'][1], recommendations['Instrument'][2],
+                recommendations['Live'][0], recommendations['Live'][1], recommendations['Live'][2],
+                recommendations['Loud'][0], recommendations['Loud'][1], recommendations['Loud'][2],
+                recommendations['Speech'][0], recommendations['Speech'][1], recommendations['Speech'][2],
+                recommendations['Valance'][0], recommendations['Valance'][1], recommendations['Valance'][2])
+        cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", data)
+        connection.commit()
+        connection.close()
 
 
-    def RemoveData(self, discordID: int, Tables: list):
+    def RemoveData(self, discordID: int, tables: list):
         
         #** Ensure Database Connection
-        self.ensure_connection()
+        connection, cursor = self.ensure_connection()
 
         #** Remove Row From Each Specified Table With Specified Discord ID **
-        for Table in Tables:
-            self.cursor.execute("DELETE FROM "+Table+" WHERE DiscordID='"+str(discordID)+"';")
-            logger.debug(f"Table '{Table}' deleted for user: {discordID}!")
-        self.connection.commit()
+        for table in tables:
+            cursor.execute(f"DELETE FROM {table} WHERE DiscordID='{discordID}';")
+            self.logger.debug(f"Table '{table}' deleted for user: {discordID}!")
+        connection.commit()
+        connection.close()
 
 
-    def AddSongHistory(self, discordID: int, History: dict, OutPointer: int):
+    def AddSongHistory(self, discordID: int, history: dict, outPointer: int):
         
         #** Ensure Database Connection
-        self.ensure_connection()
+        connection, cursor = self.ensure_connection()
+
 
         #** Delete All Rows Older Than Oldest Song In Song History & Get Amount Deleted**
-        Oldest = History[OutPointer]["ListenedAt"]
-        self.cursor.execute("DELETE FROM history WHERE ListenedAt < '"+str(Oldest)+"';")
-        DeletedRows = self.cursor.execute("SELECT ROW_COUNT();")
+        oldest = history[outPointer]["ListenedAt"]
+        cursor.execute(f"DELETE FROM history WHERE ListenedAt < '{oldest}';")
+        deletedRows = cursor.execute("SELECT ROW_COUNT();")
 
         #** If No Rows Deleted, Set Deleted Rows To Length Of List So All Songs Are Added. Using REPLACE INTO Avoids Errors For Duplicates, **
         #** As Columns With The Same Primary Key Are Just OverWritten **
-        if DeletedRows == None:
-            DeletedRows = len(History)
+        if deletedRows is None:
+            deletedRows = len(history)
     
         #** Format SQL Execute String **
-        for i in range(DeletedRows):
-            Data = (str(discordID), History[i]['ID'], History[i]["ListenedAt"])
-            self.cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", Data)
+        for i in range(deletedRows):
+            data = (str(discordID), history[i]['ID'], history[i]["ListenedAt"])
+            cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
 
         #** Write Changes To Database **
-        self.connection.commit()
+        connection.commit()
+        connection.close()
 
 
-    def AddPartialSongCache(self, Info: dict):
+    def cacheSong(self, info: dict):
         
-        #** Ensure Database Connection
-        self.ensure_connection()
+        # Get database connection from pool
+        connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning(f"Failed to cache song with {info['source']} ID '{info['id']}' due to missing database connection!")
+            return None
 
-        #** Create Tuple With Formatted Data Inside **
-        Values = (str(Info['SoundcloudID']), Info['SoundcloudURL'], Info['Name'], str(Info['Artists']).strip("[]"))
-        
-        #** Insert New Row Into Database. Only Called When New Row Is Needed **
-        ToExecute = "INSERT INTO cache (SoundcloudID, SoundcloudURL, Name, Artists) VALUES (%s, %s, %s, %s);"
-        self.cursor.execute(ToExecute, Values)
-        self.connection.commit()
-        logger.info("Partial Data Added To Cache")
-
-
-    def AddFullSongCache(self, Info: dict):
-        
-        #** Ensure Database Connection
-        self.ensure_connection()
-
-        #** Create Tuple With Formatted Data Inside **
-        Values = (str(Info['SoundcloudID']), Info['SoundcloudURL'], Info['SpotifyID'], Info['Name'], str(Info['Artists']).strip("[]"), str(Info['ArtistID']).strip("[]"), 
-                  Info['Album'], Info['AlbumID'], Info['Art'], str(Info['Colour']), Info['Release'], Info['Popularity'], Info['Explicit'], Info['Preview'])
-        
-        #** Write Data To Database Cache Replacing Any Old Columns Of Data With Same Primary Key **
-        ToExecute = "REPLACE INTO cache (SoundcloudID, SoundcloudURL, SpotifyID, Name, Artists, ArtistID, Album, AlbumID, Art, Colour, ReleaseDate, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
-        self.cursor.execute(ToExecute, Values)
-        self.connection.commit()
-        logger.info("Full Data Added To Cache")
-
-
-    def SearchCache(self, ID: str):
-        
-        #** Ensure Database Connection
-        self.ensure_connection()
-
-        if len(ID) == 22:
-            #** Get Song From Database Cache Using Spotify ID **
-            self.cursor.execute("SELECT * FROM cache WHERE SpotifyID = '"+str(ID)+"';")
-            Song = self.cursor.fetchone()
-
+        # Prepare sql and values for inserting given information into database
+        if info['source'] == "spotify":
+            sql = "INSERT INTO cache (Source, ID, URL, Name, Artists, Track, ArtistID, Album, AlbumID, Art, Colour, Release, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+            values = (info['source'], info['id'], info['url'], info['name'], info['artist'], info['track'], info['artistID'], info['album'], info['albumID'], info['art'], info['colour'], info['release'], info['popularity'], info['explicit'], info['preview'])
+        elif info['source'] == "soundcloud":
+            sql = "INSERT INTO cache (Source, ID, URL, Name, Artists, Track) VALUES (%s, %s, %s, %s, %s, %s);"
+            values = (info['source'], info['id'], info['url'], info['name'], info['author'], info['track'])
         else:
-            #** Get Song From Database Cache Using Soundcloud ID **
-            self.cursor.execute("SELECT * FROM cache WHERE SoundcloudID = '"+str(ID)+"';")
-            Song = self.cursor.fetchone()
+            self.logger.warning(f"Unknown source '{info['source']}' encountered whilst trying to cache song!")
+            return None   
+        
+        # Execute SQL query and return connection to available pool
+        cursor.execute(sql, values)
+        self.logger.debug(f"New insert into cache for {info['source']} ID: {info['id']}")
+        connection.commit()
+        connection.close()
+        self.logger.debug("Connection returned to pool!")
 
-        #** Commit To Refresh Connection & Format Full Data Into A Dict To Return **
-        self.connection.commit()
-        if Song != None:
-            if Song[2] != None:
-                RGBList = Song[9].strip("()").split(", ")
-                Song = {Song[2]: {"SoundcloudID": int(Song[0]),
-                        "SoundcloudURL": Song[1],
-                        "Name": Song[3],
-                        "Artists": Song[4].replace("'", "").split(", "),
-                        "ArtistID": Song[5].replace("'", "").split(", "),
-                        "Album": Song[6],
-                        "AlbumID": Song[7],
-                        "Art": Song[8],
-                        "Colour": (int(RGBList[0]), int(RGBList[1]), int(RGBList[2])),
-                        "Release": Song[10],
-                        "Popularity": Song[11],
-                        "Explicit": Song[12],
-                        "Preview": Song[13],
-                        "LastUpdated": Song[14],
-                        "PartialCache": False}}
+
+    def searchCache(self, query: str):
+        
+        # Get database connection from pool
+        connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning("Failed to search cache due to missing database connection!")
+            return None
+
+        # Query cache table and return connection to available pool
+        cursor.execute(f"SELECT * FROM cache WHERE (ID = '{query}') OR (URL = '{query}');")
+        result = cursor.fetchone()
+        connection.close()
+
+        #** Close Connection Once Finished & Format Full Data Into A Dict To Return **
+        if result is None:
+            return None
             
-            #** If Data Doesn't Have Spotify ID, Format Partial Data Into Dict To Return **
-            else:
-                Song = {Song[0]: {"SoundcloudURL": Song[1],
-                                "Name": Song[3],
-                                "Artists": Song[4].replace("'", "").split(", "),
-                                "PartialCache": True}}
-        return Song
+        # Format base data (for all source types) into a dictionary 
+        data = {"cacheID": int(result[0]),
+                "source": result[1],
+                "id": result[2],
+                "url": result[3],
+                "name": result[4],
+                "artists": result[5].replace("'", "").split(", "),
+                "track": result[6],
+                "updated": result[16]}
+        
+        # If source is spotify, add aditional track metadata
+        if data['source'] == "Spotify":
+            additonal = {"artistID": result[7].replace("'", "").split(", "),
+                         "album": result[8],
+                         "albumID": result[9],
+                         "art": result[10],
+                         "colour": tuple(result[11]),
+                         "release": result[12],
+                         "popularity": result[13],
+                         "explicit": result[14],
+                         "preview": result[15]}
+            data.update(additonal)
+        return data
