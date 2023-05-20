@@ -12,6 +12,7 @@ from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
 from lavalink.events import TrackEndEvent, TrackStartEvent
+from Classes.Database import Database
 
 
 #!------------------------IMPORT CUSTOM SOURCES-----------------#
@@ -82,10 +83,14 @@ class MusicCog(commands.Cog, name="Music"):
         if not hasattr(client, 'lavalink'):
             self.logger.info("No Previous Lavalink Client Found. Creating New Connection...")
             client.lavalink = lavalink.Client(client.user.id)
+            client.lavalink.logger = self.logger
             client.lavalink.add_node('127.0.0.1', 2333, 'youshallnotpass', 'eu', name='default-node')
             client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
-            client.logger.debug("Lavalink listener added")
+            self.logger.debug("Lavalink listener added")
             self.logger.info("New Client Registered")
+            
+            #** Add Datbase Connection for Lavalink
+            client.lavalink.database = Database(pool="lavalink", size=3)
         else:
             self.logger.info("Found Previous Lavalink Connection")
 
@@ -233,28 +238,28 @@ class MusicCog(commands.Cog, name="Music"):
         #**-------------Add Listening History-------------**#
 
         #** Check If Track Should Be Added To History & Fetch Voice Channel**
-        await asyncio.sleep(5)
-        voice = event.player.fetch("Voice")
+        #await asyncio.sleep(5)
+        #voice = event.player.fetch("Voice")
 
         #** Get List Of Members In Voice Channel **
-        users = []
-        for member in voice.members:
-            if member.id != 803939964092940308:
-                users.append(member.id)
+        #users = []
+        #for member in voice.members:
+        #    if member.id != 803939964092940308:
+        #        users.append(member.id)
 
         #** Check Old Users Stored In Players Are Still Listening, If Not Teardown User Object **
-        userDict = event.player.fetch('Users')
-        for discordID, user in userDict.items():
-            if not(int(discordID) in users):
-                await user.save()
-                userDict.pop(discordID)
-            else:
-                users.remove(int(discordID))
+        #userDict = event.player.fetch('Users')
+        #for discordID, user in userDict.items():
+        #    if not(int(discordID) in users):
+        #        await user.save()
+        #        userDict.pop(discordID)
+        #    else:
+        #        users.remove(int(discordID))
         
         #** Add New User Objects For Newly Joined Listeners & Store New User Dict Back In Player **
-        for discordID in users:
-            userDict[str(discordID)] = self.client.userClass.User(self.client, discordID)
-        event.player.store('Users', userDict)
+        #for discordID in users:
+        #    userDict[str(discordID)] = self.client.userClass.User(self.client, discordID)
+        #event.player.store('Users', userDict)
 
         #** Format Current Track Data Into Dict To Be Added To History **
         #uri = event.track['identifier'].split("/")

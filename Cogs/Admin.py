@@ -15,8 +15,8 @@ from discord.ext import commands
 
 import Classes.Users
 import Classes.Utils
-import Classes.Database
 import Classes.MusicUtils
+from Classes.Database import Database
 
 
 #!------------------------ADMIN COG-----------------------#
@@ -32,11 +32,7 @@ class AdminCog(commands.Cog, name="Admin"):
         
         #** Instanciate Classes If One Or More Attributes Missing **
         if not hasattr(client, 'database') or not hasattr(client, 'music') or not hasattr(client, 'utils') or not hasattr(client, 'userClass'):
-            try:
-                client.database = Classes.Database.UserData()
-            except Exception as e:
-                print(e)
-                self.logger.warning("Database Functionality Unavailable!")
+            client.database = Database()
             client.music = Classes.MusicUtils.SongData()
             client.utils = Classes.Utils.Utility(client)
             client.userClass = Classes.Users

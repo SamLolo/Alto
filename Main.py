@@ -45,17 +45,22 @@ class ColouredFormat(logging.Formatter):
         logFormat = "%(asctime)s " + self.levelFormats.get(record.levelno)
         
         if record.name.startswith("discord") and not(record.name == "discord.errors"):
-            logFormat += self.colours['light_purple'] + " %(name)s"+ self.reset +": %(message)s"
+            logFormat += self.colours['light_purple'] + " %(name)s"
         elif record.name.startswith("spotify"):
-            logFormat += self.colours['light_green'] + " %(name)s"+ self.reset +": %(message)s"
+            logFormat += self.colours['light_green'] + " %(name)s"
         elif record.name.startswith("lavalink"):
-            logFormat += self.colours['light_blue'] + " %(name)s"+ self.reset +": %(message)s"
+            logFormat += self.colours['light_blue'] + " %(name)s"
         elif record.name.startswith("database"):
-            logFormat += self.colours['light_orange'] + " %(name)s"+ self.reset +": %(message)s"
+            logFormat += self.colours['light_orange'] + " %(name)s"
         elif "error" in record.name:
-            logFormat += self.colours['dark_red'] + " %(name)s"+ self.reset +": %(message)s"
+            logFormat += self.colours['dark_red'] + " %(name)s"
         else:
-            logFormat += self.colours['grey'] + " %(name)s"+ self.reset +": %(message)s"
+            logFormat += self.colours['grey'] + " %(name)s"
+            
+        if record.levelno == logging.CRITICAL:
+            logFormat += self.reset +": "+ self.colours['red'] +"%(message)s"+ self.reset
+        else:
+            logFormat += self.reset +": %(message)s"
         
         formatter = logging.Formatter(logFormat, datefmt="%d-%m-%Y %H:%M:%S")
         return formatter.format(record)

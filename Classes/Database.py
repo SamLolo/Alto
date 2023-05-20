@@ -10,41 +10,64 @@ import mysql.connector
 #!--------------------------------DATABASE OPERATIONS-----------------------------------#
 
 
-class UserData():
+class Database():
     
-    def __init__(self):
+    def __init__(self, pool="main", size=5):
         
-        #** Get Connection Details **
+        # Setup database logger
+        self.logger = logging.getLogger("database")
+            
+        # Create connection pool for database
         user = os.environ["DATABASE_USER"]
         password = os.environ["DATABASE_PASS"]
-            
-        #** Create Connection Pool For Database **
-        self.pool = mysql.connector.pooling.MySQLConnectionPool(pool_name = "bot",
-                                                                pool_size = 5,
-                                                                host = "localhost",
-                                                                database = "alto",
-                                                                user = user,
-                                                                password = password)
-
-        #** Delete Connection Details **
+        try:
+            self.logger.info(f"Attempting to create new database pool '{pool}' of size {size}")
+            self.pool = mysql.connector.pooling.MySQLConnectionPool(pool_name = pool,
+                                                                    pool_size = size,
+                                                                    host = "localhost",
+                                                                    database = "alto",
+                                                                    user = user,
+                                                                    password = password)
+        except mysql.connector.errors.DatabaseError as failure:
+            self.logger.error(f"Database connection failed with error: {failure}")
+            self.connected = False
+            self.logger.critical("Database functionality unavailable!")
+        except Exception as error:
+            self.logger.exception(error)
+            self.connected = False
+            self.logger.critical("Database functionality unavailable!")
+        else:
+            self.connected = True
+            self.logger.info("New database pool created!")
+        
+        # Use parameter to keep track of attempts to create new database connection from pool
         del user
         del password
+        self.failures = 0
+        self.max_attempts = 3
         
-        #** Get Logger For Database **
-        self.logger = logging.getLogger("database")
-
 
     def ensure_connection(self):
         
-        try:
-            connection = self.pool.get_connection()
-            self.logger.debug("New connection established!")
-            cursor = connection.cursor(buffered=True)
-            return (connection, cursor)
-        
-        except Exception as e:
-            self.logger.error("Failed to get new connection from pool!")
-            self.logger.exception(e)
+        # If pool exists, try to create a new database connection
+        if self.connected:
+            try:
+                connection = self.pool.get_connection()
+                self.logger.debug("New connection established!")
+                cursor = connection.cursor(buffered=True)
+                self.failures = 0
+                return (connection, cursor)
+            # If error occurs, record new failed attempt & take database offline if max attempts reached
+            except Exception as e:
+                self.logger.error("Failed to get new connection from pool!")
+                self.logger.exception(e)
+                if self.failures == self.max_attempts:
+                    self.connected = False
+                    self.logger.critical("Maximum connection attempts reached! Database functionality is now disabled!")
+                self.failures += 1
+                return (None, None)
+        # If pool has failed, automatically return no connection
+        else:
             return (None, None)
 
 
@@ -147,24 +170,27 @@ class UserData():
         connection.close()
 
 
-    def RemoveData(self, discordID: int, tables: list):
+    def removeData(self, discordID: int, tables: list):
         
-        #** Ensure Database Connection
+        # Get database connection from pool
         connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning(f"Failed to delete tables '{', '.join(tables)}' for discordID '{discordID}' due to missing database connection!")
+            return None
 
-        #** Remove Row From Each Specified Table With Specified Discord ID **
+        # Remove user entry from each table and return database connection to pool
         for table in tables:
             cursor.execute(f"DELETE FROM {table} WHERE DiscordID='{discordID}';")
             self.logger.debug(f"Table '{table}' deleted for user: {discordID}!")
         connection.commit()
         connection.close()
-
+        self.logger.debug("Connection returned to pool!")
+        
 
     def AddSongHistory(self, discordID: int, history: dict, outPointer: int):
         
         #** Ensure Database Connection
         connection, cursor = self.ensure_connection()
-
 
         #** Delete All Rows Older Than Oldest Song In Song History & Get Amount Deleted**
         oldest = history[outPointer]["ListenedAt"]
@@ -193,18 +219,32 @@ class UserData():
         if connection is None:
             self.logger.warning(f"Failed to cache song with {info['source']} ID '{info['id']}' due to missing database connection!")
             return None
+        
+        # Reformat python lists into strings
+        if type(info['artists']) is list:
+            info['artists'] = ", ".join(info['artists'])
+        if 'artistID' in info.keys():
+            info['artistID'] = ", ".join(info['artistID'])
+        if 'colour' in info.keys() and info['colour'] is not None:
+            info['colour'] = ", ".join(info['colour'])
+            
+        # Replace N/A with None
+        if 'explicit' in info.keys() and info['explicit'] == "N/A":
+            info['explicit'] = None
 
         # Prepare sql and values for inserting given information into database
         if info['source'] == "spotify":
-            sql = "INSERT INTO cache (Source, ID, URL, Name, Artists, Track, ArtistID, Album, AlbumID, Art, Colour, Release, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
-            values = (info['source'], info['id'], info['url'], info['name'], info['artist'], info['track'], info['artistID'], info['album'], info['albumID'], info['art'], info['colour'], info['release'], info['popularity'], info['explicit'], info['preview'])
+            sql = "INSERT INTO cache (Source, ID, URL, Name, Artists, Duration, Track, ArtistID, Album, AlbumID, Art, Colour, `Release`, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+            values = (info['source'], info['id'], info['url'], info['name'], info['artists'], info['duration'], info['track'], info['artistID'], info['album'], info['albumID'], info['art'], info['colour'], info['release'], info['popularity'], info['explicit'], info['preview'])
         elif info['source'] == "soundcloud":
-            sql = "INSERT INTO cache (Source, ID, URL, Name, Artists, Track) VALUES (%s, %s, %s, %s, %s, %s);"
-            values = (info['source'], info['id'], info['url'], info['name'], info['author'], info['track'])
+            sql = "INSERT INTO cache (Source, ID, URL, Name, Artists, Duration, Track) VALUES (%s, %s, %s, %s, %s, %s, %s);"
+            values = (info['source'], info['id'], info['url'], info['name'], info['artists'], info['duration'], info['track'])
         else:
             self.logger.warning(f"Unknown source '{info['source']}' encountered whilst trying to cache song!")
+            connection.close()
+            self.logger.debug("Connection returned to pool!")
             return None   
-        
+
         # Execute SQL query and return connection to available pool
         cursor.execute(sql, values)
         self.logger.debug(f"New insert into cache for {info['source']} ID: {info['id']}")
@@ -218,7 +258,7 @@ class UserData():
         # Get database connection from pool
         connection, cursor = self.ensure_connection()
         if connection is None:
-            self.logger.warning("Failed to search cache due to missing database connection!")
+            self.logger.warning(f"Failed to search cache with query '{query}' due to missing database connection!")
             return None
 
         # Query cache table and return connection to available pool
@@ -226,7 +266,7 @@ class UserData():
         result = cursor.fetchone()
         connection.close()
 
-        #** Close Connection Once Finished & Format Full Data Into A Dict To Return **
+        # Check if any results were found
         if result is None:
             return None
             
@@ -237,19 +277,22 @@ class UserData():
                 "url": result[3],
                 "name": result[4],
                 "artists": result[5].replace("'", "").split(", "),
-                "track": result[6],
-                "updated": result[16]}
+                "duration": result[6],
+                "track": result[7],
+                "updated": result[17]}
         
         # If source is spotify, add aditional track metadata
-        if data['source'] == "Spotify":
-            additonal = {"artistID": result[7].replace("'", "").split(", "),
-                         "album": result[8],
-                         "albumID": result[9],
-                         "art": result[10],
-                         "colour": tuple(result[11]),
-                         "release": result[12],
-                         "popularity": result[13],
-                         "explicit": result[14],
-                         "preview": result[15]}
-            data.update(additonal)
+        if data['source'] == "spotify":
+            data.update({"artistID": result[8].replace("'", "").split(", "),
+                         "album": result[9],
+                         "albumID": result[10],
+                         "art": result[11],
+                         "release": result[13],
+                         "popularity": result[14],
+                         "explicit": result[15],
+                         "preview": result[16]})
+            if result[12] is not None:
+                data["colour"] = tuple(result[12])
+            else:
+                data["colour"] = None
         return data
