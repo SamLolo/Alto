@@ -4,6 +4,7 @@
 
 import random
 from datetime import datetime
+from discord.ext import commands
 
 
 #!------------------------SONG HISTORY QUEUE-----------------------!#
@@ -11,86 +12,36 @@ from datetime import datetime
 
 class SongHistory(object):
     
-    def __init__(self, DiscordID):
-
+    def __init__(self, discordID: int):
         super(SongHistory, self).__init__()
 
-        #** Fetch Last Queue Session From Database, Returns List Of Dictionaries **
-        self.History = self.client.database.GetHistory(DiscordID)
-        
-        #** Create Array Of SongIDs **
-        self.array = []
-        for dict in self.History:
-            self.array.append(dict['ID'])
-
-        #** Setup Pointers, Defining The MaxSize & Setting Full To False
-        self.inpointer = 0
-        self.outpointer = 0
-        self.maxsize = 19
-        if len(self.array) == 20:
-            self.full = True
-        else:
-            self.full = False
-
-        
-    def check_empty(self):
-        
-        #** Check Queue Isn't Full & Pointers Aren't The Same **
-        return (not(self.full) and self.outpointer == self.inpointer)
-        
-        
-    def check_full(self):
-        
-        #** Check If Queue Is Full & Pointers Are The Same **
-        return (self.full and self.inpointer == self.outpointer)
+        # Fetch current song history from database
+        self.history = self.client.database.getHistory(discordID)
+        self.maxsize = 20
         
 
-    def addSong(self, data):
+    def addSongHistory(self, data: dict):
         
-        #** Check If Queue Is Full **
-        if not(self.check_full()):
+        # If queue is full, clear song from history first
+        if len(self.history) < self.maxsize:
+            self.clearSong()
             
-            #** Add Value To Array & Data To History & Increment In-Pointer **
-            ID = list(data.values())[0]
-            if len(self.array) == self.maxsize:
-                self.array[self.inpointer] = ID
-                self.History[self.inpointer] = data
-            else:
-                self.array.append(ID)
-                self.History.append(data)
-            if self.inpointer == self.maxsize:
-                self.inpointer = 0
-            else:
-                self.inpointer += 1
-
-            print("Song History Added!")
-
-            #** Set Full To True If Same As OutPointer **
-            if self.inpointer == self.outpointer and len(self.array) == self.maxsize:
-                self.full = True
+        # Add new song data to history array
+        self.history.insert(0, data)
+        self.client.logger.debug(f"Song added to history for user '{self.discord}'!")
         
 
     def clearSong(self):
         
-        #** Check If Queue Is Empty **
-        if not(self.check_empty()):
+        # Check if queue is empty and return none if true
+        if not(len(self.history) == 0):
             
-            #** Pop Data Point From History Array & Increment Out Pointer **
-            data = self.History.pop(self.outpointer)
-            if self.outpointer == self.maxsize:
-                self.outpointer = 0
-            else:
-                self.outpointer += 1
-
-            print("Song History Removed")
-
-            #** Set Full To False If Currently True & Return Removed Data Point **
-            if self.full:
-                self.full = False
+            # Remove oldest song in queue and return data of song just removed
+            data = self.history.pop(-1)
+            self.client.logger.debug(f"Song removed from history for user '{self.discord}'!")
             return data
-            
-        #** Return None If No Value Removed **    
         else:
+            self.client.logger.warning(f"Attempted to remove history from empty queue! (User: {self.discord})")
             return None
         
 
@@ -99,18 +50,19 @@ class SongHistory(object):
 
 class User(SongHistory):
     
-    def __init__(self, client, DiscordID):
+    def __init__(self, client: commands.Bot, discordID: int):
         
         #** Setup Discord Client object & Instantiate Music & Database Modules **
         self.client = client
+        self.discord = discordID
 
         #** Initialise Listening History Classe **
-        super(User, self).__init__(DiscordID)
+        super(User, self).__init__(discordID)
         
         #** Get User Dictionary **
-        self.user = self.client.database.GetUser(DiscordID)
+        self.user = self.client.database.GetUser(discordID)
         if self.user == None:
-            discordUser = self.client.get_user(DiscordID)
+            discordUser = self.client.get_user(discordID)
             self.user = {"data": {"discordID": int(discordUser.id),
                                   "name": discordUser.name,
                                   "discriminator": discordUser.discriminator,
@@ -132,14 +84,14 @@ class User(SongHistory):
     async def save(self):
         
         #** Send Data To Database To Be Saved **
-        self.client.database.AddSongHistory(self.user['data']['discordID'], self.History, self.outpointer)
-        self.client.database.SaveUserDetails(self.user)
+        self.client.database.saveHistory(self.user['data']['discordID'], self.History, self.outpointer)
+        #self.client.database.SaveUserDetails(self.user)
         
     
     async def incrementHistory(self, TrackData):
         
         #** If Queue Is Currently Full, Clear Oldest Song From Queue **
-        if self.check_full():
+        if len(self.history) < self.maxsize:
             OldSong = self.clearSong()
             
             #** Check If OldSong Has A Spotify ID & Get Audio Features **
@@ -151,13 +103,13 @@ class User(SongHistory):
                 else:
                     #** Create Conversions Dict Between Recommendations Data & Feature Keys From Request **
                     Conversions = {'Acoustic':'acousticness', 
-                                'Dance': 'danceability',
-                                'Energy': 'energy',
-                                'Instrument': 'instrumentalness',
-                                'Live': 'liveness',
-                                'Loud': 'loudness',
-                                'Speech': 'speechiness',
-                                'Valance': 'valence'}
+                                   'Dance': 'danceability',
+                                   'Energy': 'energy',
+                                   'Instrument': 'instrumentalness',
+                                   'Live': 'liveness',
+                                   'Loud': 'loudness',
+                                   'Speech': 'speechiness',
+                                   'Valance': 'valence'}
                     
                     #** Get Song Count For Recommendations **
                     SongCount = self.user['recommendations']['songcount']
@@ -188,7 +140,7 @@ class User(SongHistory):
                 self.user['data']['songs'] += 1
 
         #** Add New Song To Queue **
-        self.addSong(TrackData)
+        self.addSongHistory(TrackData)
 
     
     def getRecommendations(self):
@@ -196,8 +148,8 @@ class User(SongHistory):
         #** Create Lists Of Listened To Spotify Track ID's And Artists From Listening History **
         TrackIDs = []
         for i in range(len(self.array)):
-            if self.History[i]['SpotifyID'] is not None:
-                TrackIDs.append(self.History[i]['SpotifyID'])
+            if self.history[i]['SpotifyID'] is not None:
+                TrackIDs.append(self.history[i]['SpotifyID'])
 
         #** Select 3 Track ID's and 2 Artist ID's At Random From The Two Lists **
         while len(TrackIDs) > 3:

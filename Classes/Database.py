@@ -102,47 +102,8 @@ class Database():
             return data
         else:
             return None
-            
-
-    def GetHistory(self, discordID: int):
         
-        #** Ensure Database Connection
-        connection, cursor = self.ensure_connection()
-
-        #** Get Users Listening History From Database, Ordered By Most Recent First **
-        sql = ("SELECT history.SongID, history.ListenedAt, cache.SoundcloudURL, cache.SpotifyID, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity "
-               "FROM history "
-               "INNER JOIN cache ON history.SongID = cache.SoundcloudID "
-              f"WHERE DiscordID = '{discordID}' "
-               "ORDER BY ListenedAt ASC;")
-        cursor.execute(sql)
-        result = cursor.fetchall()
-        connection.close()
-
-        #** Create Empty List & Iterate Through Returned Rows **
-        history = []
-        for row in result:
-
-            #** Create Dictionary Of Song Data From Returned Tuple **
-            data = {"ID": int(row[0]),
-                    "ListenedAt": row[1],
-                    "SpotifyID": row[3],
-                    "Name": row[4],
-                    "Artists": row[5].replace("'", "").split(", "),
-                    "URI": row[2]}
-
-            #** If Song Has Spotify ID, Add Spotify Data As Well **
-            if row[3] != None:
-                data['ArtistIDs'] = row[6].replace("'", "").split(", ")
-                data['Popularity'] = row[7]
-      
-            #** Add Dictionary To List **
-            history.append(data)
-
-        #** Return List Of Ordered Song Dictionaries **
-        return history
-
-
+    
     def SaveUserDetails(self, user: dict):
         
         #** Ensure Database Connection
@@ -168,6 +129,64 @@ class Database():
         cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", data)
         connection.commit()
         connection.close()
+            
+
+    def getHistory(self, discordID: int):
+        
+        # Get database connection from pool
+        connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning(f"Failed to get history for user '{discordID}' due to missing database connection!")
+            return None
+
+        # Get listening history from database, ordered by most recent first
+        sql = ("SELECT history.SongID, history.ListenedAt, cache.Source, cache.ID, cache.URL, cache.Name, cache.Artists, cache.ArtistID "
+               "FROM history "
+               "INNER JOIN cache ON history.SongID = cache.uid "
+              f"WHERE DiscordID = '{discordID}' "
+               "ORDER BY ListenedAt ASC;")
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        connection.close()
+
+        # Create array of song objects with information just gained
+        history = []
+        for row in result:
+            data = {"cacheID": int(row[0]),
+                    "source": row[2],
+                    "id": row[3],
+                    "url": row[4],
+                    "name": row[5],
+                    "artists": row[6].replace("'", "").split(", "),
+                    "listenedAt": row[1]}
+            if data["source"] == "spotify":
+                data['artistIDs'] = row[7].replace("'", "").split(", ")
+            history.append(data)
+        return history
+    
+    
+    def saveHistory(self, discordID: int, history: dict):
+        
+        # Get database connection from pool
+        connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning(f"Failed to save history for user '{discordID}' due to missing database connection!")
+            return None
+
+        # Delete all rows in history that are older than oldest song in history & get number of rows just deleted
+        oldest = history[-1]["listenedAt"]
+        cursor.execute(f"DELETE FROM history WHERE ListenedAt < '{oldest}';")
+        deletedRows = cursor.execute("SELECT ROW_COUNT();")
+    
+        # Add new songs in history to database, based on number deleted above
+        for i in range(deletedRows):
+            data = (discordID, history[i]['cacheID'], history[i]["listenedAt"])
+            cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
+
+        # Commit changes and return connection
+        connection.commit()
+        connection.close()
+        self.logger.debug("Connection returned to pool!")
 
 
     def removeData(self, discordID: int, tables: list):
@@ -185,31 +204,6 @@ class Database():
         connection.commit()
         connection.close()
         self.logger.debug("Connection returned to pool!")
-        
-
-    def AddSongHistory(self, discordID: int, history: dict, outPointer: int):
-        
-        #** Ensure Database Connection
-        connection, cursor = self.ensure_connection()
-
-        #** Delete All Rows Older Than Oldest Song In Song History & Get Amount Deleted**
-        oldest = history[outPointer]["ListenedAt"]
-        cursor.execute(f"DELETE FROM history WHERE ListenedAt < '{oldest}';")
-        deletedRows = cursor.execute("SELECT ROW_COUNT();")
-
-        #** If No Rows Deleted, Set Deleted Rows To Length Of List So All Songs Are Added. Using REPLACE INTO Avoids Errors For Duplicates, **
-        #** As Columns With The Same Primary Key Are Just OverWritten **
-        if deletedRows is None:
-            deletedRows = len(history)
-    
-        #** Format SQL Execute String **
-        for i in range(deletedRows):
-            data = (str(discordID), history[i]['ID'], history[i]["ListenedAt"])
-            cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
-
-        #** Write Changes To Database **
-        connection.commit()
-        connection.close()
 
 
     def cacheSong(self, info: dict):
