@@ -285,7 +285,8 @@ class Spotify(object):
         
         #** Return Audio Features **
         Features = Features.json()
-        return Features['audio_features']
+        print(Features)
+        return Features['audio_features'][0]
 
 
     def FormatSongData(self, Song: dict):

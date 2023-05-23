@@ -50,15 +50,15 @@ class AccountCog(commands.Cog, name="Account"):
                     CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
 
         #** Get Last Song's Data if Listening History Isn't Empty **
-        if len(CurrentUser.array) > 0:
-            LastSongData = CurrentUser.History[len(CurrentUser.array) - 1]
+        if len(CurrentUser.history) > 0:
+            LastSongData = CurrentUser.history[-1]
 
             #** Format Data For Song & Add Last Listened To Song To Embed As Field **
             FormattedSong = self.client.utils.format_song(LastSongData)
             ProfileEmbed.add_field(name="Last Listened To:", value=FormattedSong, inline=False)
 
             #** Calculate Time Difference And Check What To Display **
-            TimeDiff = relativedelta(datetime.now(), LastSongData['ListenedAt'])
+            TimeDiff = relativedelta(datetime.now(), LastSongData['listenedAt'])
             if TimeDiff.years > 1:
                 ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.years)+" years ago")
             elif TimeDiff.years == 1:
@@ -84,8 +84,8 @@ class AccountCog(commands.Cog, name="Account"):
             ProfileEmbed.add_field(name="Last Listening Session:", value="N/A")
 
         #** Calculate Total Song Count & Add As Field To Embed **
-        SongTotal = int(CurrentUser.user['data']['songs']) + len(CurrentUser.array)
-        ProfileEmbed.add_field(name="Lifetime Song Count:", value=str(SongTotal)+" Songs")
+        SongTotal = CurrentUser.user['data']['songs']
+        ProfileEmbed.add_field(name="Lifetime Song Count:", value=f"{SongTotal} Songs")
         
         #** Send Profile Embed To User **
         await interaction.response.send_message(embed=ProfileEmbed)
@@ -118,19 +118,14 @@ class AccountCog(commands.Cog, name="Account"):
                     CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
 
         #** Check User Has Listened To Some Songs **
-        if len(CurrentUser.array) > 0:
-
-            #** Organise Song History Queue Into New Array Sorted With Newest First Song First **
-            OrganisedArray = []
-            for i in range(CurrentUser.inpointer-1, (-1*len(CurrentUser.array)+(CurrentUser.inpointer-1)), -1):
-                OrganisedArray.append(CurrentUser.History[i])
+        if len(CurrentUser.history) > 0:
 
             #** Create Iteration Object Through History List **
-            History = iter(OrganisedArray)
+            History = iter(CurrentUser.history)
             Pages = []
             
             #** For Upper Bound Of Length Of History Divided By 5 Representing The Amount Of Pages Needed **
-            for Count in range(math.ceil(len(CurrentUser.array) / 5)):
+            for Count in range(math.ceil(len(CurrentUser.history) / 5)):
 
                 #** Set Empty Description String & Get Next SongData Dict In History. If Returns None, Break Loop As Run Out Of Songs **
                 Description = ""
@@ -141,15 +136,15 @@ class AccountCog(commands.Cog, name="Account"):
 
                     #** Format Song & Add Listened To Stat & Divisor **
                     Description += self.client.utils.format_song(NextSong)
-                    Description += "\n*Listened on "+NextSong['ListenedAt'].strftime('%d/%m/%y')+" at "+NextSong['ListenedAt'].strftime('%H:%M')+"*"
+                    Description += "\n*Listened on "+NextSong['listenedAt'].strftime('%d/%m/%y')+" at "+NextSong['listenedAt'].strftime('%H:%M')+"*"
                     Description += "\n--------------------\n"
                 
                 #** Set Embed Description To String Created Above **
                 HistoryEmbed.description = Description
 
                 #** Set Page Number If More Than One Page Needed **
-                if math.ceil(len(CurrentUser.array) / 5) > 1:
-                    HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.array) / 5)))
+                if math.ceil(len(CurrentUser.history) / 5) > 1:
+                    HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.history) / 5)))
                     PageDict = copy.deepcopy(HistoryEmbed.to_dict())
                     Pages.append(PageDict)
                 
@@ -158,7 +153,7 @@ class AccountCog(commands.Cog, name="Account"):
                     Page = await interaction.channel.send(embed=HistoryEmbed)
             
             #** If More Than One Page Being Displayed, Add Back And Next Reactions & Add To Global Pagination System **
-            if math.ceil(len(CurrentUser.array) / 5) > 1:
+            if math.ceil(len(CurrentUser.history) / 5) > 1:
                 await Page.add_reaction(self.client.utils.get_emoji('Back'))
                 await Page.add_reaction(self.client.utils.get_emoji('Next'))
                 await self.Pagination.add_embed(Page.id, Pages)
@@ -175,7 +170,7 @@ class AccountCog(commands.Cog, name="Account"):
         User = self.client.userClass.User(self.client, interaction.user.id)
         
         #** Check User Actually Has Listening History To Analyse & If Not Raise Error **
-        if len(User.array) > 0:
+        if len(User.history) > 0:
 
             #** Get Recommendations From Spotify API Through User Class**
             Tracks = User.getRecommendations()
@@ -203,19 +198,19 @@ class AccountCog(commands.Cog, name="Account"):
             for SpotifyID, Data in Recommendations.items():
 
                 #** Format Embed Sections **
-                Song = Data['Name']+"\nBy: "+self.client.utils.format_artists(Data['Artists'], Data['ArtistID'])
+                Song = Data['name']+"\nBy: "+self.client.utils.format_artists(Data['artists'], Data['artistID'])
                 Links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify](https://open.spotify.com/track/{SpotifyID})\n"
-                if Data['Preview'] != None:
+                if Data['preview'] != None:
                     Links += f'{self.client.utils.get_emoji("Preview")} Song: [Preview]({Data["preview"]})\n'
-                Links += f"{self.client.utils.get_emoji('Album')} Album: [{Data['Album']}](https://open.spotify.com/album/{Data['AlbumID']})"
+                Links += f"{self.client.utils.get_emoji('Album')} Album: [{Data['album']}](https://open.spotify.com/album/{Data['AlbumID']})"
 
                 #** Create New Embed **
                 NewPage = discord.Embed(
                     title = interaction.user.display_name+"'s Recommendations")
-                NewPage.set_thumbnail(url=Data['Art'])
-                NewPage.add_field(name="Song "+str(Count+1)+":", value=Song, inline=False)
+                NewPage.set_thumbnail(url=Data['art'])
+                NewPage.add_field(name=f"Song {Count+1}:", value=Song, inline=False)
                 NewPage.add_field(name="Links:", value=Links, inline=False)
-                NewPage.set_footer(text="("+str(Count+1)+"/10) React To See More Recommendations!")
+                NewPage.set_footer(text=f"({Count+1}/10) React To See More Recommendations!")
 
                 #** Display First Recomendation To User **
                 if Count == 0:
@@ -273,11 +268,11 @@ class AccountCog(commands.Cog, name="Account"):
 
         #** Wait For User To React To Tick & Remove Data When Done So **
         while True:
-                Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
-                if Reaction.event_type == 'REACTION_ADD':
-                    if str(Reaction.emoji) == self.client.utils.get_emoji('checkmark'):
-                        self.client.database.RemoveData(interaction.user.id, Tables)
-                        await interaction.user.dm_channel.send("All requested data successfully removed!")
+            Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
+            if Reaction.event_type == 'REACTION_ADD':
+                if str(Reaction.emoji) == self.client.utils.get_emoji('checkmark'):
+                    self.client.database.RemoveData(interaction.user.id, Tables)
+                    await interaction.user.dm_channel.send("All requested data successfully removed!")
 
 
 #!-------------------SETUP FUNCTION-------------------#

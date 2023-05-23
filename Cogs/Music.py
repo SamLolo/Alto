@@ -169,7 +169,7 @@ class MusicCog(commands.Cog, name="Music"):
             #** Save All Current Users Stored In Player To Database **
             userDict = player.fetch('Users')
             for user in userDict.values():
-                await user.save()
+                user.save()
         
         #** Raise error to user if bot isn't already in vc
         else:
@@ -238,46 +238,44 @@ class MusicCog(commands.Cog, name="Music"):
         #**-------------Add Listening History-------------**#
 
         #** Check If Track Should Be Added To History & Fetch Voice Channel**
-        #await asyncio.sleep(5)
-        #voice = event.player.fetch("Voice")
+        await asyncio.sleep(5)
+        voice = event.player.fetch("Voice")
 
         #** Get List Of Members In Voice Channel **
-        #users = []
-        #for member in voice.members:
-        #    if member.id != 803939964092940308:
-        #        users.append(member.id)
+        users = []
+        for member in voice.members:
+            if not(member.id in [803939964092940308, 1008107176168013835]):
+                users.append(member.id)
 
         #** Check Old Users Stored In Players Are Still Listening, If Not Teardown User Object **
-        #userDict = event.player.fetch('Users')
-        #for discordID, user in userDict.items():
-        #    if not(int(discordID) in users):
-        #        await user.save()
-        #        userDict.pop(discordID)
-        #    else:
-        #        users.remove(int(discordID))
+        userDict = event.player.fetch('Users')
+        for discordID, user in userDict.items():
+            if not(int(discordID) in users):
+                user.save()
+                userDict.pop(discordID)
+            else:
+                users.remove(int(discordID))
         
         #** Add New User Objects For Newly Joined Listeners & Store New User Dict Back In Player **
-        #for discordID in users:
-        #    userDict[str(discordID)] = self.client.userClass.User(self.client, discordID)
-        #event.player.store('Users', userDict)
+        for discordID in users:
+            userDict[str(discordID)] = self.client.userClass.User(self.client, discordID)
+        event.player.store('Users', userDict)
 
         #** Format Current Track Data Into Dict To Be Added To History **
-        #uri = event.track['identifier'].split("/")
-        #Id  = uri[4].split(":")[2]
-        #trackData = {"ID": id,
-        #             "ListenedAt": timestamp,
-        #             "SpotifyID": None,
-        #             "Name": event.track['title'],
-        #             "Artists": [event.track['author']],
-        #             "URI": event.track['uri']}
-        #if 'spotify' in event.track.extra.keys():
-        #    trackData['Artists'] = event.track.extra['spotify']['artists']
-        #    trackData['ArtistIDs'] = event.track.extra['spotify']['artistID']
-        #    trackData['Popularity'] = event.track.extra['spotify']['popularity']
-        #
-        #** For All Current Listeners, Add New Song To Their Song History **
-        #for user in userDict.values():
-        #    await user.incrementHistory(trackData)
+        if event.track.source_name == "spotify":
+            data = {"cacheID": event.track.extra['metadata']['cacheID'],
+                    "source": event.track.source_name,
+                    "id": event.track.identifier,
+                    "url": event.track.uri,
+                    "name": event.track.title,
+                    "artists": event.track.extra['metadata']['artists'],
+                    "artistID": event.track.extra['metadata']['artistID'],
+                    "popularity": event.track.extra['metadata']['popularity'],
+                    "listenedAt": timestamp}
+            
+            #** For All Current Listeners, Add New Song To Their Song History **
+            for user in userDict.values():
+                user.addSongHistory(data)
 
 
     @app_commands.guild_only()

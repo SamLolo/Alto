@@ -4,7 +4,7 @@
 
 import os
 import logging
-import mysql.connector
+from mysql.connector import pooling, errors
 
 
 #!--------------------------------DATABASE OPERATIONS-----------------------------------#
@@ -12,7 +12,7 @@ import mysql.connector
 
 class Database():
     
-    def __init__(self, pool="main", size=5):
+    def __init__(self, pool: str = "main", size: int = 5):
         
         # Setup database logger
         self.logger = logging.getLogger("database")
@@ -22,13 +22,13 @@ class Database():
         password = os.environ["DATABASE_PASS"]
         try:
             self.logger.info(f"Attempting to create new database pool '{pool}' of size {size}")
-            self.pool = mysql.connector.pooling.MySQLConnectionPool(pool_name = pool,
+            self.pool = pooling.MySQLConnectionPool(pool_name = pool,
                                                                     pool_size = size,
                                                                     host = "localhost",
                                                                     database = "alto",
                                                                     user = user,
                                                                     password = password)
-        except mysql.connector.errors.DatabaseError as failure:
+        except errors.DatabaseError as failure:
             self.logger.error(f"Database connection failed with error: {failure}")
             self.connected = False
             self.logger.critical("Database functionality unavailable!")
@@ -71,64 +71,72 @@ class Database():
             return (None, None)
 
 
-    def GetUser(self, discordID: int):
+    def getUser(self, discordID: int):
         
-        #** Ensure Database Connection
+        # Get database connection from pool
         connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning(f"Failed to get user data for '{discordID}' due to missing database connection!")
+            return None
 
-        #** Get Info About Discord User From Database **
+        # Fetch user data from database
         cursor.execute(f"SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '{discordID}';")
         result = cursor.fetchone()
         connection.close()
+        self.logger.debug("Connection returned to pool!")
 
-        #** Format Userdata To Dictionary & Return Values **
-        if result != None:
-            data = {"result": {"discordID": int(result[0]),
-                               "name": result[1],
-                               "discriminator": result[2],
-                               "avatar": result[3],
-                               "joined": result[5],
-                               "songs": result[4]},
-                    "recommendations": {"songcount": result[7],
-                                        "Popularity": [result[8], result[9], result[10]],
-                                        "Acoustic": [result[11], result[12], result[13]],
-                                        "Dance": [result[14], result[15], result[16]],
-                                        "Energy": [result[17], result[18], result[19]],
-                                        "Instrument": [result[20], result[21], result[22]],
-                                        "Live": [result[23], result[24], result[25]],
-                                        "Loud": [result[26], result[27], result[28]],
-                                        "Speech": [result[29], result[30], result[31]],
-                                        "Valance": [result[32], result[33], result[34]]}}
+        # Format user data if row was found
+        if result is not None:
+            data = {"data": {"id": int(result[0]),
+                             "name": result[1],
+                             "avatar": result[2],
+                             "created": result[4],
+                             "songs": result[3]},
+                    "recommendations": {"songcount": result[6],
+                                        "popularity": [result[7], result[8], result[9]],
+                                        "acousticness": [result[10], result[11], result[12]],
+                                        "danceability": [result[13], result[14], result[15]],
+                                        "energy": [result[16], result[17], result[18]],
+                                        "instrumentalness": [result[19], result[20], result[21]],
+                                        "liveness": [result[22], result[23], result[24]],
+                                        "loudness": [result[25], result[26], result[27]],
+                                        "speechiness": [result[28], result[29], result[30]],
+                                        "valence": [result[31], result[32], result[33]]}}
             return data
         else:
             return None
         
     
-    def SaveUserDetails(self, user: dict):
+    def saveUser(self, user: dict):
         
-        #** Ensure Database Connection
+        # Get database connection from pool
         connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning(f"Failed to save user data for '{user['data']['id']}' due to missing database connection!")
+            return None
 
-        #** Write Data About User To Users Table / Update Row If Already Exists **
-        userdata = user['data']
-        data = (str(userdata['discordID']), userdata['name'], userdata['discriminator'], userdata['avatar'], userdata['songs'], userdata['joined'])
-        cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s, %s);", data)
+        # Write new data into users table, updating the row if it already exists
+        data = (user['data']['id'], user['data']['name'], user['data']['avatar'], user['data']['songs'], user['data']['created'])
+        cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s);", data)
 
-        #** Write Data About User Recommendation Data To Recommendations Table / Update If Already Exists **
+        # write user recommendation data to recommendations table (update if already exists)
         recommendations = user['recommendations']
-        data = (userdata['discordID'], recommendations['songcount'], 
-                recommendations['Popularity'][0], recommendations['Popularity'][1], recommendations['Popularity'][2],
-                recommendations['Acoustic'][0], recommendations['Acoustic'][1], recommendations['Acoustic'][2],
-                recommendations['Dance'][0], recommendations['Dance'][1], recommendations['Dance'][2],
-                recommendations['Energy'][0], recommendations['Energy'][1], recommendations['Energy'][2],
-                recommendations['Instrument'][0], recommendations['Instrument'][1], recommendations['Instrument'][2],
-                recommendations['Live'][0], recommendations['Live'][1], recommendations['Live'][2],
-                recommendations['Loud'][0], recommendations['Loud'][1], recommendations['Loud'][2],
-                recommendations['Speech'][0], recommendations['Speech'][1], recommendations['Speech'][2],
-                recommendations['Valance'][0], recommendations['Valance'][1], recommendations['Valance'][2])
+        data = (user['data']['id'], recommendations['songcount'], 
+                recommendations['popularity'][0], recommendations['popularity'][1], recommendations['popularity'][2],
+                recommendations['acousticness'][0], recommendations['acousticness'][1], recommendations['acousticness'][2],
+                recommendations['danceability'][0], recommendations['danceability'][1], recommendations['danceability'][2],
+                recommendations['energy'][0], recommendations['energy'][1], recommendations['energy'][2],
+                recommendations['instrumentalness'][0], recommendations['instrumentalness'][1], recommendations['instrumentalness'][2],
+                recommendations['liveness'][0], recommendations['liveness'][1], recommendations['liveness'][2],
+                recommendations['loudness'][0], recommendations['loudness'][1], recommendations['loudness'][2],
+                recommendations['speechiness'][0], recommendations['speechiness'][1], recommendations['speechiness'][2],
+                recommendations['valence'][0], recommendations['valence'][1], recommendations['valence'][2])
         cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", data)
+        
+        # Commit changes and return connection to pool
         connection.commit()
         connection.close()
+        self.logger.debug("Connection returned to pool!")
             
 
     def getHistory(self, discordID: int):
@@ -140,7 +148,7 @@ class Database():
             return None
 
         # Get listening history from database, ordered by most recent first
-        sql = ("SELECT history.SongID, history.ListenedAt, cache.Source, cache.ID, cache.URL, cache.Name, cache.Artists, cache.ArtistID "
+        sql = ("SELECT history.SongID, history.ListenedAt, cache.Source, cache.ID, cache.URL, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity "
                "FROM history "
                "INNER JOIN cache ON history.SongID = cache.uid "
               f"WHERE DiscordID = '{discordID}' "
@@ -148,6 +156,7 @@ class Database():
         cursor.execute(sql)
         result = cursor.fetchall()
         connection.close()
+        self.logger.debug("Connection returned to pool!")
 
         # Create array of song objects with information just gained
         history = []
@@ -160,7 +169,8 @@ class Database():
                     "artists": row[6].replace("'", "").split(", "),
                     "listenedAt": row[1]}
             if data["source"] == "spotify":
-                data['artistIDs'] = row[7].replace("'", "").split(", ")
+                data['artistID'] = row[7].replace("'", "").split(", ")
+                data['popularity'] = row[8]
             history.append(data)
         return history
     
@@ -179,9 +189,10 @@ class Database():
         deletedRows = cursor.execute("SELECT ROW_COUNT();")
     
         # Add new songs in history to database, based on number deleted above
-        for i in range(deletedRows):
-            data = (discordID, history[i]['cacheID'], history[i]["listenedAt"])
-            cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
+        if deletedRows is not None and deletedRows > 0:
+            for i in range(deletedRows):
+                data = (discordID, history[i]['cacheID'], history[i]["listenedAt"])
+                cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
 
         # Commit changes and return connection
         connection.commit()
@@ -259,6 +270,7 @@ class Database():
         cursor.execute(f"SELECT * FROM cache WHERE (ID = '{query}') OR (URL = '{query}');")
         result = cursor.fetchone()
         connection.close()
+        self.logger.debug("Connection returned to pool!")
 
         # Check if any results were found
         if result is None:
