@@ -71,59 +71,70 @@ class Database():
             return (None, None)
 
 
-    def getUser(self, discordID: int):
+    def getUser(self, id: int):
         
         # Get database connection from pool
         connection, cursor = self.ensure_connection()
         if connection is None:
-            self.logger.warning(f"Failed to get user data for '{discordID}' due to missing database connection!")
-            return None
+            self.logger.warning(f"Failed to get user data for '{id}' due to missing database connection!")
+            raise ConnectionError(f"Failed to get user data for '{id}' due to missing database connection!")
 
         # Fetch user data from database
-        cursor.execute(f"SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '{discordID}';")
+        cursor.execute(f"SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '{id}';")
         result = cursor.fetchone()
         connection.close()
         self.logger.debug("Connection returned to pool!")
 
         # Format user data if row was found
         if result is not None:
-            data = {"data": {"id": int(result[0]),
-                             "name": result[1],
-                             "avatar": result[2],
-                             "songs": result[3],
-                             "history": result[5],
-                             "public": result[6],
-                             "created": result[4]},
-                    "recommendations": {"songcount": result[8],
-                                        "popularity": [result[9], result[10], result[11]],
-                                        "acousticness": [result[12], result[13], result[14]],
-                                        "danceability": [result[15], result[16], result[17]],
-                                        "energy": [result[18], result[19], result[20]],
-                                        "instrumentalness": [result[21], result[22], result[23]],
-                                        "liveness": [result[24], result[25], result[26]],
-                                        "loudness": [result[27], result[28], result[29]],
-                                        "speechiness": [result[30], result[31], result[32]],
-                                        "valence": [result[33], result[34], result[35]]}}
+            data = {"songs": result[1],
+                    "history": result[3],
+                    "public": result[4],
+                    "created": result[2],
+                    "recommendations": {"songcount": result[6],
+                                        "popularity": [result[7], result[8], result[9]],
+                                        "acousticness": [result[10], result[11], result[12]],
+                                        "danceability": [result[13], result[14], result[15]],
+                                        "energy": [result[16], result[17], result[18]],
+                                        "instrumentalness": [result[19], result[20], result[21]],
+                                        "liveness": [result[22], result[23], result[24]],
+                                        "loudness": [result[25], result[26], result[27]],
+                                        "speechiness": [result[28], result[29], result[30]],
+                                        "valence": [result[31], result[32], result[33]]}}
             return data
         else:
             return None
         
     
-    def saveUser(self, user: dict):
+    def saveUser(self, id: int, user: dict):
         
         # Get database connection from pool
         connection, cursor = self.ensure_connection()
         if connection is None:
-            self.logger.warning(f"Failed to save user data for '{user['data']['id']}' due to missing database connection!")
-            return None
+            self.logger.warning(f"Failed to save user data for '{id}' due to missing database connection!")
+            raise ConnectionError(f"Failed to save user data for '{id}' due to missing database connection!")
 
         # Write new data into users table, updating the row if it already exists
-        data = (user['data']['id'], user['data']['name'], user['data']['avatar'], user['data']['songs'], user['data']['created'], user['data']['history'], user['data']['public'])
-        cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s, %s, %s);", data)
+        data = (id, user['songs'], user['created'], user['history'], user['public'])
+        cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s);", data)
+        
+        # Commit changes and return connection to pool
+        connection.commit()
+        connection.close()
+        self.logger.debug(f"Saved user data for user '{id}'")
+        self.logger.debug("Connection returned to pool!")
 
+    
+    def saveRecommendations(self, id: int, recommendations: dict):
+        
+        # Get database connection from pool
+        connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning(f"Failed to save recommendations data for '{id}' due to missing database connection!")
+            raise ConnectionError(f"Failed to save recommendations data for '{id}' due to missing database connection!")
+    
         # write user recommendation data to recommendations table (update if already exists)
-        recommendations = user['recommendations']
-        data = (user['data']['id'], recommendations['songcount'], 
+        data = (id, recommendations['songcount'], 
                 recommendations['popularity'][0], recommendations['popularity'][1], recommendations['popularity'][2],
                 recommendations['acousticness'][0], recommendations['acousticness'][1], recommendations['acousticness'][2],
                 recommendations['danceability'][0], recommendations['danceability'][1], recommendations['danceability'][2],
@@ -138,6 +149,7 @@ class Database():
         # Commit changes and return connection to pool
         connection.commit()
         connection.close()
+        self.logger.debug(f"Saved recommendations data for user '{id}'!")
         self.logger.debug("Connection returned to pool!")
             
 
@@ -147,7 +159,7 @@ class Database():
         connection, cursor = self.ensure_connection()
         if connection is None:
             self.logger.warning(f"Failed to get history for user '{discordID}' due to missing database connection!")
-            return None
+            raise ConnectionError(f"Failed to get history for user '{discordID}' due to missing database connection!")
 
         # Get listening history from database, ordered by most recent first
         sql = ("SELECT history.SongID, history.ListenedAt, cache.Source, cache.ID, cache.URL, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity "
@@ -174,31 +186,44 @@ class Database():
                 data['artistID'] = row[7].replace("'", "").split(", ")
                 data['popularity'] = row[8]
             history.append(data)
+        self.logger.debug(f"Successfully fetched song history for user '{discordID}'!")
         return history
     
     
     def saveHistory(self, discordID: int, history: dict):
+        print("Saving history!")
         
         # Get database connection from pool
         connection, cursor = self.ensure_connection()
         if connection is None:
             self.logger.warning(f"Failed to save history for user '{discordID}' due to missing database connection!")
-            return None
+            raise ConnectionError(f"Failed to save history for user '{discordID}' due to missing database connection!")
 
         # Delete all rows in history that are older than oldest song in history & get number of rows just deleted
         oldest = history[-1]["listenedAt"]
         cursor.execute(f"DELETE FROM history WHERE ListenedAt < '{oldest}';")
-        deletedRows = cursor.execute("SELECT ROW_COUNT();")
+        cursor.execute("SELECT ROW_COUNT();")
+        deletedRows = cursor.fetchone()
+        print(deletedRows)
+        if deletedRows is not None:
+            deletedRows = deletedRows[0]
     
-        # Add new songs in history to database, based on number deleted above
-        if deletedRows is not None and deletedRows > 0:
-            for i in range(deletedRows):
-                data = (discordID, history[i]['cacheID'], history[i]["listenedAt"])
-                cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
-
+            # Add new songs in history to database, based on number deleted above
+            if deletedRows > 0:
+                for i in range(deletedRows):
+                    data = (discordID, history[i]['cacheID'], history[i]["listenedAt"])
+                    cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
+            
+            # Add all songs if deletedRows is 0 incase user has no cached history 
+            else:
+                for track in history:
+                    data = (discordID, track['cacheID'], track["listenedAt"])
+                    cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
+                
         # Commit changes and return connection
         connection.commit()
         connection.close()
+        self.logger.debug(f"Saved history for user '{discordID}'!")
         self.logger.debug("Connection returned to pool!")
 
 
@@ -208,7 +233,7 @@ class Database():
         connection, cursor = self.ensure_connection()
         if connection is None:
             self.logger.warning(f"Failed to delete tables '{', '.join(tables)}' for discordID '{discordID}' due to missing database connection!")
-            return None
+            raise ConnectionError(f"Failed to delete tables '{', '.join(tables)}' for discordID '{discordID}' due to missing database connection!")
 
         # Remove user entry from each table and return database connection to pool
         for table in tables:
@@ -225,7 +250,7 @@ class Database():
         connection, cursor = self.ensure_connection()
         if connection is None:
             self.logger.warning(f"Failed to cache song with {info['source']} ID '{info['id']}' due to missing database connection!")
-            return None
+            raise ConnectionError(f"Failed to cache song with {info['source']} ID '{info['id']}' due to missing database connection!")
         
         # Reformat python lists into strings
         if type(info['artists']) is list:
@@ -256,8 +281,15 @@ class Database():
         cursor.execute(sql, values)
         self.logger.debug(f"New insert into cache for {info['source']} ID: {info['id']}")
         connection.commit()
+        
+        # Get cache ID generated for information just inserted
+        cursor.execute("SELECT LAST_INSERT_ID()")
+        key = cursor.fetchone()[0]
+        
+        # Return connection to available pool
         connection.close()
         self.logger.debug("Connection returned to pool!")
+        return key
 
 
     def searchCache(self, query: str):
@@ -266,7 +298,7 @@ class Database():
         connection, cursor = self.ensure_connection()
         if connection is None:
             self.logger.warning(f"Failed to search cache with query '{query}' due to missing database connection!")
-            return None
+            raise ConnectionError(f"Failed to search cache with query '{query}' due to missing database connection!")
 
         # Query cache table and return connection to available pool
         cursor.execute(f"SELECT * FROM cache WHERE (ID = '{query}') OR (URL = '{query}');")

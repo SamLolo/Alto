@@ -31,16 +31,27 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
         tracks = sorted(tracks.items(), key=lambda x: x[1], reverse=True)
         top = tracks[0][0]
         
-        # Cache top track metadata & base64 track
-        data = {'track': top.track,
-                'source': 'spotify',
-                'id': self.identifier,
-                'name': self.title,
-                'url': self.uri,
-                'duration': self.duration}
-        data.update(self.extra['metadata'])
-        client.database.cacheSong(data)
-
+        # Cache top track metadata & base64 track if not already cached
+        if self.extra['metadata']['cacheID'] is None:
+            data = {'track': top.track,
+                    'source': 'spotify',
+                    'id': self.identifier,
+                    'name': self.title,
+                    'url': self.uri,
+                    'duration': self.duration}
+            data.update(self.extra['metadata'])
+            
+            cacheID = None
+            if client.database.connected:
+                try:
+                    cacheID = client.database.cacheSong(data)
+                except:
+                    pass
+            else:
+                client.logger.debug(f"Failed to cache spotify track with id: {self.identifier}")
+            if cacheID is not None:
+                self.extra['metadata']['cacheID'] = cacheID
+            
         # Return base64 track code from best search result
         self.track = top.track
         return self.track
@@ -108,7 +119,13 @@ class SpotifySource(Source):
                     info = self.discord.music.SearchSpotify(query.strip("spsearch:"))
                     
                     # Query cache for returned spotifyID
-                    cache = client.database.searchCache(info['tracks'][0]['id'])
+                    if client.database.connected:
+                        try:
+                            cache = client.database.searchCache(info['tracks'][0]['id'])
+                        except:
+                            pass
+                    else:
+                        client.logger.debug(f"Failed to search cache for spotify ID: {info['tracks'][0]['id']}")
                 
                 # If url entered, get spotifyID by splitting up url
                 elif query.startswith('https://open.spotify.com/'):
@@ -118,7 +135,13 @@ class SpotifySource(Source):
 
                     # If just track, query cache for spotifyID
                     if "track" in query:
-                        cache = client.database.searchCache(spotifyID)
+                        if client.database.connected:
+                            try:
+                                cache = client.database.searchCache(spotifyID)
+                            except:
+                                pass
+                        else:
+                            client.logger.debug(f"Failed to search cache for spotify ID: {spotifyID}")
                         
                         # If no track found, get new song info from Spotify
                         if cache is None:
@@ -138,7 +161,8 @@ class SpotifySource(Source):
                 raise e
             except Exception as e:
                 client.logger.exception(e)
-                raise LoadError
+                client.logger.warning(f"Unexpected error whilst loading track: {e.message}")
+                raise LoadError(e.message)
             
             # If cached (single) track found, load track as standard AudioTrack
             else:
@@ -170,16 +194,16 @@ class SpotifySource(Source):
                                                         'uri': f"https://open.spotify.com/track/{track['id']}"}, 
                                                         requester=0,
                                                         metadata={'cacheID': None,
-                                                                'artists': track['artists'],
-                                                                'artistID': track['artistID'],
-                                                                'album': track['album'],
-                                                                'albumID': track['albumID'],
-                                                                'art': track['art'],
-                                                                'colour': None,
-                                                                'release': track['release'],
-                                                                'popularity': track['popularity'],
-                                                                'explicit': track['explicit'],
-                                                                'preview': track['preview']})
+                                                                  'artists': track['artists'],
+                                                                  'artistID': track['artistID'],
+                                                                  'album': track['album'],
+                                                                  'albumID': track['albumID'],
+                                                                  'art': track['art'],
+                                                                  'colour': None,
+                                                                  'release': track['release'],
+                                                                  'popularity': track['popularity'],
+                                                                  'explicit': track['explicit'],
+                                                                  'preview': track['preview']})
                         tracks.append(trackObj)
                 
                     # Return LoadResult with playlist metadata if available

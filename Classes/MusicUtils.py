@@ -285,7 +285,7 @@ class Spotify(object):
         
         #** Return Audio Features **
         Features = Features.json()
-        if Features != None or Features['audio_features'] != None:
+        if Features is not None or Features['audio_features'] is not None:
             return Features['audio_features']
         else:
             raise Exception("FeaturesNotFound")

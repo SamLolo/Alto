@@ -31,6 +31,14 @@
 		"DM": {
 			"message": "**DM Failed!**\nPlease turn on `Allow Server Direct Messages` in Discord settings!",
 			"ephemeral": true
+		},
+		"Database": {
+			"message": "**We're currently experiencing trouble loading user data!**\nPlease try again in a little while or notify `Lolo#6699` on Discord!",
+			"ephemeral": true
+		},
+		"Lavalink": {
+			"message": "**Music playback is currently unavailable!**\nPlease try again in a little while or notify `Lolo#6699` on Discord!",
+			"ephemeral": true
 		}
 	},
 	"CommandNotFound": {

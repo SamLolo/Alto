@@ -178,6 +178,10 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     async def ensure_voice(self, interaction: discord.Interaction):
+        
+        #** Check if there are any availbale nodes **
+        if len(self.client.lavalink.node_manager.available_nodes) == 0:
+            raise app_commands.CheckFailure("Lavalink")
 
         #** If Command Needs User To Be In VC, Check if Author is in Voice Channel
         if not(interaction.command.name in ['queue', 'nowplaying']):
@@ -238,46 +242,53 @@ class MusicCog(commands.Cog, name="Music"):
             await old.delete()
 
         #**-------------Add Listening History-------------**#
-
-        #** Check If Track Should Be Added To History & Fetch Voice Channel**
-        await asyncio.sleep(5)
-        voice = event.player.fetch("Voice")
-
-        #** Get List Of Members In Voice Channel **
-        users = []
-        for member in voice.members:
-            if not(member.id in [803939964092940308, 1008107176168013835]):
-                users.append(member.id)
-
-        #** Check Old Users Stored In Players Are Still Listening, If Not Teardown User Object **
-        userDict = event.player.fetch('Users')
-        for discordID, user in userDict.items():
-            if not(int(discordID) in users):
-                user.save()
-                userDict.pop(discordID)
-            else:
-                users.remove(int(discordID))
         
-        #** Add New User Objects For Newly Joined Listeners & Store New User Dict Back In Player **
-        for discordID in users:
-            userDict[str(discordID)] = self.client.userClass.User(self.client, discordID)
-        event.player.store('Users', userDict)
+        #** Disable listening history system when database is unavailable as songs won't be cached **
+        if self.client.database.connected:
 
-        #** Format Current Track Data Into Dict To Be Added To History **
-        if event.track.source_name == "spotify":
-            data = {"cacheID": event.track.extra['metadata']['cacheID'],
-                    "source": event.track.source_name,
-                    "id": event.track.identifier,
-                    "url": event.track.uri,
-                    "name": event.track.title,
-                    "artists": event.track.extra['metadata']['artists'],
-                    "artistID": event.track.extra['metadata']['artistID'],
-                    "popularity": event.track.extra['metadata']['popularity'],
-                    "listenedAt": timestamp}
+            #** Check If Track Should Be Added To History & Fetch Voice Channel**
+            await asyncio.sleep(10)
+            voice = event.player.fetch("Voice")
+
+            #** Get List Of Members In Voice Channel **
+            users = []
+            for member in voice.members:
+                if not(member.id in [803939964092940308, 1008107176168013835]):
+                    users.append(member.id)
+
+            #** Check Old Users Stored In Players Are Still Listening, If Not Teardown User Object **
+            userDict = event.player.fetch('Users')
+            for discordID, user in userDict.items():
+                if not(int(discordID) in users):
+                    user.save()
+                    userDict.pop(discordID)
+                else:
+                    users.remove(int(discordID))
             
-            #** For All Current Listeners, Add New Song To Their Song History **
-            for user in userDict.values():
-                user.addSongHistory(data)
+            #** Add New User Objects For Newly Joined Listeners & Store New User Dict Back In Player **
+            for discordID in users:
+                try:
+                    userDict[str(discordID)] = self.client.userClass.User(self.client, id=discordID)
+                except:
+                    self.logger.debug("Exception whilst loading new user!")
+            event.player.store('Users', userDict)
+
+            #** Format Current Track Data Into Dict To Be Added To History **
+            if event.track.source_name in ["spotify"] and event.track.extra['metadata']['cacheID'] is not None:
+                data = {"cacheID": event.track.extra['metadata']['cacheID'],
+                        "source": event.track.source_name,
+                        "id": event.track.identifier,
+                        "url": event.track.uri,
+                        "name": event.track.title,
+                        "artists": event.track.extra['metadata']['artists'],
+                        "artistID": event.track.extra['metadata']['artistID'],
+                        "popularity": event.track.extra['metadata']['popularity'],
+                        "listenedAt": timestamp}
+                
+                #** For All Current Listeners, Add New Song To Their Song History **
+                for user in userDict.values():
+                    if user.metadata['history'] == 2 or (user.metadata['history'] == 1 and event.track.requester == user.user.id):
+                        user.addSongHistory(data)
 
 
     @app_commands.guild_only()
@@ -305,13 +316,13 @@ class MusicCog(commands.Cog, name="Music"):
             
             #** Create queued embed for single track
             emoji = self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())
-            Queued = discord.Embed(title = f"{emoji+' ' if emoji != None else ''}Track Added To Queue!",
+            Queued = discord.Embed(title = f"{str(emoji)+' ' if emoji is not None else ''}Track Added To Queue!",
                                    description = f"[{Results['tracks'][0]['title']}]({Results['tracks'][0]['uri']})")
             
             #** Format artists based on information avaiable
             if Results['tracks'][0]['title'] != Results['tracks'][0]['author']:
                 if Results['tracks'][0]['source_name'] == "spotify":
-                    Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['spotify']['artists'], Results['tracks'][0]['extra']['spotify']['artistID'])}"
+                    Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['metadata']['artists'], Results['tracks'][0]['extra']['metadata']['artistID'])}"
                 else:
                     Queued.description += f"\nBy: {Results['tracks'][0]['author']}"
         
@@ -323,7 +334,7 @@ class MusicCog(commands.Cog, name="Music"):
             
             #** Format queued embed for playlists
             emoji = self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())
-            Queued = discord.Embed(title = f"{emoji+' ' if emoji != None else ''}Playlist Added To Queue!",
+            Queued = discord.Embed(title = f"{str(emoji)+' ' if emoji is not None else ''}Playlist Added To Queue!",
                                    description = f"{Results['playlist_info']['name']} - {len(Results['tracks'])} Tracks")
         
         #** If URL Can't Be Loaded, Raise Error
@@ -459,7 +470,7 @@ class MusicCog(commands.Cog, name="Music"):
                         artists = self.client.utils.format_artists(player.current.extra['metadata']['artists'], player.current.extra['metadata']['artistID'])
                         body += f"{emoji} [{player.current.title}]({player.current.uri})\nBy: {artists}\n"
                     else:
-                        body += f"{emoji if emoji != None else ''} [{player.current.title}]({player.current.uri})\nBy: {player.current.author}\n"
+                        body += f"{str(emoji)+' ' if emoji is not None else ''}[{player.current.title}]({player.current.uri})\nBy: {player.current.author}\n"
                     body += "--------------------\n__**UP NEXT:**__\n"
                 
                 #** Add information about next 10 songs in queue that haven't already been displayed **
@@ -470,7 +481,7 @@ class MusicCog(commands.Cog, name="Music"):
                             artists = self.client.utils.format_artists(player.queue[j].extra['metadata']['artists'], player.queue[j].extra['metadata']['artistID'])
                             body += f"{emoji} **{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {artists}\n"
                         else:
-                            body += f"{emoji if emoji != None else ''} **{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {player.queue[j]['author']}\n"
+                            body += f"{str(emoji)+' ' if emoji is not None else ''}**{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {player.queue[j]['author']}\n"
                 else:
                     body += "*Queue is currently empty!*"
                 
@@ -591,7 +602,7 @@ class MusicCog(commands.Cog, name="Music"):
         if spotify.startswith("https://open.spotify.com/track/"):
             spotifyID = (spotify.split("/"))[4].split("?")[0]
         else:
-            await interaction.response.send_message("Please enter a valid Spotify Track Link!", ephemeral=True)
+            await interaction.response.send_message("Info is only currently only available for Spotify tracks!", ephemeral=True)
 
         #** Check ID Is A Valid Spotify ID & Get Song Details **
         if len(spotifyID) == 22:
