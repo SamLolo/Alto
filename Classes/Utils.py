@@ -32,23 +32,23 @@ class Utility():
 
         #** Return artist is not a list
         if type(artists) == list:
-            
-            #** Format string based on whether links are available
             formatted = ""
             for i in range(len(artists)):
-                if IDs is not None:
-                    formatted += f", [{artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
-                else:
-                    formatted += artists[i]
                 
                 #** Add comma up until 2nd to last artist in list, using & between the last 2 artists
-                if i <= len(artists)-3:
+                if i > 0 and i < len(artists)-1:
                     formatted += ", "
-                elif i == len(artists)-2:
+                elif i == len(artists)-1 and i != 0:
                     formatted += " & "
+                
+                #** Format string based on whether links are available
+                if IDs is not None:
+                    formatted += f"[{artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
+                else:
+                    formatted += artists[i]
 
         #** Returned Formatted Strings
-            return formatted.strip(", ")
+            return formatted
         else:
             return artists
 
@@ -63,25 +63,14 @@ class Utility():
             return f'{int(Time[2])}:{str(int(Time[3])).zfill(2)}'
         else:
             return f'{int(Time[1])}:{str(int(Time[2])).zfill(2)}:{str(int(Time[3])).zfill(2)}'
-
-        
-    def format_song(self, SongData):
-
-        #** If Spotify Song, Format Artists & Create Create String With Spotify Emoji **
-        if SongData['SpotifyID'] is not None:
-            FormattedArtists = self.format_artists(SongData['Artists'], SongData['ArtistIDs'])
-            FormattedSong = f"{self.get_emoji('Spotify')} [{SongData['Name']}](https://open.spotify.com/track/{SongData['SpotifyID']})\nBy: {FormattedArtists}"
-        
-        #** If Soundcloud, Format Song Title & Add Single Artist With Link From Song Data **
-        else:
-            FormattedSong = f"{self.get_emoji('Soundcloud')} [{SongData['Name']}]({SongData['URI']})\n"
-            FormattedSong += f"By: [{SongData['Artists'][0]}]({('/'.join(SongData['URI'].split('/')[:4]))})"
-
-        #** Return Formatted String **
-        return FormattedSong
     
     
     def get_emoji(self, name):
+        #** Return Unicode tick/cross if name is boolean value
+        if name == True:
+            return "✅"
+        elif name == False:
+            return "❌"
         
         #** Search through sequence of client emojis and return found emoji object **
         for emoji in self.client.emojis:

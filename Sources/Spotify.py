@@ -68,18 +68,20 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
         
         # Audio or lyric versions of tracks should be preferred
         if "audio" in track['title'] or "lyric" in track['title']:
-            match += 2
+            match += 3
         
-        # Prefer unslowed tracks unless specified otherwise
-        if "slowed" in track['title'] and not("slowed" in self.title):
-            match -= 1
-        
-        # Prefer original track unless specified otherwise
-        if "reverb" in track['title'] and not("reverb" in self.title):
-            match -= 1
+        # Check keywords for match between found sound and original
+        kwords = ["slowerd", "reverb", "sped-up", "acoustic", "stripped", "live"]
+        for word in kwords:
+            if word in track['title'] and word in self.title:
+                match += 1
+            elif (word in track['title'] and not(word in self.title)) or (not(word in track['title']) and word in self.title):
+                match -= 1
         
         # Prefer original version over remixes unless remix is explicitly specified
-        if "remix" in track['title'] and not("remix" in self.title):
+        if "remix" in track['title'] and "remix" in self.title:
+            match += 1
+        elif ("remix" in track['title'] and not("remix" in self.title)) or (not("remix" in track['title']) and "remix" in self.title):
             match -= 2
         
         return match

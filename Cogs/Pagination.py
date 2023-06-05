@@ -86,23 +86,25 @@ class EmbedPaginator(commands.Cog):
         self.logger = logging.getLogger("discord.pagination")
 
     
-    async def add_embed(self, messageID: int, pages: list, currentPage: int = 0):
+    async def setup(self, message: discord.Message, pages: list, currentPage: int = 0):
         """
         Create new pagedEmbed object to keep track of an embed with multiple pages
         
         Parameters:
-        messageID (int/str): the message ID to create a paged embed obj for
+        message (discord.Message): the message to create a paged embed obj for
         pages (list): array of dictionaries representing the embeds
         currentPage (int): the index of the page currently being displayed   [Default: 0]
         
         Returns:
         None
         """
-        #** Add paged embed obj to open pages dictionary
-        self.openPages[str(messageID)] = PagedEmbed(pages, currentPage)
+        #** Add Reactions And Created PagedEmbed For Message
+        await message.add_reaction(self.client.utils.get_emoji('Back'))
+        await message.add_reaction(self.client.utils.get_emoji('Next'))
+        self.openPages[str(message.id)] = PagedEmbed(pages, currentPage)
         
     
-    async def get_embed(self, messageID: int):
+    def get_embed(self, messageID: int):
         """
         Fetches the paged embed object associated with the passed-in message ID
         
@@ -114,7 +116,7 @@ class EmbedPaginator(commands.Cog):
         (None): paged embed object not found for message ID
         """
         #** Get paged embed obj for messageID
-        if messageID in self.openPages.keys():
+        if str(messageID) in self.openPages.keys():
             embedQueue = self.openPages[str(messageID)]
             return embedQueue
         else:
@@ -123,49 +125,52 @@ class EmbedPaginator(commands.Cog):
 
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, reaction: discord.Reaction):
+    async def on_raw_reaction_add(self, reaction: discord.RawReactionActionEvent):
         """
         Listens for reactions to paged embeds and adjusts the embed accoridngly
         
         Parameters:
-        reaction (discord.Reaction): the reaction object recieved from the discord event
+        reaction (discord.RawReactionActionEvent): the reaction object recieved from the discord event
         
         Returns:
         None
         """
         #** Check rection is an add, not carried out by the user
         if reaction.user_id != self.client.user.id:
-            if reaction.event_type == 'REACTION_ADD':
+            
+            #** Get channel and message if they exist & remove reaction if message belongs to bot
+            channel = self.client.get_channel(reaction.channel_id)
+            if channel != None:
+                message = await channel.fetch_message(reaction.message_id)
+                if message != None and message.author.id == self.client.user.id:
+                    await message.remove_reaction(reaction.emoji, reaction.member)
                 
-                #** Chek if paged embed object exists for reactions message ID
-                pagedEmbed = self.get_embed(reaction.message_id)
-                if pagedEmbed is not None:
+                    #** Chek if paged embed object exists for reactions message ID
+                    pagedEmbed = self.get_embed(reaction.message_id)
+                    if pagedEmbed is not None:
 
-                    #** Check if reaction is back or next emojis, and if so, get channel
-                    nextEmoji = self.client.utils.get_emoji('Next')
-                    backEmoji = self.client.utils.get_emoji('Back')
-                    if (reaction.emoji.id == nextEmoji.id) or (reaction.emoji.id == backEmoji.id):
-                        channel = get(self.client.get_all_channels(), guild__id=reaction.guild_id, id=reaction.channel_id)
-                        if channel != None:
+                        #** Get new embed based on reaction emoji
+                        nextEmoji = self.client.utils.get_emoji('Next')
+                        backEmoji = self.client.utils.get_emoji('Back')
+                        if reaction.emoji.id == nextEmoji.id:
+                            newEmbed = pagedEmbed.next()
+                        elif reaction.emoji.id == backEmoji.id:
+                            newEmbed = pagedEmbed.previous()
+                        else:
+                            newEmbed = None
 
-                            #** Get message and remove reaction just added
-                            try:
-                                message = await channel.fetch_message(reaction.message_id)
-                                await message.remove_reaction(reaction.emoji, reaction.member)
-
-                                #** Get new embed based on reaction emoji
-                                if reaction.emoji.id == nextEmoji.id:
-                                    newEmbed = pagedEmbed.next()
-                                elif reaction.emoji.id == backEmoji.id:
-                                    newEmbed = pagedEmbed.previous()
-                                else:
-                                    newEmbed = None
-
-                                #** Edit message to show requested page
-                                if newEmbed != None:
-                                    await message.edit(embed=newEmbed)
-                            except:
-                                self.logger.debug(f"Message not found whilst getting new page: {reaction.message_id}")
+                        #** Edit message to show requested page
+                        if newEmbed != None:
+                            await message.edit(embed=newEmbed)
+                
+                #** Log deleted message and remove pages from active pagination list
+                elif message == None:
+                    self.logger.debug(f"Message not found whilst getting new page: {reaction.message_id}")
+                    try:
+                        self.openPages.pop(str(reaction.message_id))
+                        self.logger.debug(f"Removed message with id '{reaction.message_id}' from active pagination list!")
+                    except:
+                        pass
 
 
 #!-------------------SETUP FUNCTION-------------------#

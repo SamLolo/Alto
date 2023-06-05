@@ -76,7 +76,7 @@ class MusicCog(commands.Cog, name="Music"):
 
         #** Assign Discord Bot Client As Class Object & Setup Logging **
         self.client = client 
-        self.Pagination = self.client.get_cog("EmbedPaginator")
+        self.pagination = self.client.get_cog("EmbedPaginator")
         self.logger = logging.getLogger('lavalink')
 
         #** Create Client If One Doesn't Already Exist **
@@ -84,7 +84,6 @@ class MusicCog(commands.Cog, name="Music"):
             self.logger.info("No Previous Lavalink Client Found. Creating New Connection...")
             client.lavalink = lavalink.Client(client.user.id)
             client.lavalink.logger = self.logger
-            client.lavalink.add_node('127.0.0.1', 2333, 'youshallnotpass', 'eu', name='default-node')
             client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
             self.logger.debug("Lavalink listener added")
             self.logger.info("New Client Registered")
@@ -93,6 +92,11 @@ class MusicCog(commands.Cog, name="Music"):
             client.lavalink.database = Database(pool="lavalink", size=3)
         else:
             self.logger.info("Found Previous Lavalink Connection")
+            
+        #** Connect To Lavalink If Not Already Connected **
+        if len(client.lavalink.node_manager.available_nodes) == 0:
+            client.lavalink.add_node('127.0.0.1', 2333, 'youshallnotpass', 'eu', name='default-node')
+            self.logger.debug("Connecting to default-node@127.0.0.1:2333...")
 
         #** Add Event Hook **
         self.client.lavalink.add_event_hooks(self)
@@ -130,21 +134,18 @@ class MusicCog(commands.Cog, name="Music"):
         emoji = self.client.utils.get_emoji(track.source_name.title())  
         if emoji is not None:
             nowPlaying.set_author(name=f"Playing From {track.source_name.title()}", icon_url=emoji.url)
-        else:
-            nowPlaying.set_author(name=f"Playing From {track.source_name.title()}")
             
         #** If Track Has Spotify Info, Format List of Artists & Add Thumbnail
-        if "spotify" in track.extra.keys():
-            nowPlaying.set_thumbnail(url=track.extra['spotify']['art'])
-            nowPlaying.add_field(name="By:", value=self.client.utils.format_artists(track.extra['spotify']['artists'], track.extra['spotify']['artistID']))
-        else:
-            nowPlaying.add_field(name="By:", value=track['author'])
+        if track.title != track.author:
+            if track.source_name == "spotify":
+                nowPlaying.set_thumbnail(url=track.extra['metadata']['art'])
+                nowPlaying.add_field(name="By:", value=self.client.utils.format_artists(track.extra['metadata']['artists'], track.extra['metadata']['artistID']))
+            else:
+                nowPlaying.add_field(name="By:", value=track['author'])
             
         #** If Not A Stream, Add Duration Field
         if not(track.stream):
             nowPlaying.add_field(name="Duration:", value = self.client.utils.format_time(track.duration))
-        else:
-            nowPlaying.add_field(name="Duration: ", value="N/A")
         
         #** Add requester to embed
         user = self.client.get_user(track.requester)
@@ -195,6 +196,7 @@ class MusicCog(commands.Cog, name="Music"):
                 Player.store('Channel', interaction.channel_id)
                 Player.store('Voice', interaction.user.voice.channel)
                 Player.store('Users', {})
+                Player.store('Last_Volume', 25)
                 await Player.set_volume(25)
                 
             #** If bot doesn't need to connect and isn't already connected, raise error
@@ -213,7 +215,7 @@ class MusicCog(commands.Cog, name="Music"):
     async def on_track_end(self, event: TrackEndEvent):
             
         #** If Queue Empty, Save User Data & Disconnect From VC
-        if event.player.queue == [] and event.player.is_connected:
+        if event.player.queue == [] and event.player.is_connected and not(event.player.is_playing):
             await self._disconnect(event.player)
             
 
@@ -302,14 +304,16 @@ class MusicCog(commands.Cog, name="Music"):
                 await Player.play()
             
             #** Create queued embed for single track
-            Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())} Track Added To Queue!",
+            emoji = self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())
+            Queued = discord.Embed(title = f"{emoji+' ' if emoji != None else ''}Track Added To Queue!",
                                    description = f"[{Results['tracks'][0]['title']}]({Results['tracks'][0]['uri']})")
             
             #** Format artists based on information avaiable
-            if "spotify" in Results['tracks'][0]['extra'].keys():
-                Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['spotify']['artists'], Results['tracks'][0]['extra']['spotify']['artistID'])}"
-            else:
-                Queued.description += f"\nBy: {Results['tracks'][0]['author']}"
+            if Results['tracks'][0]['title'] != Results['tracks'][0]['author']:
+                if Results['tracks'][0]['source_name'] == "spotify":
+                    Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['spotify']['artists'], Results['tracks'][0]['extra']['spotify']['artistID'])}"
+                else:
+                    Queued.description += f"\nBy: {Results['tracks'][0]['author']}"
         
         elif Results["loadType"] == 'PLAYLIST_LOADED':
             for i, track in enumerate(Results['tracks']):
@@ -318,7 +322,8 @@ class MusicCog(commands.Cog, name="Music"):
                     await Player.play()
             
             #** Format queued embed for playlists
-            Queued = discord.Embed(title = f"{self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())} Playlist Added To Queue!",
+            emoji = self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())
+            Queued = discord.Embed(title = f"{emoji+' ' if emoji != None else ''}Playlist Added To Queue!",
                                    description = f"{Results['playlist_info']['name']} - {len(Results['tracks'])} Tracks")
         
         #** If URL Can't Be Loaded, Raise Error
@@ -326,7 +331,7 @@ class MusicCog(commands.Cog, name="Music"):
             raise app_commands.CheckFailure("SongNotFound")
         
         #** Output requester name & tag in footer
-        Queued.set_footer(text=f"Requested By {interaction.user.display_name}#{interaction.user.discriminator}")
+        Queued.set_footer(text=f"Requested By {interaction.user.display_name}")
         await interaction.followup.send(embed=Queued)
         
 
@@ -360,8 +365,22 @@ class MusicCog(commands.Cog, name="Music"):
 
         #** If Connected Set Volume & Confirm Volume Change
         else: 
+            current = Player.volume
             await Player.set_volume(percentage)
-            await interaction.response.send_message(f"Volume Set To {percentage}%")
+            message = f"Volume Set To {percentage}%"
+            
+            #** Unpause if volume increased from 0, or pause if volume set to 0
+            if current == 0 and percentage > 0:
+                await Player.set_pause(False)
+                message += "\n*Player has been unpaused!*"
+            elif current > 0 and percentage == 0:
+                await Player.set_pause(True)
+                message += "\n*Player has been paused!\nTo continue listening, set the volume level >0 or use the* `/pause` *command!*"
+            await interaction.response.send_message(message)
+                
+            #** Update previously stored Last_Volume if volume has changed
+            if current != percentage:
+                Player.store('Last_Volume', current)
 
     
     @app_commands.guild_only()
@@ -375,12 +394,16 @@ class MusicCog(commands.Cog, name="Music"):
         if not(Player.is_playing):
             raise app_commands.CheckFailure("NotPlaying")
 
-        #** If Connected & Playing Skip Song & Confirm Track Skipped **
+        #** If connected, flip current pause status
         else:
             await Player.set_pause(not(Player.paused))
             if Player.paused:
                 await interaction.response.send_message("Player Paused!")
             else:
+                #** If volume is 0 whilst paused, restore volume to previous level before unpausing
+                if Player.volume == 0:
+                    volume = Player.fetch("Last_Volume")
+                    await Player.set_volume(volume)
                 await interaction.response.send_message("Player Unpaused!")
 
     
@@ -406,90 +429,65 @@ class MusicCog(commands.Cog, name="Music"):
     async def queue(self, interaction: discord.Interaction):
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
-        Player = await self.ensure_voice(interaction)
+        player = await self.ensure_voice(interaction)
         
-        #** Format Queue Into Embed & Send Into Discord **
-        if Player.queue != []:
+        #** Format Basic Queue Embed Which Follows Same Structure For All Pages **
+        if player.is_playing:
             queueEmbed = discord.Embed(
                 title = f"Queue For {interaction.user.voice.channel.name}:",
                 colour = discord.Colour.blue())
             queueEmbed.set_thumbnail(url=interaction.guild.icon.url)
             
             #** Format Footer Based On Whether Shuffle & Repeat Are Active **
-            if Player.shuffle:
-                footer = "Shuffle: ✅  "
-            else:
-                footer = "Shuffle: ❌  "
-            if Player.repeat:
-                footer += "Loop: ✅"
-            else:
-                footer += "Loop: ❌"
+            footer = f"Shuffle: {self.client.utils.get_emoji(player.shuffle)}   Loop: {self.client.utils.get_emoji(True if player.loop in [1,2] else False)}"
+            if player.loop == 2:
+                footer += " (Current Queue)"
+            elif player.loop == 1:
+                footer += " (Current Track)"
             queueEmbed.set_footer(text=footer)
             
-            pages = [copy.deepcopy(queueEmbed.to_dict()) for x in range(math.ceil(len(Player.queue)/10))]
-            print(pages)
-            print(Player.current)
-            print(Player.queue)
-            
-            #** Format body of each page of 
-            body = "__**NOW PLAYING:**__\n"
-            
-            #** If Not Stream, Check If Has Spotify Data **
-            emoji = self.client.utils.get_emoji(Player.current.source_name.title())
-            if "spotify" in Player.current.extra.keys():
-
-                #** Format Data For Spotify Else Format And Add Data For SoundCloud Instead **
-                Artists = self.client.utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
-                body += f"{self.client.utils.get_emoji('Spotify')} [{Player.current['title']}]({Player.current['uri']})\nBy: {Artists}\n"
-            else:
-                body += f"{self.client.utils.get_emoji('Soundcloud')} [{Player.current['title']}]({Player.current['uri']})\nBy: {Player.current['author']}\n"
-            body += "--------------------\n__**UP NEXT:**__\n"
-
-            #** Loop Through Queue **
-            for i in range(-1, len(Player.queue)):
-
-                #** -1 Indicates Currently Playing Song, Added First **
-                if i == -1:
-
-                    #** If Not Stream, Check If Has Spotify Data **
-                    if not(Player.current.stream):
-                        if "spotify" in Player.current.extra.keys():
-
-                            #** Format Data For Spotify Else Format And Add Data For SoundCloud Instead **
-                            Artists = self.client.utils.format_artists(Player.current.extra['spotify']['artists'], Player.current.extra['spotify']['artistID'])
-                            body += f"{self.client.utils.get_emoji('Spotify')} [{Player.current['title']}]({Player.current['uri']})\nBy: {Artists}\n"
-                        else:
-                            body += f"{self.client.utils.get_emoji('Soundcloud')} [{Player.current['title']}]({Player.current['uri']})\nBy: {Player.current['author']}\n"
-                    
-                    #** If Stream, Format Data For Stream, And Add Up Next Seperator For Rest Of Queue **
+            #** Copy queueEmbed object for number of pages needed to be displayed! **
+            pages = [copy.deepcopy(queueEmbed.to_dict()) for x in range(math.ceil((len(player.queue)+1)/10))]
+            for i, page in enumerate(pages):
+                
+                #** Add information about currently playing song to first page! **
+                body = ""
+                if i == 0:
+                    body = "__**NOW PLAYING:**__\n"
+                    emoji = self.client.utils.get_emoji(player.current.source_name.title())
+                    if player.current.source_name == "spotify":
+                        artists = self.client.utils.format_artists(player.current.extra['metadata']['artists'], player.current.extra['metadata']['artistID'])
+                        body += f"{emoji} [{player.current.title}]({player.current.uri})\nBy: {artists}\n"
                     else:
-                        body += "["+Player.current['title']+"]("+Player.current['uri']+")\nBy: "+Player.current['author']+"\n"
+                        body += f"{emoji if emoji != None else ''} [{player.current.title}]({player.current.uri})\nBy: {player.current.author}\n"
                     body += "--------------------\n__**UP NEXT:**__\n"
                 
-                #** For i>=0, Work Though Index's In Queue **
-                else:
-
-                    #** If Track At Index Is Not Stream, Check If Song Has Spotify Data **
-                    if not(Player.queue[i].stream):
-                        if "spotify" in Player.queue[i].extra.keys():
-
-                            #** Format Data For Spotify Else Format And Add Data For SoundCloud Instead **
-                            Spotify = Player.queue[i].extra['spotify']
-                            Artists = self.client.utils.format_artists(Spotify['artists'], Spotify['artistID'])
-                            body += f"{self.client.utils.get_emoji('Spotify')} **{i+1}: **[{Player.current['title']}]({Player.current['uri']})\nBy: {Artists}\n"
+                #** Add information about next 10 songs in queue that haven't already been displayed **
+                if player.queue != []:
+                    for j in range(i*10, (i+1)*10 if len(player.queue) >= (i+1)*10 else len(player.queue)):
+                        emoji = self.client.utils.get_emoji(player.queue[j]['source_name'].title())
+                        if player.queue[j].source_name == "spotify":
+                            artists = self.client.utils.format_artists(player.queue[j].extra['metadata']['artists'], player.queue[j].extra['metadata']['artistID'])
+                            body += f"{emoji} **{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {artists}\n"
                         else:
-                            body += f"{self.client.utils.get_emoji('Soundcloud')} **{i+1}: **[{Player.queue[i]['title']}]({Player.queue[i]['uri']})\nBy: {Player.queue[i]['author']}\n"
-                    
-                    #** If Stream, Format Data For Stream & Add To String **
-                    else:
-                        body += f"**{i+1}: **[{Player.queue[i]['title']}]({Player.queue[i]['uri']})\nBy: {Player.queue[i]['author']}\n"
-
-            queueEmbed.description = body
-            await interaction.response.send_message(embed=queueEmbed)
+                            body += f"{emoji if emoji != None else ''} **{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {player.queue[j]['author']}\n"
+                else:
+                    body += "*Queue is currently empty!*"
+                
+                #** Add description to page & send page to discord if first page **    
+                page['description'] = body
+                if i == 0:
+                    pageEmbed = discord.Embed.from_dict(page)
+                    await interaction.response.send_message(embed=pageEmbed)
+        
+            #** Create Pagination For Message If Needed **
+            if len(pages) > 1:
+                message = await interaction.original_response()
+                await self.pagination.setup(message, pages)
         
         #** If Queue Empty, Just Send Plain Text **
         else:
-            await interaction.response.send_message("Queue Is Currently Empty!")
+            await interaction.response.send_message("Queue Is Currently Empty!", ephemeral=True)
 
 
     @app_commands.guild_only()
@@ -540,37 +538,25 @@ class MusicCog(commands.Cog, name="Music"):
             #** Check Integer Is Greater Than 0 (Skip Forwards) or Not **
             if forward is not None:
 
-                #** Check If Seek Time Is Within Current Track **
+                #** Check If Seek Time Is Within Current Track & Seek Forward Specified Time in ms **
                 if (forward * 1000) < (Player.current.duration - Player.position):
-
-                    #** Seek Forward Specified Time in ms **
                     await Player.seek(Player.position + (forward * 1000))
-
-                    #** Let User Know How Much Time Has Been Skipped **
                     await interaction.response.send_message(f"Skipped Forwards {forward * 1000} Seconds!")
 
                 #** Otherwise Skip Track**
                 else:
                     await Player.skip()
-
-                    #** Let User Know Track Has Been Skipped **
                     await interaction.response.send_message("Current Track Skipped!")
             
             elif backward is not None:
-                #** If Time Is Less Than Start, seek back in song specified amount of time **
+                #** If Time Is Less Than Start, Seek Backwards Specified Time in ms **
                 if (backward * 1000) < Player.position:
-
-                    #** Seek Backwards Specified Time in ms **
                     await Player.seek(Player.position - (backward * 1000))
-
-                    #** Let User Know How Much Time Has Been Skipped **
                     await interaction.response.send_message(f"Skipped Backwards {backward * 1000} Seconds!")
                 
                 #** Seek back to start if greater than current position **
                 else:
                     await Player.seek(0)
-
-                    #** Let User Know How Much Time Has Been Skipped **
                     await interaction.response.send_message("Skipped Back To Start Of Song!")
             
             #** Let User They Need To Enter Forward Or Backwards Time For Command To Work **
@@ -593,8 +579,6 @@ class MusicCog(commands.Cog, name="Music"):
         NowPlaying = self._format_nowplaying(Player, Player.current)
         if not(Player.current.stream):
             NowPlaying.set_field_at(1, name="Position:", value = f"{self.client.utils.format_time(Player.position)} / {self.client.utils.format_time(Player.current.duration)}")
-        else:
-            NowPlaying.set_field_at(1, name="Position:", value = "N/A")
 
         #** Add Requester To Embed & Send Embed To User **
         await interaction.response.send_message(embed=NowPlaying)
@@ -605,60 +589,52 @@ class MusicCog(commands.Cog, name="Music"):
 
         #** Check If Input Is Spotify URL & Format Input Data, Else Raise Bad Argument Error **
         if spotify.startswith("https://open.spotify.com/track/"):
-            SpotifyID = (spotify.split("/"))[4].split("?")[0]
+            spotifyID = (spotify.split("/"))[4].split("?")[0]
         else:
             await interaction.response.send_message("Please enter a valid Spotify Track Link!", ephemeral=True)
 
-        #** Check ID Is A Valid Spotify ID **
-        if len(SpotifyID) == 22:
-
-            #** Get Song Details And Check If Song Is Found **
+        #** Check ID Is A Valid Spotify ID & Get Song Details **
+        if len(spotifyID) == 22:
             try:
-                SongInfo = self.client.music.GetSongDetails(SpotifyID)
+                songInfo = self.client.music.GetSongDetails(spotifyID)
             except Exception as e:
                 raise app_commands.CheckFailure(e.message)
             else:
-                
                 #** Format Returned Data Ready To Be Put Into The Embeds **
-                SongInfo = SongInfo[SpotifyID]
-                Description = "**By: **" + self.client.utils.format_artists(SongInfo['Artists'], SongInfo['ArtistID'])
-                Links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify]({spotify})\n"
-                if SongInfo['Preview'] != None:
-                    Links += f"{self.client.utils.get_emoji('Preview')} Song: [Preview]({SongInfo['Preview']})\n"
-                if SongInfo['AlbumID'] != None:
-                    Links += f"{self.client.utils.get_emoji('Album')} Album: [{SongInfo['Album']}](https://open.spotify.com/album/{SongInfo['AlbumID']})"
-                else:
-                    Links += f"{self.client.utils.get_emoji('Album')} Album: {SongInfo['Album']}"
+                description = "**By: **" + self.client.utils.format_artists(songInfo['artists'], songInfo['artistID'])
+                links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify]({spotify})\n"
+                if songInfo['preview'] != None:
+                    links += f"{self.client.utils.get_emoji('Preview')} Song: [Preview]({songInfo['preview']})\n"
+                if songInfo['albumID'] != None and songInfo['album'] != None:
+                    links += f"{self.client.utils.get_emoji('Album')} Album: [{songInfo['album']}](https://open.spotify.com/album/{songInfo['albumID']})"
                 
                 #** Setup Embed With Advanced Song Information **
-                BaseEmbed = discord.Embed(
-                    title=SongInfo['Name'], 
-                    description=Description)
-                if SongInfo['Art'] != None:
-                    BaseEmbed.set_thumbnail(url=SongInfo['Art'])
-                BaseEmbed.set_footer(text="(2/2) React To See Basic Song Information!")
-                BaseEmbed.add_field(name="Popularity:", value=SongInfo['Popularity'], inline=True)
-                BaseEmbed.add_field(name="Explicit:", value=SongInfo['Explicit'], inline=True)
-                BaseEmbed.add_field(name="Tempo:", value=SongInfo['Tempo'], inline=True)
-                BaseEmbed.add_field(name="Key:", value=SongInfo['Key'], inline=True)
-                BaseEmbed.add_field(name="Beats Per Bar:", value=SongInfo['BeatsPerBar'], inline=True)
-                BaseEmbed.add_field(name="Mode:", value=SongInfo['Mode'], inline=True)
-                Advanced = copy.deepcopy(BaseEmbed.to_dict())
+                baseEmbed = discord.Embed(title=songInfo['name'], 
+                                          description=description)
+                if songInfo['art'] != None:
+                    baseEmbed.set_thumbnail(url=songInfo['art'])
+                baseEmbed.set_footer(text="(2/2) React To See Basic Song Information!")
+                baseEmbed.add_field(name="Popularity:", value=songInfo['popularity'], inline=True)
+                baseEmbed.add_field(name="Explicit:", value=songInfo['explicit'], inline=True)
+                baseEmbed.add_field(name="Tempo:", value=songInfo['tempo'], inline=True)
+                baseEmbed.add_field(name="Key:", value=songInfo['key'], inline=True)
+                baseEmbed.add_field(name="Beats Per Bar:", value=songInfo['beats'], inline=True)
+                baseEmbed.add_field(name="Mode:", value=songInfo['mode'], inline=True)
+                advanced = copy.deepcopy(baseEmbed.to_dict())
 
                 #** Setup Embed With Basic Song Information **
-                BaseEmbed.clear_fields()
-                BaseEmbed.set_footer(text="(1/2) React To See Advanced Song Information!")
-                BaseEmbed.add_field(name="Length:", value=SongInfo['Duration'], inline=False)
-                BaseEmbed.add_field(name="Released:", value=SongInfo['Release'], inline=True)
-                BaseEmbed.add_field(name="Genre:", value=SongInfo['Genre'].title(), inline=True)
-                BaseEmbed.add_field(name="Links:", value=Links, inline=False)
-                Basic = BaseEmbed.to_dict()
+                baseEmbed.clear_fields()
+                baseEmbed.set_footer(text="(1/2) React To See Advanced Song Information!")
+                baseEmbed.add_field(name="Length:", value=songInfo['duration'], inline=False)
+                baseEmbed.add_field(name="Released:", value=songInfo['release'], inline=True)
+                baseEmbed.add_field(name="Genre:", value=songInfo['genre'].title(), inline=True)
+                baseEmbed.add_field(name="Links:", value=links, inline=False)
+                basic = baseEmbed.to_dict()
 
                 #** Send First Page & Setup Pagination Object **
-                Page = await interaction.response.send_message(embed=BaseEmbed)
-                await Page.add_reaction(self.client.utils.get_emoji('Back'))
-                await Page.add_reaction(self.client.utils.get_emoji('Next'))
-                await self.Pagination.add_embed(Page.id, [Basic, Advanced])
+                await interaction.response.send_message(embed=baseEmbed)
+                message = await interaction.original_response()
+                await self.pagination.setup(message, [basic, advanced])
 
 
 #!-------------------SETUP FUNCTION-------------------#

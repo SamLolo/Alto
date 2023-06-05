@@ -6,11 +6,11 @@
     ],
     "StatusTime": 60,
     "Prefix": "!",
-    "Welcome_Message": "Thanks for choosing my music bot! Get started by joining a vc and typing `/play`!",
+    "Welcome": {"message": "Thanks for choosing my music bot! Get started by joining a vc and typing `/play`!",
+                "enabled": false},
     "logging": {
         "directory": "Logs",
         "levels": {
-            "default": "INFO",
             "masterFile": "INFO",
             "debugFile": "DEBUG",
             "console": "INFO"

@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
+import os
 import json
 import discord
 import logging
@@ -16,7 +17,7 @@ from discord.ext import commands
 import Classes.Users
 import Classes.Utils
 import Classes.MusicUtils
-from Classes.Database import Database
+import Classes.Database
 
 
 #!------------------------ADMIN COG-----------------------#
@@ -28,13 +29,16 @@ class AdminCog(commands.Cog, name="Admin"):
 
         #** Assign Discord Bot Client As Class Object **
         self.client = client
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger("discord.admin")
         
         #** Instanciate Classes If One Or More Attributes Missing **
-        if not hasattr(client, 'database') or not hasattr(client, 'music') or not hasattr(client, 'utils') or not hasattr(client, 'userClass'):
-            client.database = Database()
+        if not hasattr(client, 'database'):
+            client.database = Classes.Database.Database()
+        if not hasattr(client, 'music'): 
             client.music = Classes.MusicUtils.SongData()
+        if not hasattr(client, 'utils'):
             client.utils = Classes.Utils.Utility(client)
+        if not hasattr(client, 'userClass'):
             client.userClass = Classes.Users
 
     
@@ -59,7 +63,7 @@ class AdminCog(commands.Cog, name="Admin"):
                 #** Re-add Attribute To Client Class **
                 if input.lower() == "database":
                     importlib.reload(Classes.Database)
-                    self.client.database = Classes.Database.UserData()
+                    self.client.database = Classes.Database.Database()
                 elif input.lower() == "music":
                     importlib.reload(Classes.MusicUtils)
                     self.client.music = Classes.MusicUtils.SongData()
@@ -72,6 +76,8 @@ class AdminCog(commands.Cog, name="Admin"):
 
             except Exception as e:
                 #** Return Error To User **
+                self.logger.warning(f"An error occured when reloading class: {input.title()}!")
+                self.logger.exception(e)
                 await ctx.send(f"**An Error Occured Whilst Trying To Reload The {input.title()} Class!**\n```{e}```")
                 return
         
@@ -86,12 +92,13 @@ class AdminCog(commands.Cog, name="Admin"):
 
             except Exception as e:
                 #** Return Error To User **
+                self.logger.warning("An error occured when reloading config file!")
+                self.logger.exception(e)
                 await ctx.send(f"**An Error Occured Whilst Trying To Reload The Config File!**\n```{e}```")
                 return
             
         #** If Input Not Config Or Class, Try To Reload Cog Under Name **
         else:
-            
             try:
                 #** ReLoad Specified Cog **
                 await self.client.reload_extension("Cogs."+input.title())
@@ -99,10 +106,13 @@ class AdminCog(commands.Cog, name="Admin"):
 
             except Exception as e:
                 #** Return Error To User **
+                self.logger.warning(f"An error occured when reloading cog: {input.title()}!")
+                self.logger.exception(e)
                 await ctx.send(f"**An Error Occured Whilst Trying To Reload {input.title()} Cog!**\n```{e}```")
                 return
             
         #** Send Confirmation Message **
+        self.logger.debug(f"Sucessfully reloaded {input.title()}!")
         await ctx.send(f"**Sucessfully Reloaded:** `{input.title()}`!")
     
 
@@ -129,17 +139,16 @@ class AdminCog(commands.Cog, name="Admin"):
             #** Wait For User To React To Tick & Stop Function Execution When Reacting With No **
             while True:
                 Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
-                if Reaction.event_type == 'REACTION_ADD':
-                    if str(Reaction.emoji) == "❌":
-                        await warning.delete()
-                        temp = await ctx.send("Cancelled Command Sync Operation!")
-                        await asyncio.sleep(10)
-                        await ctx.message.delete()
-                        await temp.delete()
-                        return
-                    elif str(Reaction.emoji) == "✅":
-                        await warning.delete()
-                        break
+                if str(Reaction.emoji) == "❌":
+                    await warning.delete()
+                    temp = await ctx.send("Cancelled Command Sync Operation!")
+                    await asyncio.sleep(10)
+                    await ctx.message.delete()
+                    await temp.delete()
+                    return
+                elif str(Reaction.emoji) == "✅":
+                    await warning.delete()
+                    break
         
         #** If Input is Integer, Check If Guild ID, & Sync To That Guild
         elif args[0].isdecimal():
@@ -156,7 +165,7 @@ class AdminCog(commands.Cog, name="Admin"):
         await self.client.tree.sync()
             
         #** Send Confirmation Message If Sucessfull **
-        self.client.logger.info(f'Synced Application Commands. Scope: "{args[0]}"')
+        self.client.logger.info(f"Synced Application Commands. Scope: '{args[0]}'")
         temp = await ctx.send(f"Sucessfully Synced Application Commands!\nScope: `{args[0]}`")
         
         
@@ -165,15 +174,11 @@ class AdminCog(commands.Cog, name="Admin"):
     async def debug(self, ctx, option):
         
         #** Format Original Embed **
-        embed = discord.Embed(
-            title=f"Debug Information For `{option.title()}`",
-            colour=discord.Colour.blue()
-        )
+        embed = discord.Embed(title=f"Debug Information For `{option.title()}`",
+                              colour=discord.Colour.blue())
         
         #** If Option Is 'Lavalink', Format Embed Description With Current Lavalink Node Info **
         if option.lower() == "lavalink":
-            
-            #** Check If Client Has 
             if hasattr(self.client, 'lavalink'):
                 
                 #** Start Description Embed & Locate Default Node From Lavalink Node Manager **
@@ -182,16 +187,17 @@ class AdminCog(commands.Cog, name="Admin"):
                     if node.name == "default-node":
                         
                         #** Check If Node Is Available Or Not & Add Stats To Description Before Breaking For Loop **
-                        print(node.stats.is_fake)
-                        if node.available and not(node.stats.is_fake):
-                            description += f"```Total Players: {node.stats.players}\nActive Players: {node.stats.playing_players}```"
-                            embed.add_field(name="CPU Usage:", value=f"{round(node.stats.lavalink_load * 100, 2)}%")
-                            embed.add_field(name="Memory Usage:", value=f"{round(node.stats.memory_used / 1000000000, 2)}GB")
-                            embed.add_field(name="Allocated Memory:", value=f"{round(node.stats.memory_allocated / 1000000000, 2)}GB")
-                            embed.add_field(name="Uptime:", value=self.client.utils.format_time(node.stats.uptime))
-                            embed.add_field(name="Missing Frames:", value=f"{node.stats.frames_deficit * -1}")
-                            embed.add_field(name="Lavalink Penalty:", value=f"{round(node.stats.penalty.total, 2)}")
-                            break
+                        if node.available:
+                            if not(node.stats.is_fake):
+                                description += f"```Total Players: {node.stats.players}\nActive Players: {node.stats.playing_players}```"
+                                embed.add_field(name="CPU Usage:", value=f"{round(node.stats.lavalink_load * 100, 2)}%")
+                                embed.add_field(name="Memory Usage:", value=f"{round(node.stats.memory_used / 1000000000, 2)}GB")
+                                embed.add_field(name="Allocated Memory:", value=f"{round(node.stats.memory_allocated / 1000000000, 2)}GB")
+                                embed.add_field(name="Uptime:", value=self.client.utils.format_time(node.stats.uptime))
+                                embed.add_field(name="Missing Frames:", value=f"{node.stats.frames_deficit * -1}")
+                                embed.add_field(name="Lavalink Penalty:", value=f"{round(node.stats.penalty.total, 2)}")
+                            else:
+                                description += "*Stats are not yet available for this node!*"
                         
                         #** Format Description With Node Offline & Break For Loop
                         else:
@@ -200,18 +206,32 @@ class AdminCog(commands.Cog, name="Admin"):
                 
                 #** Set Embed Description To Formatted Embed **
                 embed.description = description
-                            
-            #** Let User Know Lavalink Isn't Connected If Attribute Not Found **
             else:
                 embed.description = "Lavalink Not Connected!"
             
         #** If Option Is 'Database', Format Embed Description With Database Connection Info **
         elif option.lower() == "database":
-            
             print("database")
             
         #** Send Embed To Discord **
         await ctx.send(embed=embed)
+        self.logger.debug(f"Debug info requested for '{option.title()}' by user: {ctx.author.id}")
+        
+    
+    @commands.command(hidden=True)
+    @is_admin()
+    async def logs(self, ctx):
+        
+        #** Create List Of Discord File Objects For All Current Log Files In Directory **
+        logDir = self.client.config['logging']['directory']
+        download = []
+        for file in os.listdir(f"{logDir}/"):
+            if file.endswith(".log"):
+                download.append(discord.File(open(f"{logDir}/{file}", "rb")))
+        
+        #** Attach logs files to Discord Message **     
+        await ctx.send("Current session logs:", files=download)
+        self.logger.info(f"Session logs downloaded by user: {ctx.author.id}")
         
     
 #!-------------------SETUP FUNCTION-------------------#

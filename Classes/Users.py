@@ -30,11 +30,10 @@ class SongHistory(object):
         if data['source'] == "spotify":
             try:
                 features = self.client.music.GetAudioFeatures([data['id']])
-                if features is None:
-                    raise ValueError("No audio features found!")
             except:
                 self.client.logger.debug("Error getting audio features whilst adding song history!")
             else:
+                features = features[0]
                 songCount = self.user['recommendations']['songcount']
                 
                 # Create average using new track data with previous average (popularity must remain an integer)
@@ -103,8 +102,10 @@ class User(SongHistory):
             self.user = {"data": {"id": int(userData.id),
                                   "name": userData.name,
                                   "avatar": str(userData.default_avatar.url),
-                                  "created": datetime.now(),
-                                  "songs": 0},
+                                  "songs": 0,
+                                  "history": 2,
+                                  "public": True,
+                                  "created": datetime.now()},
                          "recommendations": {"songcount": 0,
                                              "popularity": [0, 50, 100],
                                              "acousticness": [0.0, 0.223396, 1.0],

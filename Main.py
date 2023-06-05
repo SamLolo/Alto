@@ -113,11 +113,12 @@ class MyClient(commands.Bot):
 
     #{ Event Called When Bot Joins New Guild/Server }
     async def on_guild_join(self, Guild):
-        #** Loop Through Channels Until 
-        for Channel in Guild.channels:
-            if isinstance(Channel, discord.channel.TextChannel):
-                await Channel.send(self.config['Welcome_Message'])
-                break
+        #** Loop Through Channels Until You Find The First Text Channel
+        if self.config['Welcome']['enabled']:
+            for Channel in Guild.channels:
+                if isinstance(Channel, discord.channel.TextChannel):
+                    await Channel.send(self.config['Welcome']['message'])
+                    break
             
 
 #! -------------------------------MAIN FUNCTION-------------------------------!#
@@ -166,18 +167,18 @@ async def main():
 
     #** Get Root Logger & Set Default Level From Config File **
     logger = logging.getLogger()
-    logger.setLevel(config['logging']['levels']['default'])
+    logger.setLevel(logging.DEBUG)
 
     #** Setup Handlers **
     masterHandle = logging.handlers.RotatingFileHandler(
         filename=f'{logDir}/master.log',
         encoding='utf-8',
-        maxBytes=32 * 1024 * 1024,
+        maxBytes=8 * 1024 * 1024,
         backupCount=10)
     debugHandle = logging.handlers.RotatingFileHandler(
         filename=f'{logDir}/debug.log',
         encoding='utf-8',
-        maxBytes=32 * 1024 * 1024,
+        maxBytes=8 * 1024 * 1024,
         backupCount=10)
     consoleHandle = logging.StreamHandler(sys.stdout)
         

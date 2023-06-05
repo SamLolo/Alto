@@ -21,7 +21,7 @@ class AccountCog(commands.Cog, name="Account"):
 
         #** Assign Discord Bot Client As Class Object & Get Pagination Cog**
         self.client = client
-        self.Pagination = self.client.get_cog("EmbedPaginator")
+        self.pagination = self.client.get_cog("EmbedPaginator")
 
  
     @app_commands.command(description="Displays information about your alto profile.")
@@ -30,6 +30,7 @@ class AccountCog(commands.Cog, name="Account"):
         #** Setup Base Profile Embed With Title & User's Colour **
         ProfileEmbed = discord.Embed(title=interaction.user.display_name+"'s Profile",
                                      colour=interaction.user.colour)
+        ProfileEmbed.set_thumbnail(url=interaction.user.avatar.url)
 
         #** If User Not In VC, Create New User Object **
         if not(interaction.user.voice) or not(interaction.user.voice.channel):
@@ -51,30 +52,24 @@ class AccountCog(commands.Cog, name="Account"):
 
         #** Get Last Song's Data if Listening History Isn't Empty **
         if len(CurrentUser.history) > 0:
-            LastSongData = CurrentUser.history[-1]
+            LastSongData = CurrentUser.history[0]
 
             #** Format Data For Song & Add Last Listened To Song To Embed As Field **
-            FormattedSong = self.client.utils.format_song(LastSongData)
-            ProfileEmbed.add_field(name="Last Listened To:", value=FormattedSong, inline=False)
+            emoji = self.client.utils.get_emoji(LastSongData['source'].title())
+            artists = self.client.utils.format_artists(LastSongData['artists'], LastSongData['artistID'] if 'artistID' in LastSongData.keys() else None)
+            description = f"{emoji if emoji != None else ''} [{LastSongData['name']}]({LastSongData['url']})\nBy: {artists}\n"
+            ProfileEmbed.add_field(name="Last Listened To:", value=description, inline=False)
 
             #** Calculate Time Difference And Check What To Display **
             TimeDiff = relativedelta(datetime.now(), LastSongData['listenedAt'])
-            if TimeDiff.years > 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.years)+" years ago")
-            elif TimeDiff.years == 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="Over a year ago")
-            elif TimeDiff.months > 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.months)+" months ago")
-            elif TimeDiff.months == 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="Over a month ago")
-            elif TimeDiff.days > 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.days)+" days ago")
-            elif TimeDiff.days == 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="A day ago")
-            elif TimeDiff.hours > 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.hours)+" hours ago")
-            elif TimeDiff.hours == 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="An hour ago")
+            if TimeDiff.years >= 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=f"Over {f'{TimeDiff.years} years' if TimeDiff.years > 1 else 'a year'} ago")
+            elif TimeDiff.months >= 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=f"Over {f'{TimeDiff.months} months' if TimeDiff.months > 1 else 'a month'} ago")
+            elif TimeDiff.days >= 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=f"{f'{TimeDiff.days} days' if TimeDiff.days > 1 else 'A day'} ago")
+            elif TimeDiff.hours >= 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=f"{f'{TimeDiff.hours} hours' if TimeDiff.days > 1 else 'An hour'} ago")
             else:
                 ProfileEmbed.add_field(name="Last Listening Session:", value="Less than an hour ago")
         
@@ -84,8 +79,7 @@ class AccountCog(commands.Cog, name="Account"):
             ProfileEmbed.add_field(name="Last Listening Session:", value="N/A")
 
         #** Calculate Total Song Count & Add As Field To Embed **
-        SongTotal = CurrentUser.user['data']['songs']
-        ProfileEmbed.add_field(name="Lifetime Song Count:", value=f"{SongTotal} Songs")
+        ProfileEmbed.add_field(name="Lifetime Song Count:", value=f"{CurrentUser.user['data']['songs']} Songs")
         
         #** Send Profile Embed To User **
         await interaction.response.send_message(embed=ProfileEmbed)
@@ -135,9 +129,10 @@ class AccountCog(commands.Cog, name="Account"):
                         break
 
                     #** Format Song & Add Listened To Stat & Divisor **
-                    Description += self.client.utils.format_song(NextSong)
-                    Description += "\n*Listened on "+NextSong['listenedAt'].strftime('%d/%m/%y')+" at "+NextSong['listenedAt'].strftime('%H:%M')+"*"
-                    Description += "\n--------------------\n"
+                    emoji = self.client.utils.get_emoji(NextSong['source'].title())
+                    artists = self.client.utils.format_artists(NextSong['artists'], NextSong['artistID'] if 'artistID' in NextSong.keys() else None)
+                    Description += f"{emoji if emoji != None else ''} [{NextSong['name']}]({NextSong['url']})\nBy: {artists}\n"
+                    Description += f"\n*Listened on {NextSong['listenedAt'].strftime('%d/%m/%y')} at {NextSong['listenedAt'].strftime('%H:%M')}*\n--------------------\n"
                 
                 #** Set Embed Description To String Created Above **
                 HistoryEmbed.description = Description
@@ -150,13 +145,12 @@ class AccountCog(commands.Cog, name="Account"):
                 
                 #** Send First Embed Page On First Loop Through Count **
                 if Count == 0:
-                    Page = await interaction.channel.send(embed=HistoryEmbed)
+                    await interaction.response.send_message(embed=HistoryEmbed)
             
             #** If More Than One Page Being Displayed, Add Back And Next Reactions & Add To Global Pagination System **
             if math.ceil(len(CurrentUser.history) / 5) > 1:
-                await Page.add_reaction(self.client.utils.get_emoji('Back'))
-                await Page.add_reaction(self.client.utils.get_emoji('Next'))
-                await self.Pagination.add_embed(Page.id, Pages)
+                message = await interaction.original_response()
+                await self.pagination.setup(message, Pages)
         
         #** Let User Know If They Have No Listening History To Display **
         else:
@@ -214,22 +208,21 @@ class AccountCog(commands.Cog, name="Account"):
 
                 #** Display First Recomendation To User **
                 if Count == 0:
-                    Page = await interaction.channel.send(content=None, embed=NewPage)
-                    await Page.add_reaction(self.client.utils.get_emoji('Back'))
-                    await Page.add_reaction(self.client.utils.get_emoji('Next'))
-                    print("Sent!")
+                    Page = await interaction.response.send_message(embed=NewPage)
+                    print(Page)
 
                 #** Convert Embed To Dictionary and Add To Data Dictionary & Increment Counter **
                 Pages.append(NewPage.to_dict())
                 Count += 1
 
             #** Add Embed To Active Pages In Pagination Cog **
-            await self.Pagination.add_embed(Page.id, Pages)
+            await self.pagination.setup(Page, Pages)
             print("All Pages Created!\n")
         
         #** Return Error To User If Failed To Get Recommendations **
         else:
             await interaction.response.send_message(content="**An Error Occurred Whilst Fetching Recommendations**!\nIf this error persists, open a ticket in our Discord server:* `/discord`.", ephemeral=True)
+
 
     @app_commands.command(description="Deletes your user data where requested from our database.")
     @app_commands.choices(type=[app_commands.Choice(name="All", value="users, spotify, history, recommendations"),
@@ -269,10 +262,9 @@ class AccountCog(commands.Cog, name="Account"):
         #** Wait For User To React To Tick & Remove Data When Done So **
         while True:
             Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
-            if Reaction.event_type == 'REACTION_ADD':
-                if str(Reaction.emoji) == self.client.utils.get_emoji('checkmark'):
-                    self.client.database.RemoveData(interaction.user.id, Tables)
-                    await interaction.user.dm_channel.send("All requested data successfully removed!")
+            if str(Reaction.emoji) == self.client.utils.get_emoji('checkmark'):
+                self.client.database.RemoveData(interaction.user.id, Tables)
+                await interaction.user.dm_channel.send("All requested data successfully removed!")
 
 
 #!-------------------SETUP FUNCTION-------------------#

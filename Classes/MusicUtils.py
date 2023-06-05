@@ -285,8 +285,10 @@ class Spotify(object):
         
         #** Return Audio Features **
         Features = Features.json()
-        print(Features)
-        return Features['audio_features'][0]
+        if Features != None or Features['audio_features'] != None:
+            return Features['audio_features']
+        else:
+            raise Exception("FeaturesNotFound")
 
 
     def FormatSongData(self, Song: dict):
@@ -522,25 +524,26 @@ class SongData(Spotify):
         try:
             SongData = self.GetSongInfo(SongID)
             Features = self.GetAudioFeatures([SongID])[0]
+            SongData = SongData['tracks'][0]
         except Exception as e:
             raise e
 
         #** Add Advanced Information Using Audio Features to Returned Song Info Dict **
-        SongData[SongID]["Duration"] = str(int(Features['duration_ms'] // 60000))+" Mins "+str(int((Features['duration_ms'] / 1000) - ((Features['duration_ms'] // 60000) * 60)))+" Seconds"
-        SongData[SongID]["Key"] = self.Keys[str(int(Features['key']))]
-        SongData[SongID]["BeatsPerBar"] = str(int(Features['time_signature']))
-        SongData[SongID]["Tempo"] = str(int(Features['tempo']))
+        SongData["duration"] = f"{int(Features['duration_ms'] // 60000)} Mins {int((Features['duration_ms'] / 1000) - ((Features['duration_ms'] // 60000) * 60))} Seconds"
+        SongData["key"] = self.Keys[str(Features['key'])]
+        SongData["beats"] = Features['time_signature']
+        SongData["tempo"] = int(Features['tempo'])
         if Features['mode'] <= 0.5:
-            SongData[SongID]["Mode"] = "Minor"
+            SongData["mode"] = "Minor"
         else:
-            SongData[SongID]["Mode"] = "Major"
+            SongData["mode"] = "Major"
         for Volume, Range in self.Volumes.items():
             if int(Features['loudness']) > Range[0] and int(Features['loudness']) <= Range[1]:
-                SongData[SongID]["Volume"] = Volume
+                SongData["volume"] = Volume
                 break
         
         #** Predict Genre Of The Song and Add it to The Song Info Dict **
-        SongData[SongID]['Genre'] = self.PredictGenre([Features])[0]
+        SongData['genre'] = self.PredictGenre([Features])[0]
 
         #** Returned Nicely Filled Song Info Dict **
         return SongData

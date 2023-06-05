@@ -90,18 +90,20 @@ class Database():
             data = {"data": {"id": int(result[0]),
                              "name": result[1],
                              "avatar": result[2],
-                             "created": result[4],
-                             "songs": result[3]},
-                    "recommendations": {"songcount": result[6],
-                                        "popularity": [result[7], result[8], result[9]],
-                                        "acousticness": [result[10], result[11], result[12]],
-                                        "danceability": [result[13], result[14], result[15]],
-                                        "energy": [result[16], result[17], result[18]],
-                                        "instrumentalness": [result[19], result[20], result[21]],
-                                        "liveness": [result[22], result[23], result[24]],
-                                        "loudness": [result[25], result[26], result[27]],
-                                        "speechiness": [result[28], result[29], result[30]],
-                                        "valence": [result[31], result[32], result[33]]}}
+                             "songs": result[3],
+                             "history": result[5],
+                             "public": result[6],
+                             "created": result[4]},
+                    "recommendations": {"songcount": result[8],
+                                        "popularity": [result[9], result[10], result[11]],
+                                        "acousticness": [result[12], result[13], result[14]],
+                                        "danceability": [result[15], result[16], result[17]],
+                                        "energy": [result[18], result[19], result[20]],
+                                        "instrumentalness": [result[21], result[22], result[23]],
+                                        "liveness": [result[24], result[25], result[26]],
+                                        "loudness": [result[27], result[28], result[29]],
+                                        "speechiness": [result[30], result[31], result[32]],
+                                        "valence": [result[33], result[34], result[35]]}}
             return data
         else:
             return None
@@ -116,8 +118,8 @@ class Database():
             return None
 
         # Write new data into users table, updating the row if it already exists
-        data = (user['data']['id'], user['data']['name'], user['data']['avatar'], user['data']['songs'], user['data']['created'])
-        cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s);", data)
+        data = (user['data']['id'], user['data']['name'], user['data']['avatar'], user['data']['songs'], user['data']['created'], user['data']['history'], user['data']['public'])
+        cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s, %s, %s);", data)
 
         # write user recommendation data to recommendations table (update if already exists)
         recommendations = user['recommendations']
