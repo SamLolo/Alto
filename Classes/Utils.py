@@ -2,9 +2,9 @@
 #!-------------------------IMPORT MODULES-----------------------!#
 
 
-import requests
 import lavalink
-from colorthief import ColorThief
+import numpy as np
+import skimage
 
 
 #!-------------------------UTILS------------------------!#
@@ -18,43 +18,39 @@ class Utility():
         self.client = client
 
         
-    def get_colour(self, URL):
-        
-        #** Get Contents Of Image URL **
-        Image = requests.get(URL)
-
-        #** Write Image To Temp PNG File **
-        File = open("ColourCheck.png", "wb")
-        File.write(Image.content)
-        File.close()
+    async def get_colour(self, URL):
         
         #** Get Most Dominant Colour In Image **
-        Colour = ColorThief('ColourCheck.png').get_color(quality=1)
+        img = skimage.io.imread(URL)        
+        colour = np.mean(img, axis=(0, 1), dtype=np.int32)
         
         #** Return RGB Colour Tuple **
-        return Colour
+        return tuple(colour)
 
 
-    def format_artists(self, Artists, IDs):
+    def format_artists(self, artists, IDs = None):
 
-        #** Prepare Empty String & Start Loop Through Artists **
-        Formatted = ""
-        for i in range(len(Artists)):
+        #** Return artist is not a list
+        if type(artists) == list:
+            formatted = ""
+            for i in range(len(artists)):
+                
+                #** Add comma up until 2nd to last artist in list, using & between the last 2 artists
+                if i > 0 and i < len(artists)-1:
+                    formatted += ", "
+                elif i == len(artists)-1 and i != 0:
+                    formatted += " & "
+                
+                #** Format string based on whether links are available
+                if IDs is not None:
+                    formatted += f"[{artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
+                else:
+                    formatted += artists[i]
 
-            #** If First Index, Add Artist & Link **
-            if i == 0:
-                Formatted += f"[{Artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
-
-            #** If Not Last Index, Add Comma Before Artist **
-            elif i != len(Artists)-1:
-                Formatted += f", [{Artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
-
-            #** If Last Index, add & Before Artist **
-            else:
-                Formatted += f" & [{Artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
-
-        #** Returned Formatted String **
-        return Formatted
+        #** Returned Formatted Strings
+            return formatted
+        else:
+            return artists
 
 
     def format_time(self, time):
@@ -67,25 +63,14 @@ class Utility():
             return f'{int(Time[2])}:{str(int(Time[3])).zfill(2)}'
         else:
             return f'{int(Time[1])}:{str(int(Time[2])).zfill(2)}:{str(int(Time[3])).zfill(2)}'
-
-        
-    def format_song(self, SongData):
-
-        #** If Spotify Song, Format Artists & Create Create String With Spotify Emoji **
-        if SongData['SpotifyID'] is not None:
-            FormattedArtists = self.format_artists(SongData['Artists'], SongData['ArtistIDs'])
-            FormattedSong = f"{self.get_emoji('Spotify')} [{SongData['Name']}](https://open.spotify.com/track/{SongData['SpotifyID']})\nBy: {FormattedArtists}"
-        
-        #** If Soundcloud, Format Song Title & Add Single Artist With Link From Song Data **
-        else:
-            FormattedSong = f"{self.get_emoji('Soundcloud')} [{SongData['Name']}]({SongData['URI']})\n"
-            FormattedSong += f"By: [{SongData['Artists'][0]}]({('/'.join(SongData['URI'].split('/')[:4]))})"
-
-        #** Return Formatted String **
-        return FormattedSong
     
     
     def get_emoji(self, name):
+        #** Return Unicode tick/cross if name is boolean value
+        if name == True:
+            return "✅"
+        elif name == False:
+            return "❌"
         
         #** Search through sequence of client emojis and return found emoji object **
         for emoji in self.client.emojis:

@@ -1,0 +1,52 @@
+{
+	"Unknown": {
+		"message": "An unexpected error occured whilst processing your request!",
+		"ephemeral": true
+	},
+	"CheckFailure": {
+		"UserVoice": {
+			"message": "To use this command, please join a Voice Channel!",
+			"ephemeral": true
+		},
+		"BotVoice": {
+			"message": "I'm Not Currently Connected!",
+			"ephemeral": false
+		},
+		"SameVoice": {
+			"message": "You must be in my Voice Channel to use this!",
+			"ephemeral": true
+		},
+		"NotPlaying": {
+			"message": "I'm Not Currently Playing Anything!",
+			"ephemeral": false
+		},
+		"History": {
+			"message": "**You must have listened to some songs before you can run this command!**\nJoin a Voice Channel and type `/play` to get listening.",
+			"ephemeral": true
+		},
+		"SongNotFound": {
+			"message": "**We couldn't find any tracks for the provided input!**\nPlease check your input and try again.",
+			"ephemeral": true
+		},
+		"DM": {
+			"message": "**DM Failed!**\nPlease turn on `Allow Server Direct Messages` in Discord settings!",
+			"ephemeral": true
+		},
+		"Database": {
+			"message": "**We're currently experiencing trouble loading user data!**\nPlease try again in a little while or notify `Lolo#6699` on Discord!",
+			"ephemeral": true
+		},
+		"Lavalink": {
+			"message": "**Music playback is currently unavailable!**\nPlease try again in a little while or notify `Lolo#6699` on Discord!",
+			"ephemeral": true
+		}
+	},
+	"CommandNotFound": {
+		"message": "**Command Not Found!**\nFor a full list of commands, type `/help`",
+		"ephemeral": true
+	},
+	"BotMissingPermissions": {
+		"message": "**To use this command, please ask a server own to give me the following permissions:**\n`%s`",
+		"ephemeral": true
+	}
+}

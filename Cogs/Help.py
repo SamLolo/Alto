@@ -81,7 +81,7 @@ class HelpCog(commands.Cog):
             if PageData == []:
                 await interaction.channel.send(embed=CategoryEmbed)
             else:
-                await self.Pagination.add_pages(Page.id, PageData)
+                await self.Pagination.add_embed(Page.id, PageData)
                 
         #**------------------SINGLE COMMAND------------------**#
                 

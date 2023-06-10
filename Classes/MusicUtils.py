@@ -12,6 +12,7 @@ import asyncio
 import requests
 import pandas as pd
 from sklearn import tree
+from datetime import datetime
 
 
 #!--------------------------------SPOTIFY-----------------------------------#
@@ -25,13 +26,13 @@ class Spotify(object):
         self.logger = logging.getLogger("spotify")
 
         #** Get Spotify Tokens From Environment Variables **
-        self.ID = os.environ["SPOTIFY_CLIENT"]
-        self.Secret = os.environ["SPOTIFY_SECRET"]
+        self.CLIENT = "6d32b18995b542c59183be193900f1d5"
+        self.SECRET = os.environ["DEV_SPOTIFY_SECRET"]
 
         #** Setup Header For Authentication **
-        ClientData = self.ID+":"+self.Secret
-        AuthStr =  base64.urlsafe_b64encode(ClientData.encode()).decode()
-        self.AuthHead = {"Content-Type": "application/x-www-form-urlencoded", 'Authorization': 'Basic {0}'.format(AuthStr)}
+        clientStr = self.CLIENT+":"+self.SECRET
+        authStr =  base64.urlsafe_b64encode(clientStr.encode()).decode()
+        self.authHead = {'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': 'Basic {0}'.format(authStr)}
 
         #** Get An Initial Bot Token For API Calls **
         self.RefreshBotToken()
@@ -41,43 +42,43 @@ class Spotify(object):
 
         #** Request a Token From Spotify Using Client Credentials **
         self.logger.info("Refreshing Bot Token")
-        data = {'grant_type': 'client_credentials', 'redirect_uri': 'http://82.22.157.214:5000/', 'client_id': self.ID, 'client_secret': self.Secret}
+        data = {'grant_type': 'client_credentials', 'redirect_uri': 'http://82.22.157.214:5000/', 'client_id': self.CLIENT, 'client_secret': self.SECRET}
    
         self.logger.debug("New Request: https://accounts.spotify.com/api/token")
-        AuthData = requests.post("https://accounts.spotify.com/api/token", data, headers = {'Content-Type': 'application/x-www-form-urlencoded'})
+        response = requests.post("https://accounts.spotify.com/api/token", data, headers=self.authHead)
 
         #** Check If Request Was A Success **
-        while AuthData.status_code != 200:
+        while response.status_code != 200:
 
             #** Check If Rate Limit Has Been Applied **
-            if 429 == AuthData.status_code:
-                time = AuthData.headers['Retry-After']
-                self.logger.warning("Rate limited reached. Retrying in "+str(time)+" seconds.")
+            if 429 == response.status_code:
+                time = response.headers['Retry-After']
+                self.logger.warning(f"Rate limited reached! Retrying in {time} seconds.")
 
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug("New Request: https://accounts.spotify.com/api/token")
-                AuthData = requests.post("https://accounts.spotify.com/api/token", data, headers = {'Content-Type': 'application/x-www-form-urlencoded'})
+                response = requests.post("https://accounts.spotify.com/api/token", data, headers=self.authHead)
                 
             #** If Other Error Occurs, Raise Error **
             else:
-                self.logger.error("[RefreshBotToken] Unexpected Error Code '"+str(AuthData.status_code)+"'")
+                self.logger.error(f"[RefreshBotToken] Unexpected Error Code '{response.status_code}'")
                 self.logger.critical("Spotify Web API Connection Lost!")
                 return "UnexpectedError"
         
-        AuthData = AuthData.json()
-        self.BotToken = AuthData['access_token']
+        authData = response.json()
+        token = authData['access_token']
 
         #** Setup Header For Requests Using Client Credentials  **
-        self.BotHead = {'Accept': "application/json", 'Content-Type': "application/json", 'Authorization': "Bearer "+self.BotToken}
-        self.logger.info("Succesfully Fetched New Bot Token")
+        self.botHead = {'Accept': "application/json", 'Content-Type': "application/json", 'Authorization': f"Bearer {token}"}
+        self.logger.info("New bot token active!")
 
 
-    def GetPlaylistSongs(self, PlaylistID):
+    def GetPlaylistSongs(self, PlaylistID: str):
 
         #** Get A Playlists Songs **
         self.logger.debug("New Request: https://api.spotify.com/v1/playlists/"+str(PlaylistID))
-        SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.BotHead)
+        SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.botHead)
 
         #** Check If Request Was A Success **
         while SongData.status_code != 200:
@@ -89,7 +90,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug("New Request: https://api.spotify.com/v1/playlists/"+str(PlaylistID))
-                SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.BotHead)
+                SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == SongData.status_code:
@@ -99,42 +100,42 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug("New Request: https://api.spotify.com/v1/playlists/"+str(PlaylistID))
-                SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.BotHead)
+                SongData = requests.get('https://api.spotify.com/v1/playlists/'+str(PlaylistID), headers = self.botHead)
                 
             #** Check If Playlist Not Found, and Return "PlaylistNotFound" **
             elif 404 == SongData.status_code:
                 self.logger.debug("[GetPlaylistSongs] Error Code '404' For ID '"+str(PlaylistID)+"'")
-                return "PlaylistNotFound"
+                raise Exception("PlaylistNotFound")
             
             #** If Other Error Occurs, Raise Error **
             else:
                 self.logger.error("[GetPlaylistSongs] Unexpected Error Code '"+str(SongData.status_code)+"' For PlaylistID '"+str(PlaylistID)+"'")
-                return "UnexpectedError"
+                raise Exception("UnexpectedError")
         
         #** Iterate Through Each Song And Check Ignore If Empty **
         if SongData != []:
             SongData = SongData.json()
-            Songs = {}
+            Songs = []
             for Song in SongData['tracks']['items']:
                 
                 #** Get Formatted Data For Each Song **
-                Songs.update(self.FormatSongData(Song['track']))
+                Songs.append(self.FormatSongData(Song['track']))
             
             #** Return Filled Dictionary Of Songs **
-            Songs = {'PlaylistInfo': {'Name': SongData['name'], 'Length': SongData['tracks']['total']}, 'Tracks': Songs}
+            Songs = {'playlistInfo': {'name': SongData['name'], 'length': SongData['tracks']['total']}, 'tracks': Songs}
             return Songs
         
         #** Return "PlaylistNotFound" if Request Body Is Empty (Shouldn't Happen) **
         else:
             self.logger.error("[GetPlaylistSongs] Empty Request Body For ID '"+str(PlaylistID)+"'")
-            return "PlaylistNotFound"
+            raise Exception("PlaylistNotFound")
 
 
-    def GetAlbumInfo(self, AlbumID):
+    def GetAlbumInfo(self, AlbumID: str):
 
         #** Get An Albums Songs **
         self.logger.debug('New Request: https://api.spotify.com/v1/albums/'+str(AlbumID))
-        AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.BotHead)
+        AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.botHead)
 
         #** Check If Request Was A Success **
         while AlbumData.status_code != 200:
@@ -146,7 +147,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug('New Request: https://api.spotify.com/v1/albums/'+str(AlbumID))
-                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.BotHead)
+                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == AlbumData.status_code:
@@ -156,44 +157,44 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug('New Request: https://api.spotify.com/v1/albums/'+str(AlbumID))
-                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.BotHead)
+                AlbumData = requests.get('https://api.spotify.com/v1/albums/'+str(AlbumID), headers = self.botHead)
                 
             #** Check If Album Not Found, and Return "AlbumNotFound" **
             elif 404 == AlbumData.status_code:
                 self.logger.debug("[GetAlbumInfo] Error Code '404' For ID '"+str(AlbumID)+"'")
-                return "AlbumNotFound"
+                raise Exception("AlbumNotFound")
             
             #** If Other Error Occurs, Raise Error **
             else:
                 self.logger.error("[GetAlbumInfo] Unexpected Error Code '"+str(AlbumData.status_code)+"' For ID '"+str(AlbumID)+"'")
-                return "UnexpectedError"
+                raise Exception("UnexpectedError")
         
         #** Iterate Through Each Song And Check Ignore If Empty **
         if AlbumData != []:
             AlbumData = AlbumData.json()
-            Songs = {}
+            Songs = []
             for Song in AlbumData['tracks']['items']:
                 
                 #** Get Formatted Data For Each Song **
                 Song['album'] = {'name': AlbumData['name'], 'id': AlbumData['id'], 'images': [{'url': AlbumData['images'][0]['url']}], 'album_type': AlbumData['album_type'], 'release_date': AlbumData['release_date']}
                 Song['popularity'] = AlbumData['popularity']
-                Songs.update(self.FormatSongData(Song))
+                Songs.append(self.FormatSongData(Song))
             
             #** Return Filled Dictionary Of Songs **
-            Songs = {'PlaylistInfo': {'Name': AlbumData['name'], 'Length': AlbumData['tracks']['total']}, 'Tracks': Songs}
+            Songs = {'playlistInfo': {'name': AlbumData['name'], 'length': AlbumData['tracks']['total']}, 'tracks': Songs}
             return Songs
         
         #** Return "AlbumNotFound" if Request Body Is Empty (Shouldn't Happen) **
         else:
             self.logger.error("[GetAlbumInfo] Empty Request Body For ID '"+str(AlbumID)+"'")
-            return "AlbumNotFound"
+            raise Exception("AlbumNotFound")
         
 
-    def GetSongInfo(self, SongID):
+    def GetSongInfo(self, SongID: str):
 
         #** Get Information About A Song **
         self.logger.debug("New Request: https://api.spotify.com/v1/tracks/"+str(SongID))
-        Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.BotHead)
+        Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.botHead)
 
         #** Check If Request Was A Success **
         while Song.status_code != 200:
@@ -205,7 +206,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug("New Request: https://api.spotify.com/v1/tracks/"+str(SongID))
-                Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.BotHead)
+                Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Song.status_code:
@@ -215,17 +216,17 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug("New Request: https://api.spotify.com/v1/tracks/"+str(SongID))
-                Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.BotHead)
+                Song = requests.get("https://api.spotify.com/v1/tracks/"+str(SongID), headers=self.botHead)
                 
             #** Check If Song Not Found, and Return "SongNotFound" **
             elif 404 == Song.status_code:
                 self.logger.debug("[GetSongInfo] Error Code '404' For ID '"+str(SongID)+"'")
-                return "SongNotFound"
+                raise Exception("SongNotFound")
             
             #** If Other Error Occurs, Raise Error **
             else:
                 self.logger.error("[GetSongInfo] Unexpected Error Code '"+str(Song.status_code)+"' For ID '"+str(SongID)+"'")
-                return "UnexpectedError"
+                raise Exception("UnexpectedError")
 
         #** Check If Song Info Returned & Format Certain Values Before Adding To Dictionary **
         if Song != []:
@@ -235,20 +236,20 @@ class Spotify(object):
             SongInfo = self.FormatSongData(Song)
             
             #** Return Dictionary Of Song Information **
-            return SongInfo
+            return {"tracks": [SongInfo]}
         
         #** Return "SongNotFound" if Request Body Is Empty (Shouldn't Happen) **
         else:
             self.logger.error("[GetSongInfo] Empty Request Body For ID '"+str(SongID)+"'")
-            return "SongNotFound"
+            raise Exception("SongNotFound")
 
 
-    def GetAudioFeatures(self, SongIDs):
+    def GetAudioFeatures(self, SongIDs: list):
 
         #** Request Audio Features For a List of Spotify IDs **
         SongIDs = ",".join(SongIDs)
         self.logger.debug("New Request: https://api.spotify.com/v1/audio-features?ids="+str(SongIDs))
-        Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.BotHead)
+        Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.botHead)
 
         #** Check If Request Was A Success **
         while Features.status_code != 200:
@@ -260,7 +261,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug("New Request: https://api.spotify.com/v1/audio-features?ids="+str(SongIDs))
-                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.BotHead)
+                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Features.status_code:
@@ -270,24 +271,27 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug("New Request: https://api.spotify.com/v1/audio-features?ids="+str(SongIDs))
-                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.BotHead)
+                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.botHead)
                 
             #** Check If Features Not Found, and Return "FeaturesNotFound" **
             elif 404 == Features.status_code:
                 self.logger.debug("[GetAudioFeatures] Error Code '404' For ID's '"+str(SongIDs)+"'")
-                return "FeaturesNotFound"
+                raise Exception("FeaturesNotFound")
             
             #** If Other Error Occurs, Raise Error **
             else:
                 self.logger.error("[GetAudioFeatures] Unexpected Error Code '"+str(Features.status_code)+"' For ID's '"+str(SongIDs)+"'")
-                return "UnexpectedError"
+                raise Exception("UnexpectedError")
         
         #** Return Audio Features **
         Features = Features.json()
-        return Features['audio_features']
+        if Features is not None or Features['audio_features'] is not None:
+            return Features['audio_features']
+        else:
+            raise Exception("FeaturesNotFound")
 
 
-    def FormatSongData(self, Song):
+    def FormatSongData(self, Song: dict):
         
         #** Add All Artists To A List **
         Artists = []
@@ -335,20 +339,23 @@ class Spotify(object):
                 Song[key] = "N/A"
 
         #** Return Dictionary (Songs) With Key: <SongID> and Value: <dict containing song infomation> **
-        SongData = {Song['id']: {'Name': Song['name'], 
-                                 'Artists': Artists, 
-                                 'ArtistID': ArtistID, 
-                                 'Album': Song['album']['name'], 
-                                 'AlbumID': Song['album']['id'], 
-                                 'Art': Song['album']['images'][0]['url'], 
-                                 'Release': Date, 
-                                 'Popularity': Song['popularity'], 
-                                 'Explicit': Song['explicit'], 
-                                 'Preview': Song['preview_url']}}
+        SongData = {'id': Song['id'],
+                    'name': Song['name'],
+                    'artists': Artists, 
+                    'artistID': ArtistID, 
+                    'album': Song['album']['name'], 
+                    'albumID': Song['album']['id'], 
+                    'art': Song['album']['images'][0]['url'], 
+                    'release': Date, 
+                    'duration': Song['duration_ms'],
+                    'popularity': Song['popularity'], 
+                    'explicit': Song['explicit'], 
+                    'preview': Song['preview_url'],
+                    'updated': datetime.now()}
         return SongData
 
 
-    def SearchSpotify(self, Name, Artist):
+    def SearchSpotify(self, Name: str, Artist: str = ""):
         
         #** Format Name & Artist To Fill Spaces With %20 **
         Name = "%20".join(str(Name).split(" "))
@@ -357,7 +364,7 @@ class Spotify(object):
         #** Fetch Top Search Result From Spotify **
         Data = {'type': 'track', 'limit': '1', 'include_external': 'audio'}
         self.logger.debug('New Request: https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist)
-        Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.BotHead)
+        Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.botHead)
 
         #** Check If Request Was A Success **
         while Result.status_code != 200:
@@ -369,7 +376,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug('New Request: https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist)
-                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.BotHead)
+                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Result.status_code:
@@ -379,17 +386,17 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug('New Request: https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist)
-                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.BotHead)
+                Result = requests.get('https://api.spotify.com/v1/search?q="'+Name+'"%20artist:'+Artist, Data, headers = self.botHead)
                 
             #** Check If Song Not Found, and Return "SongNotFound" **
             elif 404 == Result.status_code:
                 self.logger.debug("[SearchSpotify] Error Code '404' For Input: '"+Name+"' by '"+Artist+"'")
-                return "SongNotFound"
+                raise Exception("SongNotFound")
             
             #** If Other Error Occurs, Raise Error **
             else:
                 self.logger.error("[SearchSpotify] Unexpected Error Code '"+str(Result.status_code)+"' For Input: '"+Name+"' by '"+Artist+"'")
-                return "UnexpectedError"
+                raise Exception("UnexpectedError")
 
         #** Check if Request Body Empty (Shouldn't Happen) & Convert to Json **
         if Result != []:
@@ -402,24 +409,24 @@ class Spotify(object):
                 SongInfo = self.FormatSongData(Result['tracks']['items'][0])
                 
                 #** Return Dictionary Of Song Information **
-                return SongInfo
+                return {"tracks": [SongInfo]}
             
             #** Return Song Not Found If No Songs Returned **
             else:
                 self.logger.debug("[SearchSpotify] No Songs Returned For Input: '"+Name+"' by '"+Artist+"'")
-                return "SongNotFound"
+                raise Exception("SongNotFound")
         
         #** Return "SongNotFound" If Request Body Is Empty (Shouldn't Happen) **
         else:
             self.logger.error("[SearchSpotify] Empty Request Body For Input: '"+Name+"' by '"+Artist+"'")
-            return "SongNotFound"
+            raise Exception("SongNotFound")
 
 
-    def GetRecommendations(self, data):
+    def GetRecommendations(self, data: dict):
         
         #** Requests Recommendations From Spotify With The Data Provided **
         self.logger.debug('New Request: https://api.spotify.com/v1/recommendations')
-        Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
+        Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.botHead)
 
         #** Check If Request Was A Success **
         while Recommendations.status_code != 200:
@@ -431,7 +438,7 @@ class Spotify(object):
                 
                 #** Retry Request **
                 self.logger.debug('New Request: https://api.spotify.com/v1/recommendations')
-                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
+                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Recommendations.status_code:
@@ -441,17 +448,17 @@ class Spotify(object):
                 #** Retry Request **
                 asyncio.sleep(time)
                 self.logger.debug('New Request: https://api.spotify.com/v1/recommendations')
-                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.BotHead)
+                Recommendations = requests.get("https://api.spotify.com/v1/recommendations", data, headers = self.botHead)
                 
             #** Check If Recommendations Not Found, and Return "RecommendationsNotFound" **
             elif 404 == Recommendations.status_code:
                 self.logger.debug("[GetRecommendations] Error Code '404' For Input: '"+data+"'")
-                return "RecommendationsNotFound"
+                raise Exception("RecommendationsNotFound")
             
             #** If Other Error Occurs, Raise Error **
             else:
                 self.logger.error("[GetRecommendations] Unexpected Error Code '"+str(Recommendations.status_code)+"' For Input: '"+data+"'")
-                return "UnexpectedError"
+                raise Exception("UnexpectedError")
         
         #** Iterate Through Each Song And Check Ignore If Empty **
         if Recommendations != []:
@@ -461,20 +468,20 @@ class Spotify(object):
             if Recommendations['tracks'] != []:
 
                 #** Return List Of Recommended Songs **
-                Songs = {}
+                Songs = []
                 for Song in Recommendations['tracks']:
-                    Songs.update(self.FormatSongData(Song))
+                    Songs.append(self.FormatSongData(Song))
                 return Songs
 
             #** "Return RecommendationsNotFound" If No Songs Returned **
             else:
                 self.logger.debug("[GetRecommendations] No Songs Returned For Input: '"+data+"'")
-                return "RecommendationsNotFound"
+                raise Exception("RecommendationsNotFound")
 
         #** Return "RecommendationsNotFound" If Request Body Is Empty (Shouldn't Happen) **
         else:
             self.logger.error("[GetRecommendations] Empty Request Body For Input: '"+data+"'")
-            return "RecommendationsNotFound"
+            raise Exception("RecommendationsNotFound")
 
 
 #!--------------------------------SONG DATA-----------------------------------#
@@ -511,36 +518,38 @@ class SongData(Spotify):
         self.GenrePredictor = Tree.fit(PredictionData, GenreData)
 
 
-    def GetSongDetails(self, SongID):
+    def GetSongDetails(self, SongID: str):
 
         #** Get Song Information and Song Features **
-        SongData = self.GetSongInfo(SongID)
-        if SongData in ["SongNotFound", "UnexpectedError"]:
-            return SongData
-        Features = self.GetAudioFeatures([SongID])[0]
+        try:
+            SongData = self.GetSongInfo(SongID)
+            Features = self.GetAudioFeatures([SongID])[0]
+            SongData = SongData['tracks'][0]
+        except Exception as e:
+            raise e
 
         #** Add Advanced Information Using Audio Features to Returned Song Info Dict **
-        SongData[SongID]["Duration"] = str(int(Features['duration_ms'] // 60000))+" Mins "+str(int((Features['duration_ms'] / 1000) - ((Features['duration_ms'] // 60000) * 60)))+" Seconds"
-        SongData[SongID]["Key"] = self.Keys[str(int(Features['key']))]
-        SongData[SongID]["BeatsPerBar"] = str(int(Features['time_signature']))
-        SongData[SongID]["Tempo"] = str(int(Features['tempo']))
+        SongData["duration"] = f"{int(Features['duration_ms'] // 60000)} Mins {int((Features['duration_ms'] / 1000) - ((Features['duration_ms'] // 60000) * 60))} Seconds"
+        SongData["key"] = self.Keys[str(Features['key'])]
+        SongData["beats"] = Features['time_signature']
+        SongData["tempo"] = int(Features['tempo'])
         if Features['mode'] <= 0.5:
-            SongData[SongID]["Mode"] = "Minor"
+            SongData["mode"] = "Minor"
         else:
-            SongData[SongID]["Mode"] = "Major"
+            SongData["mode"] = "Major"
         for Volume, Range in self.Volumes.items():
             if int(Features['loudness']) > Range[0] and int(Features['loudness']) <= Range[1]:
-                SongData[SongID]["Volume"] = Volume
+                SongData["volume"] = Volume
                 break
         
         #** Predict Genre Of The Song and Add it to The Song Info Dict **
-        SongData[SongID]['Genre'] = self.PredictGenre([Features])[0]
+        SongData['genre'] = self.PredictGenre([Features])[0]
 
         #** Returned Nicely Filled Song Info Dict **
         return SongData
     
 
-    def PredictGenre(self, Features):
+    def PredictGenre(self, Features: list):
 
         #** Predict Genre From List Of Features **
         Combined = []
@@ -555,7 +564,7 @@ class SongData(Spotify):
         return Prediction
 
 
-    def RecommendFromTracks(self, Tracks):
+    def RecommendFromTracks(self, Tracks: dict):
 
         #** Create Dictionaries Used To Sort Data **
         Data = {'duration_ms': [], 'key': [], 'mode': [], 'time_signature': [], 'acousticness': [], 'danceability': [], 'energy': [], 'instrumentalness': [], 'liveness': [], 'loudness': [], 'speechiness': [], 'valence': [], 'tempo': [], 'popularity': []}
@@ -591,7 +600,10 @@ class SongData(Spotify):
 
         #** Get Audio Features For Each List Of Songs **
         for TrackSet in SplitSongs:
-            Features = self.GetAudioFeatures(TrackSet)
+            try:
+                Features = self.GetAudioFeatures(TrackSet)
+            except Exception as e:
+                raise e
 
             #** Sort Audio Features Into Data Dict Based On Key Ignoring Popularity **
             for Song in Features:
@@ -687,7 +699,10 @@ class SongData(Spotify):
                 'min_valence': Min[11], 'target_valence': Avg[11], 'max_valence': Max[11],
                 'min_tempo': Min[12], 'target_tempo': Avg[12], 'max_tempo': Max[12],
                 'min_popularity': int(Min[13]), 'target_popularity': int(Avg[13]), 'max_popularity': int(Max[13])}
-        Tracks = self.GetRecommendations(data)
+        try:
+            Tracks = self.GetRecommendations(data)
+        except Exception as e:
+            raise e
         
         #** Return Track List **
         return Tracks

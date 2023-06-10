@@ -21,7 +21,7 @@ class AccountCog(commands.Cog, name="Account"):
 
         #** Assign Discord Bot Client As Class Object & Get Pagination Cog**
         self.client = client
-        self.Pagination = self.client.get_cog("EmbedPaginator")
+        self.pagination = self.client.get_cog("EmbedPaginator")
 
  
     @app_commands.command(description="Displays information about your alto profile.")
@@ -30,62 +30,57 @@ class AccountCog(commands.Cog, name="Account"):
         #** Setup Base Profile Embed With Title & User's Colour **
         ProfileEmbed = discord.Embed(title=interaction.user.display_name+"'s Profile",
                                      colour=interaction.user.colour)
+        ProfileEmbed.set_thumbnail(url=interaction.user.avatar.url)
 
-        #** If User Not In VC, Create New User Object **
-        if not(interaction.user.voice) or not(interaction.user.voice.channel):
-            CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
-        
-        #** If In VC, Check If Player Active & If Not, Create New User Object **
-        else:
+        #** Try Getting User Object From Player If User Is In VC **
+        CurrentUser = None
+        if (interaction.user.voice is not None) and (interaction.user.voice.channel is not None):
             Player = self.client.lavalink.player_manager.get(interaction.user.voice.channel.guild.id)
-            if Player == None:
-                CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
-            
-            #** If Player Active, Fetch Users Dict & Check If User In Dictionary Otherwise Create New User Object **
-            else:
+            if Player is not None:
                 UserDict = Player.fetch('Users')
-                try:
+                if str(interaction.user.id) in UserDict.keys():
                     CurrentUser = UserDict[str(interaction.user.id)]
+        
+        #** Otherwise Create Fresh User Object **       
+        if CurrentUser is None:
+            if self.client.database.connected:
+                try:
+                    CurrentUser = self.client.userClass.User(self.client, user=interaction.user)
                 except:
-                    CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
+                    pass
+            else:
+                raise app_commands.CheckFailure("Database")
 
         #** Get Last Song's Data if Listening History Isn't Empty **
-        if len(CurrentUser.array) > 0:
-            LastSongData = CurrentUser.History[len(CurrentUser.array) - 1]
+        if len(CurrentUser.history) > 0:
+            LastSongData = CurrentUser.history[0]
 
             #** Format Data For Song & Add Last Listened To Song To Embed As Field **
-            FormattedSong = self.client.utils.format_song(LastSongData)
-            ProfileEmbed.add_field(name="Last Listened To:", value=FormattedSong, inline=False)
+            emoji = self.client.utils.get_emoji(LastSongData['source'].title())
+            artists = self.client.utils.format_artists(LastSongData['artists'], LastSongData['artistID'] if 'artistID' in LastSongData.keys() else None)
+            description = f"{str(emoji)+' ' if emoji is not None else ''}[{LastSongData['name']}]({LastSongData['url']})\nBy: {artists}\n"
+            ProfileEmbed.add_field(name="Last Listened To:", value=description, inline=False)
 
             #** Calculate Time Difference And Check What To Display **
-            TimeDiff = relativedelta(datetime.now(), LastSongData['ListenedAt'])
-            if TimeDiff.years > 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.years)+" years ago")
-            elif TimeDiff.years == 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="Over a year ago")
-            elif TimeDiff.months > 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="Over "+str(TimeDiff.months)+" months ago")
-            elif TimeDiff.months == 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="Over a month ago")
-            elif TimeDiff.days > 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.days)+" days ago")
-            elif TimeDiff.days == 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="A day ago")
-            elif TimeDiff.hours > 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value=str(TimeDiff.hours)+" hours ago")
-            elif TimeDiff.hours == 1:
-                ProfileEmbed.add_field(name="Last Listening Session:", value="An hour ago")
+            TimeDiff = relativedelta(datetime.now(), LastSongData['listenedAt'])
+            if TimeDiff.years >= 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=f"Over {f'{TimeDiff.years} years' if TimeDiff.years > 1 else 'a year'} ago")
+            elif TimeDiff.months >= 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=f"Over {f'{TimeDiff.months} months' if TimeDiff.months > 1 else 'a month'} ago")
+            elif TimeDiff.days >= 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=f"{f'{TimeDiff.days} days' if TimeDiff.days > 1 else 'A day'} ago")
+            elif TimeDiff.hours >= 1:
+                ProfileEmbed.add_field(name="Last Listening Session:", value=f"{f'{TimeDiff.hours} hours' if TimeDiff.days > 1 else 'An hour'} ago")
             else:
                 ProfileEmbed.add_field(name="Last Listening Session:", value="Less than an hour ago")
         
         #** Add Blank Fields If Listening History Empty **
         else:
-            ProfileEmbed.add_field(name="Last Listened To:", value="No Listening History")
+            ProfileEmbed.add_field(name="Last Listened To:", value="No Listening History", inline=False)
             ProfileEmbed.add_field(name="Last Listening Session:", value="N/A")
 
         #** Calculate Total Song Count & Add As Field To Embed **
-        SongTotal = int(CurrentUser.user['data']['songs']) + len(CurrentUser.array)
-        ProfileEmbed.add_field(name="Lifetime Song Count:", value=str(SongTotal)+" Songs")
+        ProfileEmbed.add_field(name="Lifetime Song Count:", value=f"{CurrentUser.metadata['songs']} Songs")
         
         #** Send Profile Embed To User **
         await interaction.response.send_message(embed=ProfileEmbed)
@@ -97,40 +92,35 @@ class AccountCog(commands.Cog, name="Account"):
         #** Setup Base History Embed With Title, User's Colour & Profile Picture **
         HistoryEmbed = discord.Embed(title=interaction.user.display_name+"'s Listening History",
                                      colour=interaction.user.colour)
-        HistoryEmbed.set_thumbnail(url=interaction.user.avatar_url)
+        HistoryEmbed.set_thumbnail(url=interaction.user.avatar.url)
         
-        #** If User Not In VC, Create New User Object **
-        if not(interaction.user.voice) or not(interaction.user.voice.channel):
-            CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
-        
-        #** If In VC, Check If Player Active & If Not, Create New User Object **
-        else:
+        #** Try Getting User Object From Player If User Is In VC **
+        CurrentUser = None
+        if (interaction.user.voice is not None) and (interaction.user.voice.channel is not None):
             Player = self.client.lavalink.player_manager.get(interaction.user.voice.channel.guild.id)
-            if Player == None:
-                CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
-            
-            #** If Player Active, Fetch Users Dict & Check If User In Dictionary Otherwise Create New User Object **
-            else:
+            if Player is not None:
                 UserDict = Player.fetch('Users')
-                try:
+                if str(interaction.user.id) in UserDict.keys():
                     CurrentUser = UserDict[str(interaction.user.id)]
+        
+        #** Otherwise Create Fresh User Object **       
+        if CurrentUser is None:
+            if self.client.database.connected:
+                try:
+                    CurrentUser = self.client.userClass.User(self.client, user=interaction.user)
                 except:
-                    CurrentUser = self.client.userClass.User(self.client, interaction.user.id)
+                    pass
+            else:
+                raise app_commands.CheckFailure("Database")
 
         #** Check User Has Listened To Some Songs **
-        if len(CurrentUser.array) > 0:
-
-            #** Organise Song History Queue Into New Array Sorted With Newest First Song First **
-            OrganisedArray = []
-            for i in range(CurrentUser.inpointer-1, (-1*len(CurrentUser.array)+(CurrentUser.inpointer-1)), -1):
-                OrganisedArray.append(CurrentUser.History[i])
-
-            #** Create Iteration Object Through History List **
-            History = iter(OrganisedArray)
+        if len(CurrentUser.history) > 0:
+            print(CurrentUser.history)
+            History = iter(CurrentUser.history)
             Pages = []
             
             #** For Upper Bound Of Length Of History Divided By 5 Representing The Amount Of Pages Needed **
-            for Count in range(math.ceil(len(CurrentUser.array) / 5)):
+            for Count in range(math.ceil(len(CurrentUser.history) / 5)):
 
                 #** Set Empty Description String & Get Next SongData Dict In History. If Returns None, Break Loop As Run Out Of Songs **
                 Description = ""
@@ -140,28 +130,26 @@ class AccountCog(commands.Cog, name="Account"):
                         break
 
                     #** Format Song & Add Listened To Stat & Divisor **
-                    Description += self.client.utils.format_song(NextSong)
-                    Description += "\n*Listened on "+NextSong['ListenedAt'].strftime('%d/%m/%y')+" at "+NextSong['ListenedAt'].strftime('%H:%M')+"*"
-                    Description += "\n--------------------\n"
-                
-                #** Set Embed Description To String Created Above **
+                    emoji = self.client.utils.get_emoji(NextSong['source'].title())
+                    artists = self.client.utils.format_artists(NextSong['artists'], NextSong['artistID'] if 'artistID' in NextSong.keys() else None)
+                    Description += f"{str(emoji)+' ' if emoji is not None else ''}[{NextSong['name']}]({NextSong['url']})\nBy: {artists}\n"
+                    Description += f"\n*Listened on {NextSong['listenedAt'].strftime('%d/%m/%y')} at {NextSong['listenedAt'].strftime('%H:%M')}*\n--------------------\n"
                 HistoryEmbed.description = Description
 
                 #** Set Page Number If More Than One Page Needed **
-                if math.ceil(len(CurrentUser.array) / 5) > 1:
-                    HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.array) / 5)))
+                if math.ceil(len(CurrentUser.history) / 5) > 1:
+                    HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.history) / 5)))
                     PageDict = copy.deepcopy(HistoryEmbed.to_dict())
                     Pages.append(PageDict)
                 
                 #** Send First Embed Page On First Loop Through Count **
                 if Count == 0:
-                    Page = await interaction.channel.send(embed=HistoryEmbed)
+                    await interaction.response.send_message(embed=HistoryEmbed)
             
             #** If More Than One Page Being Displayed, Add Back And Next Reactions & Add To Global Pagination System **
-            if math.ceil(len(CurrentUser.array) / 5) > 1:
-                await Page.add_reaction(self.client.utils.get_emoji('Back'))
-                await Page.add_reaction(self.client.utils.get_emoji('Next'))
-                await self.Pagination.add_pages(Page.id, Pages)
+            if math.ceil(len(CurrentUser.history) / 5) > 1:
+                message = await interaction.original_response()
+                await self.pagination.setup(message, Pages)
         
         #** Let User Know If They Have No Listening History To Display **
         else:
@@ -171,70 +159,77 @@ class AccountCog(commands.Cog, name="Account"):
     @app_commands.command(description="Displays 10 random song recommendations based on your listening history.")
     async def recommendations(self, interaction: discord.Interaction):
         
-        #** Get User **
-        User = self.client.userClass.User(self.client, interaction.user.id)
+        #** Try Getting User Object From Player If User Is In VC **
+        user = None
+        if (interaction.user.voice is not None) and (interaction.user.voice.channel is not None):
+            player = self.client.lavalink.player_manager.get(interaction.user.voice.channel.guild.id)
+            if player is not None:
+                userDict = player.fetch('Users')
+                if str(interaction.user.id) in userDict.keys():
+                    user = userDict[str(interaction.user.id)]
         
-        #** Check User Actually Has Listening History To Analyse & If Not Raise Error **
-        if len(User.array) > 0:
-
-            #** Get Recommendations From Spotify API Through User Class**
-            Tracks = User.getRecommendations()
+        #** Otherwise Create Fresh User Object **       
+        if user is None:
+            if self.client.database.connected:
+                try:
+                    user = self.client.userClass.User(self.client, user=interaction.user)
+                except:
+                    pass
+            else:
+                raise app_commands.CheckFailure("Database")
+        
+        #** Get Recommendations From Spotify API Through User Class If User Has Listened To At Least One Song **
+        if len(user.history) > 0:
+            tracks = user.getRecommendations()
             print("Got Recommendations")
-        
         else:
-            raise commands.CheckFailure(message="History")
+            raise app_commands.CheckFailure("History")
 
-        #** Check Tracks We're Fetched Correctly From Spotify API **
-        if not(Tracks in ["RecommendationsNotFound", "UnexpectedError"]):
-
-            #** Randomly Choose 10 Songs From 50 Recomendations **
-            print(Tracks)
-            Recommendations = {}
+        #** Randomly Choose 10 Songs From 50 Recomendations **
+        if tracks is not None:
+            recommendations = {}
             for i in range(10):
-                SpotifyID = random.choice(list(Tracks.keys()))
-                while SpotifyID in Recommendations.keys():
-                    SpotifyID = random.choice(list(Tracks.keys()))
-                Recommendations.update({SpotifyID: Tracks[SpotifyID]})
-            print(Recommendations)
+                track = random.choice(tracks)
+                while track['id'] in recommendations.keys():
+                    track = random.choice(tracks)
+                recommendations[track['id']] = track
 
             #** Loop Through Data & Create Dictionary Of Embed Pages **
-            Pages = []
-            Count = 0
-            for SpotifyID, Data in Recommendations.items():
+            pages = []
+            count = 0
+            for id, data in recommendations.items():
 
                 #** Format Embed Sections **
-                Song = Data['Name']+"\nBy: "+self.client.utils.format_artists(Data['Artists'], Data['ArtistID'])
-                Links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify](https://open.spotify.com/track/{SpotifyID})\n"
-                if Data['Preview'] != None:
-                    Links += f'{self.client.utils.get_emoji("Preview")} Song: [Preview]({Data["preview"]})\n'
-                Links += f"{self.client.utils.get_emoji('Album')} Album: [{Data['Album']}](https://open.spotify.com/album/{Data['AlbumID']})"
+                song = data['name'] + "\nBy: " + self.client.utils.format_artists(data['artists'], data['artistID'])
+                links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify](https://open.spotify.com/track/{id})\n"
+                if data['preview'] is not None:
+                    links += f'{self.client.utils.get_emoji("Preview")} Song: [Preview]({data["preview"]})\n'
+                links += f"{self.client.utils.get_emoji('Album')} Album: [{data['album']}](https://open.spotify.com/album/{data['albumID']})"
 
                 #** Create New Embed **
-                NewPage = discord.Embed(
+                page = discord.Embed(
                     title = interaction.user.display_name+"'s Recommendations")
-                NewPage.set_thumbnail(url=Data['Art'])
-                NewPage.add_field(name="Song "+str(Count+1)+":", value=Song, inline=False)
-                NewPage.add_field(name="Links:", value=Links, inline=False)
-                NewPage.set_footer(text="("+str(Count+1)+"/10) React To See More Recommendations!")
+                page.set_thumbnail(url=data['art'])
+                page.add_field(name=f"Song {count+1}:", value=song, inline=False)
+                page.add_field(name="Links:", value=links, inline=False)
+                page.set_footer(text=f"({count+1}/10) React To See More Recommendations!")
 
                 #** Display First Recomendation To User **
-                if Count == 0:
-                    Page = await interaction.channel.send(content=None, embed=NewPage)
-                    await Page.add_reaction(self.client.utils.get_emoji('Back'))
-                    await Page.add_reaction(self.client.utils.get_emoji('Next'))
-                    print("Sent!")
+                if count == 0:
+                    await interaction.response.send_message(embed=page)
 
                 #** Convert Embed To Dictionary and Add To Data Dictionary & Increment Counter **
-                Pages.append(NewPage.to_dict())
-                Count += 1
+                pages.append(page.to_dict())
+                count += 1
 
             #** Add Embed To Active Pages In Pagination Cog **
-            await self.Pagination.add_pages(Page.id, Pages)
-            print("All Pages Created!\n")
+            message = await interaction.original_response()
+            await self.pagination.setup(message, pages)
         
         #** Return Error To User If Failed To Get Recommendations **
         else:
-            await interaction.response.send_message(content="**An Error Occurred Whilst Fetching Recommendations**!\nIf this error persists, open a ticket in our Discord server:* `/discord`.", ephemeral=True)
+            await interaction.response.send_message("**An Error Occurred Whilst Fetching Recommendations**!\nIf this error persists, open a ticket in our Discord server:* `/discord`.", ephemeral=True)
+
 
     @app_commands.command(description="Deletes your user data where requested from our database.")
     @app_commands.choices(type=[app_commands.Choice(name="All", value="users, spotify, history, recommendations"),
@@ -262,7 +257,7 @@ class AccountCog(commands.Cog, name="Account"):
 
         #** Raise Error If Can't Send Messages To DM Channel **
         except :
-            raise commands.CheckFailure(message="DM")
+            raise app_commands.CheckFailure(message="DM")
         
         #** Let User Know To Check DM's If All Sucessful **
         await interaction.response.send_message("Please check your DMs!", ephemeral=True)
@@ -273,11 +268,10 @@ class AccountCog(commands.Cog, name="Account"):
 
         #** Wait For User To React To Tick & Remove Data When Done So **
         while True:
-                Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
-                if Reaction.event_type == 'REACTION_ADD':
-                    if str(Reaction.emoji) == self.client.utils.get_emoji('checkmark'):
-                        self.client.database.RemoveData(interaction.user.id, Tables)
-                        await interaction.user.dm_channel.send("All requested data successfully removed!")
+            Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
+            if str(Reaction.emoji) == self.client.utils.get_emoji('checkmark'):
+                self.client.database.RemoveData(interaction.user.id, Tables)
+                await interaction.user.dm_channel.send("All requested data successfully removed!")
 
 
 #!-------------------SETUP FUNCTION-------------------#
