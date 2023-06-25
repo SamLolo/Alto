@@ -156,7 +156,8 @@ async def main():
                 #** If Number Valid, Increase Number Of Log File **
                 else:
                     os.rename(f"{logDir}/Backups/{file}", f"{logDir}/Backups/Session.{int(number)+1}.zip")
-        os.rename(f"{logDir}/Backups/Session.zip", f"{logDir}/Backups/Session.1.zip")
+            else:
+                os.rename(f"{logDir}/Backups/Session.zip", f"{logDir}/Backups/Session.1.zip")
         
         #** Zip Log Files & Move Zip File Into Backups Folder & Delete Previous Log Files **
         with ZipFile(f"{logDir}/Backups/Session.zip", 'w') as zipFile:
