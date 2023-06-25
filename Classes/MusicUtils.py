@@ -26,8 +26,8 @@ class Spotify(object):
         self.logger = logging.getLogger("spotify")
 
         #** Get Spotify Tokens From Environment Variables **
-        self.CLIENT = "6d32b18995b542c59183be193900f1d5"
-        self.SECRET = os.environ["DEV_SPOTIFY_SECRET"]
+        self.CLIENT = "710b5d6211ee479bb370e289ed1cda3d"
+        self.SECRET = os.environ["SPOTIFY_SECRET"]
 
         #** Setup Header For Authentication **
         clientStr = self.CLIENT+":"+self.SECRET
