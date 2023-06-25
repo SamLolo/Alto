@@ -194,7 +194,16 @@ class MusicCog(commands.Cog, name="Music"):
         #** Join vc if not already connected & required by command
         if not(Player.is_connected):
             if interaction.command.name in ['play']:
-                await interaction.user.voice.channel.connect(cls=LavalinkVoiceClient)
+                
+                #** Check bot has permission to join and that channel has space for the bot **
+                permissions = interaction.user.voice.channel.permissions_for(interaction.guild.me)
+                print(interaction.user.voice.channel.user_limit)
+                if not(permissions.view_channel and permissions.connect and permissions.speak):
+                    raise app_commands.CheckFailure("PlayPermissions")
+                elif len(interaction.user.voice.channel.voice_states) >= interaction.user.voice.channel.user_limit and interaction.user.voice.channel.user_limit != 0:
+                    raise app_commands.CheckFailure("ChannelFull")
+                else:
+                    await interaction.user.voice.channel.connect(cls=LavalinkVoiceClient)
 
                 #** Store Key, Value Pairs In Player & Set Default Volume To 25%
                 Player.store('Channel', interaction.channel_id)

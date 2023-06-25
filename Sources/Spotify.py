@@ -63,15 +63,17 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
         
         # If title of track is found in Youtube title
         if self.title in track['title']:
-            match += 2
+            match += 5
         
         # If spotify author name is found in Youtube channel name or Youtube title
-        if self.extra['metadata']['artists'][0] in track['author'] or self.extra['metadata']['artists'][0] in track['title']:
-            match += 1
+        if self.extra['metadata']['artists'][0] in track['author']:
+            match += 4 
+        if self.extra['metadata']['artists'][0] in track['title']:
+            match += 2
         
         # Duration is within 5 seconds of actual track duration (favours audio only vs music videos)
         if (self.duration - track['duration']) <= 5000 or (self.duration - track['duration']) >= -5000:
-            match += 2
+            match += 4
         
         # If VEVO in youtube channel name, then likely official channel
         if "VEVO" in track['author']:
@@ -85,7 +87,7 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
         kwords = ["slowerd", "reverb", "sped-up", "acoustic", "stripped", "live"]
         for word in kwords:
             if word in track['title'] and word in self.title:
-                match += 1
+                match += 2
             elif (word in track['title'] and not(word in self.title)) or (not(word in track['title']) and word in self.title):
                 match -= 1
         
