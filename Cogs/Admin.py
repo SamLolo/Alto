@@ -222,18 +222,45 @@ class AdminCog(commands.Cog, name="Admin"):
     @is_admin()
     async def logs(self, ctx):
         
-        #** Create List Of Discord File Objects For All Current Log Files In Directory **
+        # Create List Of Discord File Objects For All Current Log Files In Directory 
         logDir = self.client.config['logging']['directory']
         download = []
         for file in os.listdir(f"{logDir}/"):
             if file.endswith(".log"):
                 download.append(discord.File(open(f"{logDir}/{file}", "rb")))
         
-        #** Attach logs files to Discord Message **     
+        # Attach logs files to Discord Message 
         await ctx.send("Current session logs:", files=download)
         self.logger.info(f"Session logs downloaded by user: {ctx.author.id}")
         
     
+    @commands.command(hidden=True)
+    @is_admin()
+    async def force_disconnect(self, ctx, server="current"):
+        # Get guild object for requested server
+        if server.lower() == "current":
+            guild = ctx.guild
+        else:
+            guild = self.client.get_guild(int(server))
+        
+        # Handle standard disconnect procedure by force disconnecting the bot and saving user data
+        if guild is not None:
+            await guild.voice_client.disconnect()
+            player = self.client.lavalink.player_manager.get(guild.id)
+            
+            # If player found, remove old nowPlaying message if one exists
+            if player is not None:
+                oldMessage = player.fetch('NowPlaying')
+                if oldMessage is not None:
+                    await oldMessage.delete()
+                    player.delete('NowPlaying')
+
+                # Save all user data within the player
+                userDict = player.fetch('Users')
+                for user in userDict.values():
+                    user.save()
+    
+
 #!-------------------SETUP FUNCTION-------------------#
 
 
