@@ -39,6 +39,14 @@
 		"Lavalink": {
 			"message": "**Music playback is currently unavailable!**\nPlease try again in a little while or notify `Lolo#6699` on Discord!",
 			"ephemeral": true
+		},
+		"PlayPermissions": {
+			"message": "**I am missing the permissions to join & play music through your voice channel!**\nPlease ask an admin to give me permissions to connect and speak!",
+			"ephemeral": false
+		},
+		"ChannelFull": {
+			"message": "The voice channel you are in is currently full! \n*Please try again when space becomes available!*",
+			"ephemeral": true
 		}
 	},
 	"CommandNotFound": {
