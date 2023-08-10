@@ -1,0 +1,81 @@
+prefix = "!" # Prefix used for admin text-based commands
+development_mode = true # Toggles development mode (recommended false for production)
+
+[extensions]
+# Define which cogs should be loaded upon startup. Setting the value to false means the cog is ignored.
+account = true
+admin = true
+background = true
+errors = true
+help = false
+music = true
+pagination = true
+settings = false
+utility = true
+
+[spotify]
+# Settings for spotify. Leave the secrets blank to use environment variables (recommended!)
+# If a development account isn't specified, the same spotify account will be used in both normal and development operations!
+client_id = ""
+secret = "" # Leave blank to use environment variables (recommended)
+dev_client = "6d32b18995b542c59183be193900f1d5"
+dev_secret = "" # Leave blank to use environment variables (recommended)
+
+[database]
+# Settins for database connection.
+host = "localhost" # Leave blank to use environment variables
+schema = "alto"
+username = "root" # Leave blank to use environment variables
+password = "" # Leave blank to use environment variables (recommended)
+max_retries = 3
+
+[database.main]
+# Settings for the main database pool used inside Classes/Database.py when no paramaters are specified.
+poolname = "main"
+size = 5
+
+[database.lavalink]
+# Settings for the secondary database pool used by lavalink
+poolname = "lavalink"
+size = 3
+
+[logging]
+# Overall settings for the logging module
+directory = "Logs"
+backups = 10
+default_level = "DEBUG" # Used to override the minimum logging level of the individual handlers
+
+[logging.handlers]
+# Allows you to decide which additonal logging handlers are loaded and active (master cannot be disabled)
+console = true
+debug = true
+
+[logging.levels]
+# Set the levels for the different logging handlers
+master = "INFO"
+debug = "DEBUG"
+console = "INFO"
+
+[status]
+# Settings for the status rotation carried out in the background
+enabled = true
+interval = 60   # Measured in Seconds
+messages = [["Playing", "V 1.1"],
+            ["Watching", "/play"],
+            ["Listening", "Music"]]
+default = ["Listening", "Music"] # Used as the status when rotation is disabled
+
+[welcome]
+# Settings for the welcome message sent when 
+enabled = false
+message = "Thanks for choosing my music bot! Get started by joining a vc and typing `/play`!"
+
+[environment]
+# Points to the different keys used in the systems environment variables. Don't change unless you don't want to use the default envoiroment variable names!
+spotify_secret = "SPOTIFY_SECRET"
+spotify_dev_secret = "DEV_SPOTIFY_SECRET"
+bot_token = "BOT_TOKEN"
+dev_token = "DEV_TOKEN"
+database_host = "DATABASE_IP"
+database_user = "DATABASE_USER"
+database_password = "DATABASE_PASS"

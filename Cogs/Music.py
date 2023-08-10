@@ -11,7 +11,7 @@ import lavalink
 from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
-from lavalink.events import TrackEndEvent, TrackStartEvent
+from lavalink.events import TrackEndEvent, TrackStartEvent, TrackExceptionEvent
 from Classes.Database import Database
 
 
@@ -89,7 +89,7 @@ class MusicCog(commands.Cog, name="Music"):
             self.logger.info("New Client Registered")
             
             #** Add Datbase Connection for Lavalink
-            client.lavalink.database = Database(pool="lavalink", size=3)
+            client.lavalink.database = Database(client.config, pool=client.config['database']['lavalink']['poolname'], size=client.config['database']['lavalink']['size'])
         else:
             self.logger.info("Found Previous Lavalink Connection")
             
@@ -184,7 +184,7 @@ class MusicCog(commands.Cog, name="Music"):
             raise app_commands.CheckFailure("Lavalink")
 
         #** If Command Needs User To Be In VC, Check if Author is in Voice Channel
-        if not(interaction.command.name in ['queue', 'nowplaying']):
+        if not(interaction.command.name in ['play', 'queue', 'nowplaying']):
             if not(interaction.user.voice) or not(interaction.user.voice.channel):
                 raise app_commands.CheckFailure("UserVoice")
         
@@ -197,7 +197,6 @@ class MusicCog(commands.Cog, name="Music"):
                 
                 #** Check bot has permission to join and that channel has space for the bot **
                 permissions = interaction.user.voice.channel.permissions_for(interaction.guild.me)
-                print(interaction.user.voice.channel.user_limit)
                 if not(permissions.view_channel and permissions.connect and permissions.speak):
                     raise app_commands.CheckFailure("PlayPermissions")
                 elif len(interaction.user.voice.channel.voice_states) >= interaction.user.voice.channel.user_limit and interaction.user.voice.channel.user_limit != 0:
@@ -228,9 +227,19 @@ class MusicCog(commands.Cog, name="Music"):
     async def on_track_end(self, event: TrackEndEvent):
             
         #** If Queue Empty, Save User Data & Disconnect From VC
-        if event.player.queue == [] and event.player.is_connected and not(event.player.is_playing):
+        if event.player.queue == [] and event.player.is_connected:
             await self._disconnect(event.player)
-            
+    
+    
+    @lavalink.listener(TrackExceptionEvent)
+    async def on_track_error(self, event: TrackExceptionEvent):
+        
+        #** Let user know that error has occured and which song isn't being played anymore **
+        channel = self.client.get_channel(int(event.player.fetch("Channel")))
+        await channel.send(f"**An error occured whilst trying to play {event.track.title} by {event.track.author}!**\nThe track has been skipped.")
+        print(event.exception)
+        print(event.severity)
+    
 
     @lavalink.listener(TrackStartEvent)
     async def on_track_start(self, event: TrackStartEvent):
@@ -310,7 +319,7 @@ class MusicCog(commands.Cog, name="Music"):
         await interaction.response.defer()
         
         #** If query is plain text, search spotify**
-        if not(query.startswith("https://") or query.startswith("http://") or query.startswith("scsearch:")):
+        if not(query.startswith("https://") or query.startswith("http://") or query.startswith("scsearch:") or query.startswith("spsearch:") or query.startswith("ytsearch:")):
             Results = await Player.node.get_tracks(f"spsearch:{query}", check_local=True)
     
         #** If query is a URL, Get track(s) from lavalink
@@ -605,56 +614,74 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @app_commands.command(description="Displays both basic and more in-depth information about a specified song.")
-    async def info(self, interaction: discord.Interaction, spotify: str):
-
-        #** Check If Input Is Spotify URL & Format Input Data, Else Raise Bad Argument Error **
-        if spotify.startswith("https://open.spotify.com/track/"):
-            spotifyID = (spotify.split("/"))[4].split("?")[0]
-        else:
-            await interaction.response.send_message("Info is only currently only available for Spotify tracks!", ephemeral=True)
-
-        #** Check ID Is A Valid Spotify ID & Get Song Details **
-        if len(spotifyID) == 22:
-            try:
-                songInfo = self.client.music.GetSongDetails(spotifyID)
-            except Exception as e:
-                raise app_commands.CheckFailure(e.message)
+    async def info(self, interaction: discord.Interaction, song: str = ""):
+        
+        #** Get player & ensure command is ok to be run
+        player = await self.ensure_voice(interaction)
+        query = song.strip('<>')
+        
+        #** If query is plain text, search spotify
+        if not(query.startswith("https://") or query.startswith("http://") or query.startswith("scsearch:") or query.startswith("spsearch:") or query.startswith("ytsearch:")):
+            if not(query.lower() in ["", "nowplaying"]):
+                results = await player.node.get_tracks(f"spsearch:{query}", check_local=True)
             else:
-                #** Format Returned Data Ready To Be Put Into The Embeds **
-                description = "**By: **" + self.client.utils.format_artists(songInfo['artists'], songInfo['artistID'])
-                links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify]({spotify})\n"
-                if songInfo['preview'] != None:
-                    links += f"{self.client.utils.get_emoji('Preview')} Song: [Preview]({songInfo['preview']})\n"
-                if songInfo['albumID'] != None and songInfo['album'] != None:
-                    links += f"{self.client.utils.get_emoji('Album')} Album: [{songInfo['album']}](https://open.spotify.com/album/{songInfo['albumID']})"
-                
-                #** Setup Embed With Advanced Song Information **
-                baseEmbed = discord.Embed(title=songInfo['name'], 
-                                          description=description)
-                if songInfo['art'] != None:
-                    baseEmbed.set_thumbnail(url=songInfo['art'])
-                baseEmbed.set_footer(text="(2/2) React To See Basic Song Information!")
-                baseEmbed.add_field(name="Popularity:", value=songInfo['popularity'], inline=True)
-                baseEmbed.add_field(name="Explicit:", value=songInfo['explicit'], inline=True)
-                baseEmbed.add_field(name="Tempo:", value=songInfo['tempo'], inline=True)
-                baseEmbed.add_field(name="Key:", value=songInfo['key'], inline=True)
-                baseEmbed.add_field(name="Beats Per Bar:", value=songInfo['beats'], inline=True)
-                baseEmbed.add_field(name="Mode:", value=songInfo['mode'], inline=True)
-                advanced = copy.deepcopy(baseEmbed.to_dict())
+                if player.is_playing:
+                    results = [player.current]
+                else:
+                    await interaction.response.send_message("There isn't a song currently playing. Please specifiy a track instead!", ephemeral=True)
+    
+        #** If query is a URL, get track(s) from lavalink
+        else:
+            results = await player.node.get_tracks(query, check_local=True)
 
-                #** Setup Embed With Basic Song Information **
-                baseEmbed.clear_fields()
-                baseEmbed.set_footer(text="(1/2) React To See Advanced Song Information!")
-                baseEmbed.add_field(name="Length:", value=songInfo['duration'], inline=False)
-                baseEmbed.add_field(name="Released:", value=songInfo['release'], inline=True)
-                baseEmbed.add_field(name="Genre:", value=songInfo['genre'].title(), inline=True)
-                baseEmbed.add_field(name="Links:", value=links, inline=False)
-                basic = baseEmbed.to_dict()
+        #** Check if track loaded, and queue up each track
+        if results["loadType"] in ['TRACK_LOADED', 'SEARCH_RESULT']:
+            track = results[0]
+            if track.source_name == "spotify":
+                try:
+                    songInfo = self.client.music.GetSongDetails(track.identifier)
+                except Exception as e:
+                    raise app_commands.CheckFailure(e.message)
+                else:
+                    #** Format Returned Data Ready To Be Put Into The Embeds **
+                    description = "**By: **" + self.client.utils.format_artists(songInfo['artists'], songInfo['artistID'])
+                    links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify]({track.url})\n"
+                    if songInfo['preview'] != None:
+                        links += f"{self.client.utils.get_emoji('Preview')} Song: [Preview]({songInfo['preview']})\n"
+                    if songInfo['albumID'] != None and songInfo['album'] != None:
+                        links += f"{self.client.utils.get_emoji('Album')} Album: [{songInfo['album']}](https://open.spotify.com/album/{songInfo['albumID']})"
+                    
+                    #** Setup Embed With Advanced Song Information **
+                    baseEmbed = discord.Embed(title=songInfo['name'], 
+                                            description=description)
+                    if songInfo['art'] != None:
+                        baseEmbed.set_thumbnail(url=songInfo['art'])
+                    baseEmbed.set_footer(text="(2/2) React To See Basic Song Information!")
+                    baseEmbed.add_field(name="Popularity:", value=songInfo['popularity'], inline=True)
+                    baseEmbed.add_field(name="Explicit:", value=songInfo['explicit'], inline=True)
+                    baseEmbed.add_field(name="Tempo:", value=songInfo['tempo'], inline=True)
+                    baseEmbed.add_field(name="Key:", value=songInfo['key'], inline=True)
+                    baseEmbed.add_field(name="Beats Per Bar:", value=songInfo['beats'], inline=True)
+                    baseEmbed.add_field(name="Mode:", value=songInfo['mode'], inline=True)
+                    advanced = copy.deepcopy(baseEmbed.to_dict())
 
-                #** Send First Page & Setup Pagination Object **
-                await interaction.response.send_message(embed=baseEmbed)
-                message = await interaction.original_response()
-                await self.pagination.setup(message, [basic, advanced])
+                    #** Setup Embed With Basic Song Information **
+                    baseEmbed.clear_fields()
+                    baseEmbed.set_footer(text="(1/2) React To See Advanced Song Information!")
+                    baseEmbed.add_field(name="Length:", value=songInfo['duration'], inline=False)
+                    baseEmbed.add_field(name="Released:", value=songInfo['release'], inline=True)
+                    baseEmbed.add_field(name="Genre:", value=songInfo['genre'].title(), inline=True)
+                    baseEmbed.add_field(name="Links:", value=links, inline=False)
+                    basic = baseEmbed.to_dict()
+
+                    #** Send First Page & Setup Pagination Object **
+                    await interaction.response.send_message(embed=baseEmbed)
+                    message = await interaction.original_response()
+                    await self.pagination.setup(message, [basic, advanced])
+            else:
+                await interaction.response.send_message("Info is currently only available for Spotify tracks!", ephemeral=True)
+        else:
+            await interaction.response.send_message("Input must be a Spotify track URL or plain text search!", ephemeral=True)
 
 
 #!-------------------SETUP FUNCTION-------------------#

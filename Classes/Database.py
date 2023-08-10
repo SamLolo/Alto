@@ -12,22 +12,30 @@ from mysql.connector import pooling, errors
 
 class Database():
     
-    def __init__(self, pool: str = "main", size: int = 5):
+    def __init__(self, config: dict, pool: str = "main", size: int = 5):
         
         # Setup database logger
         self.logger = logging.getLogger("database")
             
         # Create connection pool for database
-        user = os.environ["DATABASE_USER"]
-        password = os.environ["DATABASE_PASS"]
+        host = config['database']['host']
+        if host == "":
+            host = os.environ[config['environment']['database_host']]
+        user = config['database']['username']
+        if user == "":
+            user = os.environ[config['environment']['database_user']]
+        password = config['database']['password']
+        if password == "":
+            password = os.environ[config['environment']['database_password']]
+        
         try:
             self.logger.info(f"Attempting to create new database pool '{pool}' of size {size}")
             self.pool = pooling.MySQLConnectionPool(pool_name = pool,
-                                                                    pool_size = size,
-                                                                    host = "localhost",
-                                                                    database = "alto",
-                                                                    user = user,
-                                                                    password = password)
+                                                    pool_size = size,
+                                                    host = host,
+                                                    database = config['database']['schema'],
+                                                    user = user,
+                                                    password = password)
         except errors.DatabaseError as failure:
             self.logger.error(f"Database connection failed with error: {failure}")
             self.connected = False
@@ -44,7 +52,7 @@ class Database():
         del user
         del password
         self.failures = 0
-        self.max_attempts = 3
+        self.max_attempts = config['database']['max_retries']
         
 
     def ensure_connection(self):
@@ -166,7 +174,7 @@ class Database():
                "FROM history "
                "INNER JOIN cache ON history.SongID = cache.uid "
               f"WHERE DiscordID = '{discordID}' "
-               "ORDER BY ListenedAt ASC;")
+               "ORDER BY ListenedAt DESC;")
         cursor.execute(sql)
         result = cursor.fetchall()
         connection.close()
@@ -191,7 +199,6 @@ class Database():
     
     
     def saveHistory(self, discordID: int, history: dict):
-        print("Saving history!")
         
         # Get database connection from pool
         connection, cursor = self.ensure_connection()
@@ -204,7 +211,6 @@ class Database():
         cursor.execute(f"DELETE FROM history WHERE ListenedAt < '{oldest}';")
         cursor.execute("SELECT ROW_COUNT();")
         deletedRows = cursor.fetchone()
-        print(deletedRows)
         if deletedRows is not None:
             deletedRows = deletedRows[0]
     

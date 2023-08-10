@@ -4,7 +4,7 @@
 
 import os
 import sys
-import json
+import tomlkit
 import logging
 import discord
 import asyncio
@@ -71,7 +71,7 @@ class ColouredFormat(logging.Formatter):
 
 #** Creating Bot Client **
 class MyClient(commands.Bot):
-    def __init__(self, intents: discord.Intents, config):
+    def __init__(self, intents: discord.Intents, config: dict):
         
         #** Setup Client Logger & Config File **
         self.logger = logging.getLogger('discord')
@@ -79,7 +79,7 @@ class MyClient(commands.Bot):
 
         #** Initialise Discord Client Class **
         super().__init__(intents=intents, 
-                         command_prefix=self.config['Prefix'],
+                         command_prefix=config['prefix'],
                          case_insensitive = True,
                          help_command = None)
 
@@ -87,9 +87,10 @@ class MyClient(commands.Bot):
     #{ Setup Hook Called Before Bot Connects To Discord }
     async def setup_hook(self):
         #** Work Through List Of Active Cog Names In Config File, Loading Each One As You Go **
-        for Cog in self.config['Active_Extensions']:
-            await self.load_extension(Cog)
-            self.logger.info(f"Extension Loaded: {Cog}")
+        for cog, enabled in self.config['extensions'].items():
+            if enabled:
+                await self.load_extension(f"Cogs.{cog.title()}")
+                self.logger.info(f"Extension Loaded: {cog.title()}.py")
             
         #** Record Startup Time As Client Object **
         self.startup = discord.utils.utcnow()
@@ -114,10 +115,10 @@ class MyClient(commands.Bot):
     #{ Event Called When Bot Joins New Guild/Server }
     async def on_guild_join(self, Guild):
         #** Loop Through Channels Until You Find The First Text Channel
-        if self.config['Welcome']['enabled']:
+        if self.config['welcome']['enabled']:
             for Channel in Guild.channels:
                 if isinstance(Channel, discord.channel.TextChannel):
-                    await Channel.send(self.config['Welcome']['message'])
+                    await Channel.send(self.config['welcome']['message'])
                     break
             
 
@@ -127,9 +128,12 @@ class MyClient(commands.Bot):
 async def main():
     
     #** Load Config File **
-    with open('config.json') as ConfigFile:
-        config = json.load(ConfigFile)
-        ConfigFile.close()
+    try:
+        with open("config.toml", "rb")  as configFile:
+            config = tomlkit.load(configFile)
+    except Exception as e:
+        print(f"Failed to load config file! Error: {e}\nExiting...")
+        exit()
     
     #** Get Log Directory From Config File & Create New Folder If Missing **
     logDir = config['logging']['directory']
@@ -140,20 +144,14 @@ async def main():
     if not("Backups" in os.listdir(f"{logDir}/")):
         os.mkdir(f"{logDir}/Backups")
 
-    #** Loop Through Backups Folder In Reversed Order **
+    #** Loop Through Backups Folder In Reversed Order, incrementing each session record **
     if "master.log" in os.listdir(f"{logDir}/"):
         sortedFiles = sorted(os.listdir(f"{logDir}/Backups"), key = lambda x: int(x.split(".")[1]) if x.split(".")[1].isdecimal() else 0, reverse=True)
         for file in sortedFiles:
-
-            #** If File Has A Number In It, Split Name To Get Number ***
-            if str(file) != "Session.zip":
-                number = str(file).split(".")[1]
-                
-                #** If Number > OR = To Max Log Count, Delete File **
+            if file != "Session.zip":
+                number = file.split(".")[1]
                 if int(number) >= config['logging']['backups']:
                     os.remove(f"{logDir}/Backups/{file}")
-                
-                #** If Number Valid, Increase Number Of Log File **
                 else:
                     os.rename(f"{logDir}/Backups/{file}", f"{logDir}/Backups/Session.{int(number)+1}.zip")
         os.rename(f"{logDir}/Backups/Session.zip", f"{logDir}/Backups/Session.1.zip")
@@ -167,39 +165,36 @@ async def main():
 
     #** Get Root Logger & Set Default Level From Config File **
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(config['logging']['default_level'])
 
-    #** Setup Handlers **
+    #** Setup master handler **
     masterHandle = logging.handlers.RotatingFileHandler(
         filename=f'{logDir}/master.log',
         encoding='utf-8',
         maxBytes=8 * 1024 * 1024,
         backupCount=10)
-    debugHandle = logging.handlers.RotatingFileHandler(
-        filename=f'{logDir}/debug.log',
-        encoding='utf-8',
-        maxBytes=8 * 1024 * 1024,
-        backupCount=10)
-    consoleHandle = logging.StreamHandler(sys.stdout)
-        
-    #** Set Formatters For Each Handler **
     masterHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
-    debugHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
-    consoleHandle.setFormatter(ColouredFormat())
-
-    #** Set Level Of Handlers From Config File **
-    masterHandle.setLevel(config['logging']['levels']['masterFile'])
-    debugHandle.setLevel(config['logging']['levels']['debugFile'])
-    consoleHandle.setLevel(config['logging']['levels']['console'])
-    
-    #** Add Handlers To Logger **
+    masterHandle.setLevel(config['logging']['levels']['master'])
     logger.addHandler(masterHandle)
-    logger.addHandler(debugHandle)
-    logger.addHandler(consoleHandle)
-    
-    #** Log Code Start & Config File Load **
-    logger.info("Code Started!")
     logger.info("Loaded Config File")
+    
+    #** Setup debug handler if active **
+    if config['logging']['handlers']['debug']:
+        debugHandle = logging.handlers.RotatingFileHandler(
+            filename=f'{logDir}/debug.log',
+            encoding='utf-8',
+            maxBytes=8 * 1024 * 1024,
+            backupCount=10)
+        debugHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
+        debugHandle.setLevel(config['logging']['levels']['debug'])
+        logger.addHandler(debugHandle)
+        
+    #** Setup console output if active **
+    if config['logging']['handlers']['console']:
+        consoleHandle = logging.StreamHandler(sys.stdout)
+        consoleHandle.setFormatter(ColouredFormat())
+        consoleHandle.setLevel(config['logging']['levels']['console'])
+        logger.addHandler(consoleHandle)
     
     #** Get Required Intents For Bot **
     intents = discord.Intents.default()
@@ -207,8 +202,11 @@ async def main():
     intents.message_content = True
     
     #** Instanciate My Client Class & Connect Bot To Discord **
-    async with MyClient(intents=intents, config=config) as client: 
-        await client.start(os.environ["DEV_TOKEN"])
+    async with MyClient(intents=intents, config=config) as client:
+        if not(config['development_mode']):
+            await client.start(os.environ[config['environment']['bot_token']])
+        else:
+            await client.start(os.environ[config['environment']['dev_token']])
         
         
 #!-----------------------------START ASYNCIO EVENT LOOP---------------------------!#

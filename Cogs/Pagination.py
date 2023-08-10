@@ -4,7 +4,6 @@
 
 import discord
 import logging
-from discord.utils import get
 from discord.ext import commands
 
 

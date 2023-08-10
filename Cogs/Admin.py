@@ -33,7 +33,7 @@ class AdminCog(commands.Cog, name="Admin"):
         
         #** Instanciate Classes If One Or More Attributes Missing **
         if not hasattr(client, 'database'):
-            client.database = Classes.Database.Database()
+            client.database = Classes.Database.Database(client.config, pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
         if not hasattr(client, 'music'): 
             client.music = Classes.MusicUtils.SongData()
         if not hasattr(client, 'utils'):
@@ -211,7 +211,7 @@ class AdminCog(commands.Cog, name="Admin"):
             
         #** If Option Is 'Database', Format Embed Description With Database Connection Info **
         elif option.lower() == "database":
-            print("database")
+            pass
             
         #** Send Embed To Discord **
         await ctx.send(embed=embed)
