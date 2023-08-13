@@ -3,7 +3,7 @@
 
 
 import os
-import json
+import tomlkit
 import discord
 import logging
 import asyncio
@@ -40,6 +40,15 @@ class AdminCog(commands.Cog, name="Admin"):
             client.utils = Classes.Utils.Utility(client)
         if not hasattr(client, 'userClass'):
             client.userClass = Classes.Users
+            
+    
+    async def cog_load(self):
+        
+        #** Get application team from Discord **
+        application = await self.client.application_info()
+        self.admins = []
+        for member in application.team.members:
+            self.admins.append(member.id)
 
     
     #{ Check Function To See If User ID Is Bot Admin }
@@ -47,7 +56,7 @@ class AdminCog(commands.Cog, name="Admin"):
     
         #** When Called, Check If User Id In List & If So Return True **
         async def predicate(ctx):
-            if ctx.author.id in [315237737538125836, 233641884801695744]:
+            if ctx.author.id in ctx.cog.admins:
                 return True
             return False
         return commands.check(predicate)
@@ -63,7 +72,7 @@ class AdminCog(commands.Cog, name="Admin"):
                 #** Re-add Attribute To Client Class **
                 if input.lower() == "database":
                     importlib.reload(Classes.Database)
-                    self.client.database = Classes.Database.Database()
+                    self.client.database = Classes.Database.Database(self.client.config, pool=self.client.config['database']['main']['poolname'], size=self.client.config['database']['main']['size'])
                 elif input.lower() == "music":
                     importlib.reload(Classes.MusicUtils)
                     self.client.music = Classes.MusicUtils.SongData()
@@ -74,8 +83,8 @@ class AdminCog(commands.Cog, name="Admin"):
                     importlib.reload(Classes.Users)
                     self.client.userClass = Classes.Users
 
+            #** Log error & inform user **
             except Exception as e:
-                #** Return Error To User **
                 self.logger.warning(f"An error occured when reloading class: {input.title()}!")
                 self.logger.exception(e)
                 await ctx.send(f"**An Error Occured Whilst Trying To Reload The {input.title()} Class!**\n```{e}```")
@@ -84,14 +93,11 @@ class AdminCog(commands.Cog, name="Admin"):
         #** If Input Is 'Config', reload Config File **
         elif input.lower() == "config":  
             try:
-                #** ReLoad Config File **
-                with open('Config.json') as ConfigFile:
-                    self.client.config = json.load(ConfigFile)
-                    self.logger.info("Loaded Config File")
-                    ConfigFile.close()
+                with open("config.toml", "rb")  as configFile:
+                    self.client.config = tomlkit.load(configFile)
 
+            #** Log error & inform user **
             except Exception as e:
-                #** Return Error To User **
                 self.logger.warning("An error occured when reloading config file!")
                 self.logger.exception(e)
                 await ctx.send(f"**An Error Occured Whilst Trying To Reload The Config File!**\n```{e}```")
@@ -104,8 +110,8 @@ class AdminCog(commands.Cog, name="Admin"):
                 await self.client.reload_extension("Cogs."+input.title())
                 self.client.logger.info(f"Extension Loaded: Cogs.{input.title()}")
 
+            #** Log error & inform user **
             except Exception as e:
-                #** Return Error To User **
                 self.logger.warning(f"An error occured when reloading cog: {input.title()}!")
                 self.logger.exception(e)
                 await ctx.send(f"**An Error Occured Whilst Trying To Reload {input.title()} Cog!**\n```{e}```")
