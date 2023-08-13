@@ -1,6 +1,7 @@
 # Alto | Discord Music Bot
 [![](https://dcbadge.vercel.app/api/shield/803939964092940308?bot=true&style=flat)](https://discord.com/api/oauth2/authorize?client_id=803939964092940308&permissions=414836976704&scope=bot)
 ![Static Badge](https://img.shields.io/badge/Version-1.1-blue?style=flat)
+[![wakatime](https://wakatime.com/badge/user/aa966dfd-2ee1-42d6-8b74-530c65d62ac0/project/5377707e-5dac-4307-aef2-e8dcb24ec022.svg)](https://wakatime.com/@aa966dfd-2ee1-42d6-8b74-530c65d62ac0/projects/tqfoalvzth)
 
 ## About The Project
 The music bot was originally created as part of my A-Level coursework, and is currently maintained as a passion project. If you'd like to use the bot, you can invite the offical bot [here](https://discord.com/api/oauth2/authorize?client_id=803939964092940308&permissions=414836976704&scope=bot) or you can setup the code yourself using the information below! If you'd like to contribute, please do so on the [dev branch](https://github.com/SamLolo/Alto/tree/dev)! To track development, you can visit the [Trello Board](https://trello.com/b/nghSiaQg/development) which is used to track issues, and update progress, as well as future update plans! If you'd like to learn more, you can contact me on Discord *@sam_lolo*!
