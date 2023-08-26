@@ -1,5 +1,7 @@
+
 prefix = "!" # Prefix used for admin text-based commands
 development_mode = true # Toggles development mode (recommended false for production)
+
 
 [extensions]
 # Define which cogs should be loaded upon startup. Setting the value to false means the cog is ignored.
@@ -11,22 +13,33 @@ help = false
 music = true
 pagination = true
 settings = false
+server = true
 utility = true
 
+
 [spotify]
-# Settings for spotify. Leave the secrets blank to use environment variables (recommended!)
-# If a development account isn't specified, the same spotify account will be used in both normal and development operations!
-client_id = ""
-secret = "" # Leave blank to use environment variables (recommended)
+# Settings for spotify. If a development account isn't specified, the same spotify account will be used in both normal and development operations!
+client_id = "710b5d6211ee479bb370e289ed1cda3d"
 dev_client = "6d32b18995b542c59183be193900f1d5"
-dev_secret = "" # Leave blank to use environment variables (recommended)
+
+
+[lavalink]
+# Settings for the Lavalink connection established in Cogs/Music.py. Should point to the lavalink.jar.
+# Host & port can be left blank to use environment variables.
+host = "127.0.0.1"
+port = "2333"
+password = ""
+name = "default"
+region = "eu"
+reconnect_attempts = 3
+
 
 [database]
-# Settins for database connection.
-host = "localhost" # Leave blank to use environment variables
+# Settings for database connection.
+# Host & username can be left blank to use environment variables
+host = "localhost"
 schema = "alto"
-username = "root" # Leave blank to use environment variables
-password = "" # Leave blank to use environment variables (recommended)
+username = "root"
 max_retries = 3
 
 [database.main]
@@ -39,11 +52,12 @@ size = 5
 poolname = "lavalink"
 size = 3
 
+
 [logging]
 # Overall settings for the logging module
 directory = "Logs"
 backups = 10
-default_level = "DEBUG" # Used to override the minimum logging level of the individual handlers
+minimum_level = "DEBUG" # Used to set the minimum logging level of the individual handlers
 
 [logging.handlers]
 # Allows you to decide which additonal logging handlers are loaded and active (master cannot be disabled)
@@ -56,22 +70,25 @@ master = "INFO"
 debug = "DEBUG"
 console = "INFO"
 
+
 [status]
 # Settings for the status rotation carried out in the background
 enabled = true
 interval = 60   # Measured in Seconds
-messages = [["Playing", "V 1.1"],
+messages = [["Playing", "V 1.2"],
             ["Watching", "/play"],
             ["Listening", "Music"]]
 default = ["Listening", "Music"] # Used as the status when rotation is disabled
+
 
 [welcome]
 # Settings for the welcome message sent when 
 enabled = false
 message = "Thanks for choosing my music bot! Get started by joining a vc and typing `/play`!"
 
+
 [environment]
-# Points to the different keys used in the systems environment variables. Don't change unless you don't want to use the default envoiroment variable names!
+# Points to the different keys used in the systems environment variables. If these don't match, parts of the bot will fail to load.
 spotify_secret = "SPOTIFY_SECRET"
 spotify_dev_secret = "DEV_SPOTIFY_SECRET"
 bot_token = "BOT_TOKEN"
@@ -79,3 +96,6 @@ dev_token = "DEV_TOKEN"
 database_host = "DATABASE_IP"
 database_user = "DATABASE_USER"
 database_password = "DATABASE_PASS"
+lavalink_host = "LAVALINK_HOST"
+lavalink_port = "LAVALINK_PORT"
+lavalink_password = "LAVALINK_PASS"

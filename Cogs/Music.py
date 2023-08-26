@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
+import os
 import math
 import copy
 import logging
@@ -95,8 +96,26 @@ class MusicCog(commands.Cog, name="Music"):
             
         #** Connect To Lavalink If Not Already Connected **
         if len(client.lavalink.node_manager.available_nodes) == 0:
-            client.lavalink.add_node('127.0.0.1', 2333, 'youshallnotpass', 'eu', name='default-node')
-            self.logger.debug("Connecting to default-node@127.0.0.1:2333...")
+            host = client.config['lavalink']['host']
+            if host == "":
+                host = os.getenv(client.config['environment']['lavalink_host'], default=None)
+                if host is None:
+                    self.logger.error('"lavalink.host" is not set in config or environment variables!')
+            port = client.config['lavalink']['port']
+            if port == "":
+                port = os.getenv(client.config['environment']['lavalink_port'], default=None)
+                if port is None:
+                    self.logger.error('"lavalink.port" is not set in config or environment variables!')
+
+            client.lavalink.add_node(host = host, 
+                                     port = port, 
+                                     password = os.environ[client.config['environment']['lavalink_password']], 
+                                     region = client.config['lavalink']['region'], 
+                                     name = client.config['lavalink']['name'],
+                                     reconnect_attempts = client.config['lavalink']['reconnect_attempts'])
+            self.logger.debug(f"Connecting to {client.config['lavalink']['name']}@{host}:{port}...")
+            del host
+            del port
 
         #** Add Event Hook **
         self.client.lavalink.add_event_hooks(self)
@@ -465,7 +484,8 @@ class MusicCog(commands.Cog, name="Music"):
             queueEmbed = discord.Embed(
                 title = f"Queue For {interaction.user.voice.channel.name}:",
                 colour = discord.Colour.blue())
-            queueEmbed.set_thumbnail(url=interaction.guild.icon.url)
+            if interaction.guild.icon is not None:
+                queueEmbed.set_thumbnail(url=interaction.guild.icon.url)
             
             #** Format Footer Based On Whether Shuffle & Repeat Are Active **
             footer = f"Shuffle: {self.client.utils.get_emoji(player.shuffle)}   Loop: {self.client.utils.get_emoji(True if player.loop in [1,2] else False)}"

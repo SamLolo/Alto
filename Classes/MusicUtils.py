@@ -33,6 +33,8 @@ class Spotify(object):
         clientStr = self.CLIENT+":"+self.SECRET
         authStr =  base64.urlsafe_b64encode(clientStr.encode()).decode()
         self.authHead = {'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': 'Basic {0}'.format(authStr)}
+        del clientStr
+        del authStr
 
         #** Get An Initial Bot Token For API Calls **
         self.RefreshBotToken()

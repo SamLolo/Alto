@@ -16,19 +16,22 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `users`
+-- Table structure for table `servers`
 --
 
-DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `servers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `users` (
-  `DiscordID` varchar(32) NOT NULL,
-  `Songs` int DEFAULT '0',
-  `Created` datetime DEFAULT NULL,
-  `History` int DEFAULT '2',
-  `Public` tinyint DEFAULT '1',
-  PRIMARY KEY (`DiscordID`)
+CREATE TABLE `servers` (
+  `id` varchar(64) NOT NULL,
+  `Dj` tinyint DEFAULT '0',
+  `Volume` tinyint DEFAULT '1',
+  `Default Volume` int DEFAULT '25',
+  `VoteSkip` tinyint DEFAULT '0',
+  `Save Queue` tinyint DEFAULT '0',
+  `Voice Channels` json DEFAULT NULL,
+  `Text Channels` json DEFAULT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -41,4 +44,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-08-18 21:59:07
+-- Dump completed on 2023-08-18 21:59:06

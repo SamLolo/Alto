@@ -20,14 +20,14 @@ class Database():
         # Create connection pool for database
         host = config['database']['host']
         if host == "":
-            host = os.environ[config['environment']['database_host']]
+            host = os.getenv(config['environment']['database_host'], default=None)
+            if host is None:
+                self.logger.warning('"database.host" is not set in config or environment variables!')
         user = config['database']['username']
         if user == "":
-            user = os.environ[config['environment']['database_user']]
-        password = config['database']['password']
-        if password == "":
-            password = os.environ[config['environment']['database_password']]
-        
+            user = os.getenv(config['environment']['database_user'], default=None)
+            if user is None:
+                self.logger.warning('"database.user" is not set in config or environment variables!')
         try:
             self.logger.info(f"Attempting to create new database pool '{pool}' of size {size}")
             self.pool = pooling.MySQLConnectionPool(pool_name = pool,
@@ -35,7 +35,7 @@ class Database():
                                                     host = host,
                                                     database = config['database']['schema'],
                                                     user = user,
-                                                    password = password)
+                                                    password = os.environ[config['environment']['database_password']])
         except errors.DatabaseError as failure:
             self.logger.error(f"Database connection failed with error: {failure}")
             self.connected = False
@@ -50,7 +50,7 @@ class Database():
         
         # Use parameter to keep track of attempts to create new database connection from pool
         del user
-        del password
+        del host
         self.failures = 0
         self.max_attempts = config['database']['max_retries']
         
@@ -341,4 +341,78 @@ class Database():
                 data["colour"] = tuple(result[12])
             else:
                 data["colour"] = None
+        return data
+    
+    
+    def saveServer(self, id: int, dj: dict, volume: dict, voice: list, channels: list, queue: bool, skip: bool):
+        
+        # Get database connection from pool
+        connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning(f"Failed to save server with id '{id}' due to missing database connection!")
+            raise ConnectionError(f"Failed to save server with id '{id}' due to missing database connection!")
+        
+        # Replace current server settings in database
+        sql = f"REPLACE INTO servers (id, Dj, Volume, Default Volume, VoteSkip, Save Queue, Voice Channels, Text Channels) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"
+        values = (id, dj['enabled'], volume['enabled'], volume['default'], skip, queue, voice, channels)
+        cursor.execute(sql, values)
+        self.logger.debug(f"Saved server settings for guild id '{id}'")
+        
+        # Save list of dj roles and users for server
+        for user in dj['users']:
+            sql = f"REPLACE INTO dj (id, Type, Server) VALUES (%s, %s, %s);"
+            values = (user, "user", id)
+            cursor.execute(sql, values)
+        for role in dj['roles']:
+            sql = f"REPLACE INTO dj (id, Type, Server) VALUES (%s, %s, %s);"
+            values = (role, "role", id)
+            cursor.execute(sql, values)
+        self.logger.debug(f"Saved DJ permissions for guild id '{id}'")
+        
+        # Commit changes and return connection to pool
+        connection.commit()
+        connection.close()
+        self.logger.debug("Connection returned to pool!")
+        
+        
+    def loadServer(self, id: int):
+        
+        # Get database connection from pool
+        connection, cursor = self.ensure_connection()
+        if connection is None:
+            self.logger.warning(f"Failed to get server settings for id '{id}' due to missing database connection!")
+            raise ConnectionError(f"Failed to get server settings for id '{id}' due to missing database connection!")
+        
+        # Get settings for server table
+        cursor.execute(f"SELECT * FROM servers WHERE id = '{id}';")
+        result = cursor.fetchone()
+        
+        # Format result into dictionary if row found
+        if result is not None:
+            data = {"dj": {"enabled": result[1],
+                           "roles": [],
+                           "users": []},
+                    "volume": {"enabled": result[2],
+                               "default": result[3]},
+                    "voice": result[6],
+                    "channels": result[7],
+                    "skip": result[4],
+                    "queue": result[5]}
+        else:
+            return None
+        
+        # Load DJ roles and users from dj table
+        cursor.execute(f"SELECT * FROM dj WHERE Server = '{id}';")
+        results = cursor.fetchall()
+        for result in results:
+            if result[1] == "user":
+                data['dj']['users'].append(result[0])
+            elif result[1] == "role":
+                data['dj']['roles'].append(result[0])
+            else:
+                self.logger.warning(f"Result found in table 'dj' with unknown type '{result[1]}'!")
+        
+        # Return connection to available pool
+        connection.close()
+        self.logger.debug("Connection returned to pool!")
         return data

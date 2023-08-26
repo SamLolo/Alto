@@ -120,54 +120,81 @@ class MyClient(commands.Bot):
                 if isinstance(Channel, discord.channel.TextChannel):
                     await Channel.send(self.config['welcome']['message'])
                     break
-            
 
-#! -------------------------------MAIN FUNCTION-------------------------------!#
+
+#!-----------------------------SETUP FUNCTIONS-----------------------------!#
+
+
+def backup_logs(dir: str, backups: int):
+    #** Get Log Directory From Config File & Create New Folder If Missing **
+    if not(dir in os.listdir("./")):
+        os.mkdir(dir)
+        
+    #** Create Backups Folder In Log Directory If Missing **
+    if not("Backups" in os.listdir(f"{dir}/")):
+        os.mkdir(f"{dir}/Backups")
+
+    #** Loop Through Backups Folder In Reversed Order, incrementing each session record **
+    if "master.log" in os.listdir(f"{dir}/"):
+        sortedFiles = sorted(os.listdir(f"{dir}/Backups"), key = lambda x: int(x.split(".")[1]) if x.split(".")[1].isdecimal() else 0, reverse=True)
+        for file in sortedFiles:
+            if file != "Session.zip":
+                count = int(file.split(".")[1])
+                if count >= backups:
+                    os.remove(f"{dir}/Backups/{file}")
+                else:
+                    os.rename(f"{dir}/Backups/{file}", f"{dir}/Backups/Session.{count+1}.zip")
+        os.rename(f"{dir}/Backups/Session.zip", f"{dir}/Backups/Session.1.zip")
+        
+        #** Zip Log Files & Move Zip File Into Backups Folder & Delete Previous Log Files **
+        with ZipFile(f"{dir}/Backups/Session.zip", 'w') as zip:
+            for file in os.listdir(f"{dir}/"):
+                if file.endswith(".log"):
+                    zip.write(f"{dir}/{file}")
+                    os.remove(f"{dir}/{file}")
+                    
+
+def check_config(config: dict, logger: logging.Logger):
+    
+    # Check enviroment variables have values, and warn accordingly if not
+    for variable, key in config['environment'].items():
+        value = os.getenv(key, default=None)
+        if value is None:
+            if variable in ['spotify_secret', 'database_password', 'lavalink_password'] or (variable == 'bot_token' and config['development_mode'] is False):
+                logger.critical(f'"{key}" is missing from environment variables! Please set this variable before continuing!')
+                exit()
+            elif variable == 'bot_token' and config['development_mode'] is True:
+                logger.warning(f'"{key}" is missing from environment variables! The bot will not work outside of development mode. You can safely ignore this if you intend to use the bot for development only!')
+            elif variable == 'dev_token' and config['development_mode'] is False:
+                logger.critical(f"{key} is missing from environment variables! Please set this variable, or disable development mode before continuing!")
+                exit()
+            else:
+                logger.warning(f'"{key}" is missing from environment variables! Some functionality may not work as a result.')
+
+
+#!------------------------------MAIN FUNCTION------------------------------!#
 
   
 async def main():
     
-    #** Load Config File **
+    # Load config.toml file
     try:
         with open("config.toml", "rb")  as configFile:
             config = tomlkit.load(configFile)
     except Exception as e:
         print(f"Failed to load config file! Error: {e}\nExiting...")
         exit()
-    
-    #** Get Log Directory From Config File & Create New Folder If Missing **
+        
+    # Call helper function to backup last session's logs
     logDir = config['logging']['directory']
-    if not(logDir in os.listdir("./")):
-        os.mkdir(logDir)
-        
-    #** Create Backups Folder In Log Directory If Missing **
-    if not("Backups" in os.listdir(f"{logDir}/")):
-        os.mkdir(f"{logDir}/Backups")
+    backups = config['logging']['backups']
+    backup_logs(logDir, backups)
 
-    #** Loop Through Backups Folder In Reversed Order, incrementing each session record **
-    if "master.log" in os.listdir(f"{logDir}/"):
-        sortedFiles = sorted(os.listdir(f"{logDir}/Backups"), key = lambda x: int(x.split(".")[1]) if x.split(".")[1].isdecimal() else 0, reverse=True)
-        for file in sortedFiles:
-            if file != "Session.zip":
-                number = file.split(".")[1]
-                if int(number) >= config['logging']['backups']:
-                    os.remove(f"{logDir}/Backups/{file}")
-                else:
-                    os.rename(f"{logDir}/Backups/{file}", f"{logDir}/Backups/Session.{int(number)+1}.zip")
-        os.rename(f"{logDir}/Backups/Session.zip", f"{logDir}/Backups/Session.1.zip")
-        
-        #** Zip Log Files & Move Zip File Into Backups Folder & Delete Previous Log Files **
-        with ZipFile(f"{logDir}/Backups/Session.zip", 'w') as zipFile:
-            for file in os.listdir(f"{logDir}/"):
-                if file.endswith(".log"):
-                    zipFile.write(f"{logDir}/"+file)
-                    os.remove(f"{logDir}/"+file)
-
-    #** Get Root Logger & Set Default Level From Config File **
+    # Get root logger & set default level from config
     logger = logging.getLogger()
-    logger.setLevel(config['logging']['default_level'])
+    logger.setLevel(config['logging']['minimum_level'])
 
-    #** Setup master handler **
+    # Setup master handler
     masterHandle = logging.handlers.RotatingFileHandler(
         filename=f'{logDir}/master.log',
         encoding='utf-8',
@@ -176,9 +203,8 @@ async def main():
     masterHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
     masterHandle.setLevel(config['logging']['levels']['master'])
     logger.addHandler(masterHandle)
-    logger.info("Loaded Config File")
     
-    #** Setup debug handler if active **
+    # Setup debug handler if enabled in config
     if config['logging']['handlers']['debug']:
         debugHandle = logging.handlers.RotatingFileHandler(
             filename=f'{logDir}/debug.log',
@@ -189,19 +215,27 @@ async def main():
         debugHandle.setLevel(config['logging']['levels']['debug'])
         logger.addHandler(debugHandle)
         
-    #** Setup console output if active **
+    # Setup console output if enabled in config
     if config['logging']['handlers']['console']:
         consoleHandle = logging.StreamHandler(sys.stdout)
         consoleHandle.setFormatter(ColouredFormat())
         consoleHandle.setLevel(config['logging']['levels']['console'])
         logger.addHandler(consoleHandle)
+        
+    # Check through config to see if anything is wrong before loading bot
+    logger.info("Loaded config.toml file")
+    logger.info("Created master logging handler")
+    for handler, enabled in config['logging']['handlers'].items():
+        if enabled:
+            logger.info(f"Added {handler} handler")
+    check_config(config, logger)
     
-    #** Get Required Intents For Bot **
+    # Get required intents for bot to function (must be enabled in Discord developer portal first)
     intents = discord.Intents.default()
     intents.members = True
     intents.message_content = True
     
-    #** Instanciate My Client Class & Connect Bot To Discord **
+    # Instanciate MyClient class with requested intents and loaded config & establish bot connection to Discord
     async with MyClient(intents=intents, config=config) as client:
         if not(config['development_mode']):
             await client.start(os.environ[config['environment']['bot_token']])
