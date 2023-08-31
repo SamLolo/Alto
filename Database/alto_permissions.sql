@@ -16,16 +16,21 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `dj`
+-- Table structure for table `permissions`
 --
 
-DROP TABLE IF EXISTS `dj`;
+DROP TABLE IF EXISTS `permissions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `dj` (
-  `id` varchar(64) NOT NULL,
-  `Type` varchar(32) NOT NULL,
-  `Server` varchar(64) NOT NULL,
+CREATE TABLE `permissions` (
+  `id` varchar(128) NOT NULL,
+  `Type` varchar(16) NOT NULL,
+  `Server` varchar(128) NOT NULL,
+  `Play` tinyint DEFAULT '1',
+  `Volume` tinyint DEFAULT '1',
+  `Skip` tinyint DEFAULT '1',
+  `Edit Queue` tinyint DEFAULT '1',
+  `Seek` tinyint DEFAULT '1',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -39,4 +44,4 @@ CREATE TABLE `dj` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-08-18 21:59:07
+-- Dump completed on 2023-09-01  0:21:52

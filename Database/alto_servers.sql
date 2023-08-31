@@ -24,13 +24,16 @@ DROP TABLE IF EXISTS `servers`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `servers` (
   `id` varchar(64) NOT NULL,
-  `Dj` tinyint DEFAULT '0',
-  `Volume` tinyint DEFAULT '1',
   `Default Volume` int DEFAULT '25',
-  `VoteSkip` tinyint DEFAULT '0',
+  `Last Volume` int DEFAULT NULL,
   `Save Queue` tinyint DEFAULT '0',
   `Voice Channels` json DEFAULT NULL,
   `Text Channels` json DEFAULT NULL,
+  `Play` tinyint DEFAULT '1',
+  `Volume` tinyint DEFAULT '1',
+  `Skip` tinyint DEFAULT '1',
+  `Edit Queue` tinyint DEFAULT '1',
+  `Seek` tinyint DEFAULT '1',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -44,4 +47,4 @@ CREATE TABLE `servers` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-08-18 21:59:06
+-- Dump completed on 2023-09-01  0:21:52
