@@ -24,34 +24,21 @@ DROP TABLE IF EXISTS `recommendations`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `recommendations` (
   `DiscordID` varchar(32) NOT NULL,
-  `SongCount` int DEFAULT '0',
-  `Min Popularity` int DEFAULT NULL,
-  `Avg Popularity` int DEFAULT NULL,
-  `Max Popularity` int DEFAULT NULL,
-  `Min Acoustic` float DEFAULT NULL,
-  `Avg Acoustic` float DEFAULT NULL,
-  `Max Acoustic` float DEFAULT NULL,
-  `Min Dance` float DEFAULT NULL,
-  `Avg Dance` float DEFAULT NULL,
-  `Max Dance` float DEFAULT NULL,
-  `Min Energy` float DEFAULT NULL,
-  `Avg Energy` float DEFAULT NULL,
-  `Max Energy` float DEFAULT NULL,
-  `Min Instrument` float DEFAULT NULL,
-  `Avg Instrument` float DEFAULT NULL,
-  `Max Instrument` float DEFAULT NULL,
-  `Min Live` float DEFAULT NULL,
-  `Avg Live` float DEFAULT NULL,
-  `Max Live` float DEFAULT NULL,
-  `Min Loud` float DEFAULT NULL,
-  `Avg Loud` float DEFAULT NULL,
-  `Max Loud` float DEFAULT NULL,
-  `Min Speech` float DEFAULT NULL,
-  `Avg Speech` float DEFAULT NULL,
-  `Max Speech` float DEFAULT NULL,
-  `Min Valence` float DEFAULT NULL,
-  `Avg Valence` float DEFAULT NULL,
-  `Max Valence` float DEFAULT NULL,
+  `Song Count` int DEFAULT '0',
+  `Acousticness` float DEFAULT '0',
+  `Danceability` float DEFAULT '0',
+  `Duration` float DEFAULT '0',
+  `Energy` float DEFAULT '0',
+  `Instrumentalness` float DEFAULT '0',
+  `Key` float DEFAULT '0',
+  `Mode` float DEFAULT '0',
+  `Popularity` float DEFAULT '0',
+  `Liveness` float DEFAULT '0',
+  `Loudness` float DEFAULT '0',
+  `Speechiness` float DEFAULT '0',
+  `Tempo` float DEFAULT '0',
+  `Time Signature` float DEFAULT '0',
+  `Valence` float DEFAULT '0',
   PRIMARY KEY (`DiscordID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -65,4 +52,4 @@ CREATE TABLE `recommendations` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-09-01  0:21:52
+-- Dump completed on 2023-09-16 13:28:40

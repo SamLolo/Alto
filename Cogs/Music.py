@@ -324,7 +324,7 @@ class MusicCog(commands.Cog, name="Music"):
                 
                 #** For All Current Listeners, Add New Song To Their Song History **
                 for user in userDict.values():
-                    if user.metadata['history'] == 2 or (user.metadata['history'] == 1 and event.track.requester == user.user.id):
+                    if user.history_mode == 2 or (user.history_mode == 1 and event.track.requester == user.user.id):
                         user.addSongHistory(data)
 
 
@@ -699,9 +699,9 @@ class MusicCog(commands.Cog, name="Music"):
                     message = await interaction.original_response()
                     await self.pagination.setup(message, [basic, advanced])
             else:
-                await interaction.response.send_message("Info is currently only available for Spotify tracks!", ephemeral=True)
+                await interaction.response.send_message("Sorry, song info is currently only available for Spotify tracks!", ephemeral=True)
         else:
-            await interaction.response.send_message("Input must be a Spotify track URL or plain text search!", ephemeral=True)
+            await interaction.response.send_message("Your input must be a Spotify track URL or plain text search!", ephemeral=True)
 
 
 #!-------------------SETUP FUNCTION-------------------#

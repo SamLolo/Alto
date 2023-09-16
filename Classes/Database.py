@@ -5,6 +5,7 @@
 import os
 import json
 import logging
+from datetime import datetime
 from mysql.connector import pooling, errors
 from Classes.Server import UserPermissions
 
@@ -56,6 +57,8 @@ class Database():
         self.failures = 0
         self.max_attempts = config['database']['max_retries']
         
+        self.getUser(315237737538125836)
+        
 
     def ensure_connection(self):
         
@@ -90,34 +93,45 @@ class Database():
             raise ConnectionError(f"Failed to get user data for '{id}' due to missing database connection!")
 
         # Fetch user data from database
-        cursor.execute(f"SELECT * FROM users INNER JOIN recommendations WHERE users.DiscordID = '{id}';")
-        result = cursor.fetchone()
+        cursor.execute(f"SELECT * FROM users WHERE DiscordID = '{id}';")
+        user = cursor.fetchone()
+        cursor.execute(f"SELECT * FROM recommendations WHERE DiscordID = '{id}';")
+        recommendations = cursor.fetchone()
         connection.close()
         self.logger.debug("Connection returned to pool!")
 
         # Format user data if row was found
-        if result is not None:
-            data = {"songs": result[1],
-                    "history": result[3],
-                    "public": bool(result[4]),
-                    "created": result[2],
-                    "recommendations": {"songcount": result[6],
-                                        "popularity": [result[7], result[8], result[9]],
-                                        "acousticness": [result[10], result[11], result[12]],
-                                        "danceability": [result[13], result[14], result[15]],
-                                        "energy": [result[16], result[17], result[18]],
-                                        "instrumentalness": [result[19], result[20], result[21]],
-                                        "liveness": [result[22], result[23], result[24]],
-                                        "loudness": [result[25], result[26], result[27]],
-                                        "speechiness": [result[28], result[29], result[30]],
-                                        "valence": [result[31], result[32], result[33]]}}
-            print(data)
-            return data
+        if user is not None:
+            data = {"songs": user[1],
+                    "history": user[3],
+                    "public": bool(user[4]),
+                    "created": user[2]}
         else:
-            return None
+            return None  
+        
+        # Add recommendations data if available and return found info
+        if recommendations is not None:
+            data["recommendations"] = {"songcount": recommendations[1],
+                                       "acousticness": recommendations[2],
+                                       "danceability": recommendations[3],
+                                       "duration_ms": recommendations[4],
+                                       "energy": recommendations[5],
+                                       "instrumentalness": recommendations[6],
+                                       "key": recommendations[7],
+                                       "mode": recommendations[8],
+                                       "popularity": recommendations[9],
+                                       "liveness": recommendations[10],
+                                       "loudness": recommendations[11],
+                                       "speechiness": recommendations[12],
+                                       "tempo": recommendations[13],
+                                       "time_signature": recommendations[14],
+                                       "valence": recommendations[15]}
+        else:
+            data['recommendations'] = None
+        return data
         
     
-    def saveUser(self, id: int, user: dict):
+    def saveUser(self, id: int, songs: int, history: int, public: bool, created: datetime):
         
         # Get database connection from pool
         connection, cursor = self.ensure_connection()
@@ -126,7 +140,7 @@ class Database():
             raise ConnectionError(f"Failed to save user data for '{id}' due to missing database connection!")
 
         # Write new data into users table, updating the row if it already exists
-        data = (id, user['songs'], user['created'], user['history'], user['public'])
+        data = (id, songs, created, history, public)
         cursor.execute("REPLACE INTO users VALUES (%s, %s, %s, %s, %s);", data)
         
         # Commit changes and return connection to pool
@@ -145,17 +159,10 @@ class Database():
             raise ConnectionError(f"Failed to save recommendations data for '{id}' due to missing database connection!")
     
         # write user recommendation data to recommendations table (update if already exists)
-        data = (id, recommendations['songcount'], 
-                recommendations['popularity'][0], recommendations['popularity'][1], recommendations['popularity'][2],
-                recommendations['acousticness'][0], recommendations['acousticness'][1], recommendations['acousticness'][2],
-                recommendations['danceability'][0], recommendations['danceability'][1], recommendations['danceability'][2],
-                recommendations['energy'][0], recommendations['energy'][1], recommendations['energy'][2],
-                recommendations['instrumentalness'][0], recommendations['instrumentalness'][1], recommendations['instrumentalness'][2],
-                recommendations['liveness'][0], recommendations['liveness'][1], recommendations['liveness'][2],
-                recommendations['loudness'][0], recommendations['loudness'][1], recommendations['loudness'][2],
-                recommendations['speechiness'][0], recommendations['speechiness'][1], recommendations['speechiness'][2],
-                recommendations['valence'][0], recommendations['valence'][1], recommendations['valence'][2])
-        cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", data)
+        data = (id, recommendations['songcount'], recommendations['acousticness'], recommendations['danceability'], recommendations['duration_ms'], recommendations['energy'], 
+                recommendations['instrumentalness'], recommendations['key'], recommendations['mode'], recommendations['popularity'], recommendations['liveness'],
+                recommendations['loudness'], recommendations['speechiness'], recommendations['tempo'], recommendations['time_signature'], recommendations['valence'])
+        cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", data)
         
         # Commit changes and return connection to pool
         connection.commit()
@@ -413,7 +420,7 @@ class Database():
                     "channels": json.loads(result[5]),
                     "queue": bool(result[3]),
                     "permissions": {
-                        "default": [UserPermissions(x) for x, value in enumerate(result[6:], start=1) if value is 1],
+                        "default": [UserPermissions(x) for x, value in enumerate(result[6:], start=1) if value == 1],
                         "users": {},
                         "roles": {}
                     }}
@@ -425,9 +432,9 @@ class Database():
         results = cursor.fetchall()
         for result in results:
             if result[1] == "user":
-                data['permissions']['users'][result[0]] = [UserPermissions(x) for x, value in enumerate(result[3:], start=1) if value is 1]
+                data['permissions']['users'][result[0]] = [UserPermissions(x) for x, value in enumerate(result[3:], start=1) if value == 1]
             elif result[1] == "role":
-                data['permissions']['roles'][result[0]] = [UserPermissions(x) for x, value in enumerate(result[3:], start=1) if value is 1]
+                data['permissions']['roles'][result[0]] = [UserPermissions(x) for x, value in enumerate(result[3:], start=1) if value == 1]
             else:
                 self.logger.warning(f"Result found in table 'permissions' with unknown type '{result[1]}'!")
         

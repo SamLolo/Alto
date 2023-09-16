@@ -20,12 +20,12 @@
 			"message": "I'm Not Currently Playing Anything!",
 			"ephemeral": false
 		},
-		"History": {
-			"message": "**You must have listened to some songs before you can run this command!**\nJoin a Voice Channel and type `/play` to get listening.",
+		"Recommendations": {
+			"message": "**Sorry, we don't have enough data to generate recommendations!**\nYou can fix this by listening to some *Spotify* tracks using `/play`.",
 			"ephemeral": true
 		},
 		"SongNotFound": {
-			"message": "**We couldn't find any tracks for the provided input!**\nPlease check your input and try again.",
+			"message": "**Sorry, we couldn't find any tracks for the provided input!**\nPlease check your input and try again.",
 			"ephemeral": true
 		},
 		"DM": {
@@ -33,11 +33,11 @@
 			"ephemeral": true
 		},
 		"Database": {
-			"message": "**We're currently experiencing trouble loading user data!**\nPlease try again in a little while or notify `Lolo#6699` on Discord!",
+			"message": "**We're currently experiencing trouble loading user data!**\nPlease try again in a little while or notify `@sam_lolo` on Discord!",
 			"ephemeral": true
 		},
 		"Lavalink": {
-			"message": "**Music playback is currently unavailable!**\nPlease try again in a little while or notify `Lolo#6699` on Discord!",
+			"message": "**Music playback is currently unavailable!**\nPlease try again in a little while or notify `@sam_lolo` on Discord!",
 			"ephemeral": true
 		},
 		"PlayPermissions": {
