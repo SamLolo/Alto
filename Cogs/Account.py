@@ -29,7 +29,7 @@ class AccountCog(commands.Cog, name="Account"):
         
         #** Setup Base Profile Embed With Title & User's Colour **
         ProfileEmbed = discord.Embed(title=interaction.user.display_name+"'s Profile",
-                                     colour=interaction.user.colour)
+                                     colour=discord.Colour.blue)
         if interaction.user.avatar is not None:
             ProfileEmbed.set_thumbnail(url=interaction.user.avatar.url)
 
@@ -92,7 +92,7 @@ class AccountCog(commands.Cog, name="Account"):
         
         #** Setup Base History Embed With Title, User's Colour & Profile Picture **
         HistoryEmbed = discord.Embed(title=interaction.user.display_name+"'s Listening History",
-                                     colour=interaction.user.colour)
+                                     colour=discord.Colour.blue)
         if interaction.user.avatar is not None:
             HistoryEmbed.set_thumbnail(url=interaction.user.avatar.url)
         

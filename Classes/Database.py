@@ -57,8 +57,6 @@ class Database():
         self.failures = 0
         self.max_attempts = config['database']['max_retries']
         
-        self.getUser(315237737538125836)
-        
 
     def ensure_connection(self):
         

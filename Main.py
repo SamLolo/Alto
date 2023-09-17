@@ -144,7 +144,8 @@ def backup_logs(dir: str, backups: int):
                     os.remove(f"{dir}/Backups/{file}")
                 else:
                     os.rename(f"{dir}/Backups/{file}", f"{dir}/Backups/Session.{count+1}.zip")
-        os.rename(f"{dir}/Backups/Session.zip", f"{dir}/Backups/Session.1.zip")
+        if "Session.zip" in f"{dir}/Backups/":
+            os.rename(f"{dir}/Backups/Session.zip", f"{dir}/Backups/Session.1.zip")
         
         #** Zip Log Files & Move Zip File Into Backups Folder & Delete Previous Log Files **
         with ZipFile(f"{dir}/Backups/Session.zip", 'w') as zip:
