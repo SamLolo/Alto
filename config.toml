@@ -13,7 +13,7 @@ help = false
 music = true
 pagination = true
 settings = false
-server = true
+server = false
 utility = true
 
 

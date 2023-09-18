@@ -106,7 +106,7 @@ class User(SongHistory):
             
         # Check to see if user has stored information, otherwise create new profile
         try:
-            data = self.client.database.getUser(id)
+            data = self.client.database.getUser(self.user.id)
         except ConnectionError as e:
             self.logger.info(f"Can't load user data for '{self.user.id}' due to connection error!")
             raise RuntimeError(e.message)

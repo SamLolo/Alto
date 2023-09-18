@@ -50,8 +50,7 @@ class AdminCog(commands.Cog, name="Admin"):
         for member in application.team.members:
             self.admins.append(member.id)
 
-    
-    #{ Check Function To See If User ID Is Bot Admin }
+
     def is_admin():
     
         #** When Called, Check If User Id In List & If So Return True **

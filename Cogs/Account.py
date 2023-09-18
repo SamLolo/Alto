@@ -29,7 +29,7 @@ class AccountCog(commands.Cog, name="Account"):
         
         #** Setup Base Profile Embed With Title & User's Colour **
         ProfileEmbed = discord.Embed(title=interaction.user.display_name+"'s Profile",
-                                     colour=discord.Colour.blue)
+                                     colour=discord.Colour.blue())
         if interaction.user.avatar is not None:
             ProfileEmbed.set_thumbnail(url=interaction.user.avatar.url)
 
@@ -91,67 +91,69 @@ class AccountCog(commands.Cog, name="Account"):
     async def history(self, interaction: discord.Interaction):
         
         #** Setup Base History Embed With Title, User's Colour & Profile Picture **
-        HistoryEmbed = discord.Embed(title=interaction.user.display_name+"'s Listening History",
-                                     colour=discord.Colour.blue)
+        embed = discord.Embed(title=interaction.user.display_name+"'s Listening History",
+                              colour=discord.Colour.blue())
         if interaction.user.avatar is not None:
-            HistoryEmbed.set_thumbnail(url=interaction.user.avatar.url)
+            embed.set_thumbnail(url=interaction.user.avatar.url)
         
         #** Try Getting User Object From Player If User Is In VC **
-        CurrentUser = None
+        currentUser = None
         if (interaction.user.voice is not None) and (interaction.user.voice.channel is not None):
             Player = self.client.lavalink.player_manager.get(interaction.user.voice.channel.guild.id)
             if Player is not None:
                 UserDict = Player.fetch('Users')
                 if str(interaction.user.id) in UserDict.keys():
-                    CurrentUser = UserDict[str(interaction.user.id)]
+                    currentUser = UserDict[str(interaction.user.id)]
         
         #** Otherwise Create Fresh User Object **       
-        if CurrentUser is None:
+        if currentUser is None:
             if self.client.database.connected:
                 try:
-                    CurrentUser = self.client.userClass.User(self.client, user=interaction.user)
+                    currentUser = self.client.userClass.User(self.client, user=interaction.user)
                 except:
                     pass
             else:
                 raise app_commands.CheckFailure("Database")
 
-        #** Check User Has Listened To Some Songs **
-        if len(CurrentUser.history) > 0:
-            print(CurrentUser.history)
-            History = iter(CurrentUser.history)
-            Pages = []
+        # Check if user has history
+        if len(currentUser.history) > 0:
+            print(currentUser.history)
+            history = iter(currentUser.history)
+            pages = []
             
-            #** For Upper Bound Of Length Of History Divided By 5 Representing The Amount Of Pages Needed **
-            for Count in range(math.ceil(len(CurrentUser.history) / 5)):
-
-                #** Set Empty Description String & Get Next SongData Dict In History. If Returns None, Break Loop As Run Out Of Songs **
-                Description = ""
-                for i in range(5):
-                    NextSong = next(History, None)
-                    if NextSong == None:
-                        break
-
-                    #** Format Song & Add Listened To Stat & Divisor **
-                    emoji = self.client.utils.get_emoji(NextSong['source'].title())
-                    artists = self.client.utils.format_artists(NextSong['artists'], NextSong['artistID'] if 'artistID' in NextSong.keys() else None)
-                    Description += f"{str(emoji)+' ' if emoji is not None else ''}[{NextSong['name']}]({NextSong['url']})\nBy: {artists}\n"
-                    Description += f"\n*Listened on {NextSong['listenedAt'].strftime('%d/%m/%y')} at {NextSong['listenedAt'].strftime('%H:%M')}*\n--------------------\n"
-                HistoryEmbed.description = Description
-
-                #** Set Page Number If More Than One Page Needed **
-                if math.ceil(len(CurrentUser.history) / 5) > 1:
-                    HistoryEmbed.set_footer(text="Page "+str(Count+1)+"/"+str(math.ceil(len(CurrentUser.history) / 5)))
-                    PageDict = copy.deepcopy(HistoryEmbed.to_dict())
-                    Pages.append(PageDict)
+            date = None
+            while True:
                 
-                #** Send First Embed Page On First Loop Through Count **
-                if Count == 0:
-                    await interaction.response.send_message(embed=HistoryEmbed)
+                song = next(history, None)
+                if song is None:
+                    break
+                
+                if date is None:
+                    description = f"**{song['listenedAt'].strftime('%d %B %Y')}**\n"
+                    date = song['listenedAt']
+                elif (song['listenedAt'].day != date.day or song['listenedAt'].month != date.month or song['listenedAt'].year != date.year):
+                    date = song['listenedAt']
+                    embed.description = description
+                    embed.set_footer(text=f"Page {len(pages)+1}/{math.ceil(len(currentUser.history) / 5)}")
+                    dict = copy.deepcopy(embed.to_dict())
+                    pages.append(dict)
+                    description = f"\n**{song['listenedAt'].strftime('%d %B %Y')}**\n"
+                    
+                emoji = self.client.utils.get_emoji(song['source'].title())
+                artists = self.client.utils.format_artists(song['artists'], song['artistID'] if 'artistID' in song.keys() else None)
+                description += f"{song['listenedAt'].strftime('%H:%M')}   {str(emoji)+' ' if emoji is not None else ''}[{song['name']}]({song['url']})"
+                description += f"\n        *By:* {artists}\n"
+
+            embed.description = description
+            embed.set_footer(text=f"Page {len(pages)+1}/{math.ceil(len(currentUser.history) / 5)}")
+            dict = copy.deepcopy(embed.to_dict())
+            pages.append(dict)
             
             #** If More Than One Page Being Displayed, Add Back And Next Reactions & Add To Global Pagination System **
-            if math.ceil(len(CurrentUser.history) / 5) > 1:
+            await interaction.response.send_message(embed=discord.Embed.from_dict(pages[0]))
+            if len(pages) > 1:
                 message = await interaction.original_response()
-                await self.pagination.setup(message, Pages)
+                await self.pagination.setup(message, pages)
         
         #** Let User Know If They Have No Listening History To Display **
         else:

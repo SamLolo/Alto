@@ -166,7 +166,7 @@ def check_config(config: dict, logger: logging.Logger):
                 exit()
             elif variable == 'bot_token' and config['development_mode'] is True:
                 logger.warning(f'"{key}" is missing from environment variables! The bot will not work outside of development mode. You can safely ignore this if you intend to use the bot for development only!')
-            elif variable == 'dev_token' and config['development_mode'] is False:
+            elif variable == 'dev_token' and config['development_mode'] is True:
                 logger.critical(f"{key} is missing from environment variables! Please set this variable, or disable development mode before continuing!")
                 exit()
             else:
