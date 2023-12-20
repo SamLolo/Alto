@@ -16,10 +16,11 @@ from lavalink.events import TrackEndEvent, TrackStartEvent, TrackExceptionEvent
 from Classes.Database import Database
 
 
-#!------------------------IMPORT CUSTOM SOURCES-----------------#
+#!--------------IMPORT CUSTOM SOURCES & PLAYERS--------------#
 
 
 from Sources.Spotify import SpotifySource
+from Players.Player import CustomPlayer
 
 
 #!--------------------CUSTOM VOICE PROTOCOL------------------#
@@ -80,17 +81,16 @@ class MusicCog(commands.Cog, name="Music"):
         self.pagination = self.client.get_cog("EmbedPaginator")
         self.logger = logging.getLogger('lavalink')
 
-        #** Create Client If One Doesn't Already Exist **
+        #** If missing Lavalink client, create Datbase Connection for Lavalink
         if not hasattr(client, 'lavalink'):
+            self.database = Database(client.config, pool=client.config['database']['lavalink']['poolname'], size=client.config['database']['lavalink']['size'])
+            
+            #** Create Client Using New Database Pool **
             self.logger.info("No Previous Lavalink Client Found. Creating New Connection...")
             client.lavalink = lavalink.Client(client.user.id)
-            client.lavalink.logger = self.logger
             client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
             self.logger.debug("Lavalink listener added")
             self.logger.info("New Client Registered")
-            
-            #** Add Datbase Connection for Lavalink
-            client.lavalink.database = Database(client.config, pool=client.config['database']['lavalink']['poolname'], size=client.config['database']['lavalink']['size'])
         else:
             self.logger.info("Found Previous Lavalink Connection")
             
@@ -111,8 +111,7 @@ class MusicCog(commands.Cog, name="Music"):
                                      port = port, 
                                      password = os.environ[client.config['environment']['lavalink_password']], 
                                      region = client.config['lavalink']['region'], 
-                                     name = client.config['lavalink']['name'],
-                                     reconnect_attempts = client.config['lavalink']['reconnect_attempts'])
+                                     name = client.config['lavalink']['name'])
             self.logger.debug(f"Connecting to {client.config['lavalink']['name']}@{host}:{port}...")
             del host
             del port
@@ -122,7 +121,7 @@ class MusicCog(commands.Cog, name="Music"):
         self.logger.debug("Event hooks added")
         
         #** Register Custom Sources
-        self.client.lavalink.register_source(SpotifySource(client))
+        self.client.lavalink.register_source(SpotifySource(client, self.database))
         self.logger.debug("Registered custom sources")
 
 
@@ -157,10 +156,10 @@ class MusicCog(commands.Cog, name="Music"):
         #** If Track Has Spotify Info, Format List of Artists & Add Thumbnail
         if track.title != track.author:
             if track.source_name == "spotify":
-                nowPlaying.set_thumbnail(url=track.extra['metadata']['art'])
-                nowPlaying.add_field(name="By:", value=self.client.utils.format_artists(track.extra['metadata']['artists'], track.extra['metadata']['artistID']))
+                nowPlaying.set_thumbnail(url=track.artwork_url)
+                nowPlaying.add_field(name="By:", value=self.client.utils.format_artists(track.extra['metadata']['artists']))
             else:
-                nowPlaying.add_field(name="By:", value=track['author'])
+                nowPlaying.add_field(name="By:", value=track.author)
             
         #** If Not A Stream, Add Duration Field
         if not(track.stream):
@@ -208,7 +207,7 @@ class MusicCog(commands.Cog, name="Music"):
                 raise app_commands.CheckFailure("UserVoice")
         
         #** Returns a Player If One Exists, Otherwise Creates One
-        Player = self.client.lavalink.player_manager.create(interaction.guild_id)
+        Player = self.client.lavalink.player_manager.create(interaction.guild_id, cls=CustomPlayer)
 
         #** Join vc if not already connected & required by command
         if not(Player.is_connected):
@@ -317,8 +316,8 @@ class MusicCog(commands.Cog, name="Music"):
                         "id": event.track.identifier,
                         "url": event.track.uri,
                         "name": event.track.title,
-                        "artists": event.track.extra['metadata']['artists'],
-                        "artistID": event.track.extra['metadata']['artistID'],
+                        "artists": [artist['name'] for artist in event.track.extra['metadata']['artists']],
+                        "artistID": [artist['id'] for artist in event.track.extra['metadata']['artists']],
                         "popularity": event.track.extra['metadata']['popularity'],
                         "listenedAt": timestamp}
                 
@@ -359,7 +358,7 @@ class MusicCog(commands.Cog, name="Music"):
             #** Format artists based on information avaiable
             if Results['tracks'][0]['title'] != Results['tracks'][0]['author']:
                 if Results['tracks'][0]['source_name'] == "spotify":
-                    Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['metadata']['artists'], Results['tracks'][0]['extra']['metadata']['artistID'])}"
+                    Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['metadata']['artists'])}"
                 else:
                     Queued.description += f"\nBy: {Results['tracks'][0]['author']}"
         
@@ -505,7 +504,7 @@ class MusicCog(commands.Cog, name="Music"):
                     body = "__**NOW PLAYING:**__\n"
                     emoji = self.client.utils.get_emoji(player.current.source_name.title())
                     if player.current.source_name == "spotify":
-                        artists = self.client.utils.format_artists(player.current.extra['metadata']['artists'], player.current.extra['metadata']['artistID'])
+                        artists = self.client.utils.format_artists(player.current.extra['metadata']['artists'])
                         body += f"{emoji} [{player.current.title}]({player.current.uri})\nBy: {artists}\n"
                     else:
                         body += f"{str(emoji)+' ' if emoji is not None else ''}[{player.current.title}]({player.current.uri})\nBy: {player.current.author}\n"
@@ -516,7 +515,7 @@ class MusicCog(commands.Cog, name="Music"):
                     for j in range(i*10, (i+1)*10 if len(player.queue) >= (i+1)*10 else len(player.queue)):
                         emoji = self.client.utils.get_emoji(player.queue[j]['source_name'].title())
                         if player.queue[j].source_name == "spotify":
-                            artists = self.client.utils.format_artists(player.queue[j].extra['metadata']['artists'], player.queue[j].extra['metadata']['artistID'])
+                            artists = self.client.utils.format_artists(player.queue[j].extra['metadata']['artists'])
                             body += f"{emoji} **{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {artists}\n"
                         else:
                             body += f"{str(emoji)+' ' if emoji is not None else ''}**{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {player.queue[j]['author']}\n"

@@ -2,16 +2,24 @@
 #!--------------------IMPORT MODULES-----------------------#
 
 
+import logging
 import lavalink
+from Classes.Database import Database
 from discord.ext import commands
 from lavalink.errors import LoadError
-from lavalink.models import Source, LoadResult, LoadType, PlaylistInfo, DeferredAudioTrack
+from lavalink import Source, LoadResult, LoadType, PlaylistInfo, DeferredAudioTrack
+from classes.Utils import Utility
 
 
 #!-------------------DEFERED AUDIO TRACK---------------------#
 
 
 class SpotifyDeferredTrack(DeferredAudioTrack):
+    
+    def __init__(self, database: Database, data: dict, requester: int = 0, **extra):
+        self.database = database
+        super().__init__(data, requester, **extra)
+
 
     async def load(self, client: lavalink.Client):
         # Search youtube for spotify track
@@ -27,33 +35,20 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
             score = self.check_match(track)
             tracks[track] = score
         
-        # Sort tracks based on their score so best score is first in dict
+        # Sort tracks based on their score so best score is first in dict and chose top result as track
         tracks = sorted(tracks.items(), key=lambda x: x[1], reverse=True)
         top = tracks[0][0]
+        self.track = top.track
         
-        # Cache top track metadata & base64 track if not already cached
+        # Cache track metadata if not aleady cached
         if self.extra['metadata']['cacheID'] is None:
-            data = {'track': top.track,
-                    'source': 'spotify',
-                    'id': self.identifier,
-                    'name': self.title,
-                    'url': self.uri,
-                    'duration': self.duration}
-            data.update(self.extra['metadata'])
-            
-            cacheID = None
-            if client.database.connected:
-                try:
-                    cacheID = client.database.cacheSong(data)
-                except:
-                    pass
-            else:
-                client.logger.debug(f"Failed to cache spotify track with id: {self.identifier}")
-            if cacheID is not None:
+            try:
+                cacheID = self.database.cacheSong(self)
                 self.extra['metadata']['cacheID'] = cacheID
+            except:
+                pass
             
         # Return base64 track code from best search result
-        self.track = top.track
         return self.track
     
     
@@ -66,9 +61,9 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
             match += 5
         
         # If spotify author name is found in Youtube channel name or Youtube title
-        if self.extra['metadata']['artists'][0] in track['author']:
+        if self.extra['metadata']['artists'][0]['name'] in track['author']:
             match += 4 
-        if self.extra['metadata']['artists'][0] in track['title']:
+        if self.extra['metadata']['artists'][0]['name'] in track['title']:
             match += 2
         
         # Duration is within 5 seconds of actual track duration (favours audio only vs music videos)
@@ -105,10 +100,13 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
 
 class SpotifySource(Source):
     
-    def __init__(self, discord: commands.Bot):
+    def __init__(self, discord: commands.Bot, database: Database):
         super().__init__('spotify')
         # Set discord client as attribute for access during loading songs
         self.discord = discord
+        self.database = database
+        self.utils = Utility
+        self.logger = logging.getLogger('lavalink.spotify')
 
 
     async def load_item(self, client: lavalink.Client, query: str):
@@ -121,13 +119,15 @@ class SpotifySource(Source):
                     info = self.discord.music.SearchSpotify(query.strip("spsearch:"))
                     
                     # Query cache for returned spotifyID
-                    if client.database.connected:
-                        try:
-                            cache = client.database.searchCache(info['tracks'][0]['id'])
-                        except:
-                            pass
+                    try:
+                        cache = self.database.searchCache(info['tracks'][0]['id'])
+                    except Exception as ex:
+                        if type(ex) != ConnectionError:
+                            self.logger.debug(f"Failed to search cache for spotify ID: {info['tracks'][0]['id']}")
+                            self.logger.exception(ex)
                     else:
-                        client.logger.debug(f"Failed to search cache for spotify ID: {info['tracks'][0]['id']}")
+                        if cache is None:
+                            features = self.discord.music.GetAudioFeatures(info['tracks'][0]['id'])
                 
                 # If url entered, get spotifyID by splitting up url
                 elif query.startswith('https://open.spotify.com/'):
@@ -137,79 +137,72 @@ class SpotifySource(Source):
 
                     # If just track, query cache for spotifyID
                     if "track" in query:
-                        if client.database.connected:
-                            try:
-                                cache = client.database.searchCache(spotifyID)
-                            except:
-                                pass
+                        try:
+                            cache = self.database.searchCache(spotifyID)
+                        except Exception as ex:
+                            if type(ex) != ConnectionError:
+                                self.logger.debug(f"Failed to search cache for spotify ID: {spotifyID}")
+                                self.logger.exception(ex)
                         else:
-                            client.logger.debug(f"Failed to search cache for spotify ID: {spotifyID}")
-                        
-                        # If no track found, get new song info from Spotify
-                        if cache is None:
-                            info = self.discord.music.GetSongInfo(spotifyID)
+                            if cache is None:
+                                info = self.discord.music.GetSongInfo(spotifyID)
+                                features = self.discord.music.GetAudioFeatures(spotifyID)
                     
                     # If playlist/album, load track metadata from Spotify
                     elif "playlist" in query:
                         info = self.discord.music.GetPlaylistSongs(spotifyID)
+                        features = self.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
                     elif "album" in query:
                         info = self.discord.music.GetAlbumInfo(spotifyID)
+                        features = self.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
                     else:
                         raise Exception(f"Unsupported Input: {query}")
             
             # Deal with errors raised whilst fetching track information
             except LoadError as e:
-                client.logger.debug(f"LoadError for query: {query}")
+                self.logger.debug(f"LoadError for query: {query}")
                 raise e
             except Exception as e:
-                client.logger.exception(e)
-                client.logger.warning(f"Unexpected error whilst loading track: {e.message}")
+                self.logger.exception(e)
+                self.logger.warning(f"Unexpected error whilst loading track: {e.message}")
                 raise LoadError(e.message)
             
             # If cached (single) track found, load track as standard AudioTrack
+            if cache is not None:             
+                return LoadResult(LoadType.TRACK, [cache], playlist_info=PlaylistInfo.none())
+            
+            # Otherwise load a list of deferred Spotify tracks
             else:
-                if cache is not None:
-                    tracks = [lavalink.AudioTrack({'track': cache['track'],
-                                                   'identifier': cache['id'],  
-                                                   'isSeekable': True,
-                                                   'author': cache['artists'][0],
-                                                   'length': cache['duration'],
-                                                   'isStream': False,
-                                                   'title': cache['name'],
-                                                   'sourceName': 'spotify',
-                                                   'uri': cache['url']},
-                                                   requester = 0,
-                                                   metadata={k:cache[k] for k in ('cacheID', 'artists', 'artistID', 'album', 'albumID', 'art', 'colour', 'release', 'popularity', 'explicit', 'preview')})]                
+                tracks = []
+                for index, data in enumerate(info["tracks"]):
+                    tracks.append(SpotifyDeferredTrack(self.database,
+                                                      {'identifier': data['id'],  
+                                                       'isSeekable': True,
+                                                       'author': data['artists'][0]['name'],
+                                                       'length': data['duration'],
+                                                       'isStream': False,
+                                                       'title': data['name'],
+                                                       'uri': f"https://open.spotify.com/track/{data['id']}",
+                                                       'artworkURL': data['art'],
+                                                       'sourceName': 'spotify'}, 
+                                                        requester = 0,
+                                                        metadata={
+                                                            'cacheID': None,
+                                                            'artists': data['artists'],
+                                                            'colour': self.utils.get_colour(data['art']),
+                                                            'release': data['release'],
+                                                            'popularity': data['popularity'],
+                                                            'explicit': data['explicit'],
+                                                            'preview': data['preview']
+                                                        },
+                                                        features = features[index],
+                                                        album = info['albumInfo'] if 'albumInfo' in data.keys() else None))
+
+                # Return LoadResult with playlist metadata if available
+                if not("playlistInfo" in info.keys()):
                     return LoadResult(LoadType.TRACK, tracks, playlist_info=PlaylistInfo.none())
-                
-                # Otherwise load a list of deferred Spotify tracks
                 else:
-                    tracks = []
-                    for track in info["tracks"]:
-                        trackObj = SpotifyDeferredTrack({'identifier': track['id'],  
-                                                        'isSeekable': True,
-                                                        'author': track['artists'][0],
-                                                        'length': track['duration'],
-                                                        'isStream': False,
-                                                        'title': track['name'],
-                                                        'sourceName': 'spotify',
-                                                        'uri': f"https://open.spotify.com/track/{track['id']}"}, 
-                                                        requester=0,
-                                                        metadata={'cacheID': None,
-                                                                  'artists': track['artists'],
-                                                                  'artistID': track['artistID'],
-                                                                  'album': track['album'],
-                                                                  'albumID': track['albumID'],
-                                                                  'art': track['art'],
-                                                                  'colour': None,
-                                                                  'release': track['release'],
-                                                                  'popularity': track['popularity'],
-                                                                  'explicit': track['explicit'],
-                                                                  'preview': track['preview']})
-                        tracks.append(trackObj)
-                
-                    # Return LoadResult with playlist metadata if available
-                    if not("playlistInfo" in info.keys()):
-                        return LoadResult(LoadType.TRACK, tracks, playlist_info=PlaylistInfo.none())
-                    else:
+                    if not('album' in query):
                         return LoadResult(LoadType.PLAYLIST, tracks, playlist_info=PlaylistInfo(info['playlistInfo']['name']))
+                    else:
+                        return LoadResult(LoadType.PLAYLIST, tracks, playlist_info=PlaylistInfo(info['albumInfo']['name']))

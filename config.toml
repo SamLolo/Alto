@@ -31,7 +31,6 @@ port = "2333"
 password = ""
 name = "default"
 region = "eu"
-reconnect_attempts = 3
 
 
 [database]

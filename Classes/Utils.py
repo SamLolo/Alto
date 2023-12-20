@@ -12,13 +12,17 @@ import skimage
 
 class Utility():
 
-    def __init__(self, client):
+    def __init__(self, client = None):
 
         #** Load Config File **
         self.client = client
 
         
-    async def get_colour(self, URL):
+    def get_colour(self, URL):
+        
+        #** Return None if Null passed in **
+        if URL is None:
+            return None
         
         #** Get Most Dominant Colour In Image **
         img = skimage.io.imread(URL)        
@@ -28,29 +32,22 @@ class Utility():
         return tuple(colour)
 
 
-    def format_artists(self, artists, IDs = None):
+    def format_artists(self, artists: list):
 
-        #** Return artist is not a list
-        if type(artists) == list:
-            formatted = ""
-            for i in range(len(artists)):
-                
-                #** Add comma up until 2nd to last artist in list, using & between the last 2 artists
-                if i > 0 and i < len(artists)-1:
-                    formatted += ", "
-                elif i == len(artists)-1 and i != 0:
-                    formatted += " & "
-                
-                #** Format string based on whether links are available
-                if IDs is not None:
-                    formatted += f"[{artists[i]}](https://open.spotify.com/artist/{IDs[i]})"
-                else:
-                    formatted += artists[i]
-
-        #** Returned Formatted Strings
-            return formatted
-        else:
-            return artists
+        # Add comma up until 2nd to last artist in list, using & between the last 2 artists
+        formatted = ""
+        for index, artist in enumerate(artists):
+            if index > 0 and index < len(artists)-1:
+                formatted += ", "
+            elif index == len(artists)-1 and index != 0:
+                formatted += " & "
+            
+            # Format string based on whether links are available
+            if 'id' in artist.keys() and artist['id'] is not None:
+                formatted += f"[{artist['name']}](https://open.spotify.com/artist/{artist['id']})"
+            else:
+                formatted += artist['name']
+        return formatted
 
 
     def format_time(self, time):

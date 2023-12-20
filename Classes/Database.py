@@ -5,9 +5,11 @@
 import os
 import json
 import logging
+from lavalink import AudioTrack
 from datetime import datetime
 from mysql.connector import pooling, errors
 from Classes.Server import UserPermissions
+from Classes.Utils import Utility
 
 
 #!--------------------------------DATABASE OPERATIONS-----------------------------------#
@@ -19,6 +21,7 @@ class Database():
         
         # Setup database logger
         self.logger = logging.getLogger("database")
+        self.utils = Utility()
             
         # Create connection pool for database
         host = config['database']['host']
@@ -258,52 +261,49 @@ class Database():
         self.logger.debug("Connection returned to pool!")
 
 
-    def cacheSong(self, info: dict):
+    def cacheSong(self, track: AudioTrack):
         
         # Get database connection from pool
         connection, cursor = self.ensure_connection()
         if connection is None:
-            self.logger.warning(f"Failed to cache song with {info['source']} ID '{info['id']}' due to missing database connection!")
-            raise ConnectionError(f"Failed to cache song with {info['source']} ID '{info['id']}' due to missing database connection!")
+            self.logger.warning(f"Failed to cache song with {track.source_name} ID '{track.identifier}' due to missing database connection!")
+            raise ConnectionError(f"Failed to cache song with {track.source_name} ID '{track.identifier}' due to missing database connection!")
         
-        # Reformat python lists into strings
-        if type(info['artists']) is list:
-            info['artists'] = ", ".join(info['artists'])
-        if 'artistID' in info.keys():
-            info['artistID'] = ", ".join(info['artistID'])
-        if 'colour' in info.keys() and info['colour'] is not None:
-            info['colour'] = ", ".join(info['colour'])
+        # Insert into cache table the main track info
+        cache = "INSERT INTO cache (source, ID, url, name, author, duration, track, albumID, art, colour) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        cache_values = (track.source_name, track.identifier, track.uri, track.title, track.author, track.duration, track.track, track.extra['album']['id'] if 'album' in track.extra.keys() else None, track.artwork_url, ", ".join(track.extra['metadata']['colour']) if 'metadata' in track.extra.keys() else self.utils.get_colour(track.artwork_url))
+        cursor.execute(cache, cache_values)
+        
+        # Insert artists if more than one available (author is cached in main table)
+        if 'metadata' in track.extra.keys():
+            for artist in track.extra['metadata']['artists']:
+                cursor.execute("INSERT INTO artists (name, identifier, trackID) VALUES (%s, %s, %s);", (artist['name'], artist['id'], track.identifier))
+
+        # Insert spotify information if it's available
+        if track.source_name == "spotify":
+            spotify = "INSERT INTO spotify (spotifyID, release, popularity, explicit, preview) VALUES (%s, %s, %s, %s, %s)"
+            spotify_values = (track.identifier, track.extra['metadata']['release'], track.extra['metadata']['popularity'], track.extra['metadata']['explicit'], track.extra['metadata']['preview'])
+            cursor.execute(spotify, spotify_values)
             
-        # Replace N/A with None
-        if 'explicit' in info.keys() and info['explicit'] == "N/A":
-            info['explicit'] = None
-
-        # Prepare sql and values for inserting given information into database
-        if info['source'] == "spotify":
-            sql = "INSERT INTO cache (Source, ID, URL, Name, Artists, Duration, Track, ArtistID, Album, AlbumID, Art, Colour, `Release`, Popularity, Explicit, Preview) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
-            values = (info['source'], info['id'], info['url'], info['name'], info['artists'], info['duration'], info['track'], info['artistID'], info['album'], info['albumID'], info['art'], info['colour'], info['release'], info['popularity'], info['explicit'], info['preview'])
-        elif info['source'] == "soundcloud":
-            sql = "INSERT INTO cache (Source, ID, URL, Name, Artists, Duration, Track) VALUES (%s, %s, %s, %s, %s, %s, %s);"
-            values = (info['source'], info['id'], info['url'], info['name'], info['artists'], info['duration'], info['track'])
-        else:
-            self.logger.warning(f"Unknown source '{info['source']}' encountered whilst trying to cache song!")
-            connection.close()
-            self.logger.debug("Connection returned to pool!")
-            return None   
-
-        # Execute SQL query and return connection to available pool
-        cursor.execute(sql, values)
-        self.logger.debug(f"New insert into cache for {info['source']} ID: {info['id']}")
-        connection.commit()
+            features = "INSERT INTO features (spotifyID, acousticness, danceability, duration_ms, energy, instrumentalness, key, liveness, loudness, mode, speechiness, tempo, time_signature, valence) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+            features_values = (track.identifier, track.extra['features']['acousticness'], track.extra['features']['danceability'], track.extra['features']['duration_ms'], track.extra['features']['energy'], track.extra['features']['instrumentalness'], track.extra['features']['key'], 
+                               track.extra['features']['liveness'], track.extra['features']['loudness'], track.extra['features']['mode'], track.extra['features']['speechiness'], track.extra['features']['tempo'], track.extra['features']['time_signature'], track.extra['features']['valence'])
+            cursor.execute(features, features_values)
+            
+            album = "INSERT INTO album (id, name, type, image, release, length) VALUES (%s, %s, %s, %s, %s, %s);"
+            album_values = tuple(track.extra['album'].values())
+            cursor.execute(album, album_values)
         
         # Get cache ID generated for information just inserted
+        self.logger.debug(f"New insert into cache for {track.source_name} ID: {track.identifier}")
+        connection.commit()
         cursor.execute("SELECT LAST_INSERT_ID()")
-        key = cursor.fetchone()[0]
+        uid = cursor.fetchone()[0]
         
         # Return connection to available pool
         connection.close()
         self.logger.debug("Connection returned to pool!")
-        return key
+        return uid
 
 
     def searchCache(self, query: str):
@@ -314,42 +314,98 @@ class Database():
             self.logger.warning(f"Failed to search cache with query '{query}' due to missing database connection!")
             raise ConnectionError(f"Failed to search cache with query '{query}' due to missing database connection!")
 
-        # Query cache table and return connection to available pool
-        cursor.execute(f"SELECT * FROM cache WHERE (ID = '{query}') OR (URL = '{query}');")
+        # Query cache table for track metadata
+        cursor.execute(f"SELECT cache.*, spotify.release, spotify.popularity, spotify.explicit, spotify.preview, album.name, album.type, album.image, album.release, album.length
+                         features.acousticness, features.danceability, features.duration_ms, features.energy, features.instrumentalness, features.key, features.liveness,
+                         features.loudness, features.mode, features.speechiness, features.tempo, features.time_signature, features.valence
+                         FROM cache
+                         INNER JOIN spotify ON spotify.spotifyID = cache.ID
+                         INNER JOIN album ON album.id = cache.albumID
+                         INNER JOIN features ON features.spotifyID = cache.ID
+                         WHERE (cache.ID = '{query}') OR (cache.url = '{query}');")
         result = cursor.fetchone()
+        
+        # Get all artists features on track seperately
+        cursor.execute(f"SELECT *
+                         FROM artists
+                         WHERE trackID = {result[2]}")
+        artists = cursor.fetchall()
+        
+        # Return connection to available pool
         connection.close()
         self.logger.debug("Connection returned to pool!")
 
         # Check if any results were found
-        if result is None:
+        if result is None or result == ():
             return None
-            
-        # Format base data (for all source types) into a dictionary 
-        data = {"cacheID": int(result[0]),
-                "source": result[1],
-                "id": result[2],
-                "url": result[3],
-                "name": result[4],
-                "artists": result[5].replace("'", "").split(", "),
-                "duration": result[6],
-                "track": result[7],
-                "updated": result[17]}
         
-        # If source is spotify, add aditional track metadata
-        if data['source'] == "spotify":
-            data.update({"artistID": result[8].replace("'", "").split(", "),
-                         "album": result[9],
-                         "albumID": result[10],
-                         "art": result[11],
-                         "release": result[13],
-                         "popularity": result[14],
-                         "explicit": result[15],
-                         "preview": result[16]})
-            if result[12] is not None:
-                data["colour"] = tuple(result[12])
-            else:
-                data["colour"] = None
-        return data
+        # If track has spotify data, add appropiate metadata
+        if result[1] == "spotify":
+            track = AudioTrack({'track': result[7],
+                                'identifier': result[2],  
+                                'isSeekable': True,
+                                'author': result[5],
+                                'length': result[6],
+                                'isStream': False,
+                                'title': result[4],
+                                'uri': result[3],
+                                'artworkUrl': result[9],
+                                'sourceName': 'spotify'},
+                                requester = 0,
+                                metadata={
+                                    "cacheID": int(result[0]),
+                                    "artists": [{"id": artist[2], "name": artist[1]} for artist in artists],
+                                    "colour": tuple(result[10]) if result[10] is not None else None,
+                                    "release": result[12],
+                                    "popularity": result[13],
+                                    "explcit": result[14],
+                                    "preview": result[15]
+                                },
+                                features={
+                                    "acoustiness": result[21],
+                                    "danceabilty": result[22],
+                                    "duration_ms": result[23],
+                                    "energy": result[24],
+                                    "instrumentalness": result[25],
+                                    "key": result[26],
+                                    "liveness": result[27],
+                                    "loudness": result[28],
+                                    "mode": result[29],
+                                    "speechiness": result[30],
+                                    "tempo": result[31],
+                                    "time_signature": result[32],
+                                    "valence": result[33]
+                                },
+                                album={
+                                    "id": result[8],
+                                    "name": result[16],
+                                    "type": result[17],
+                                    "art": result[18],
+                                    "release": result[19],
+                                    "length": result[20]
+                                })
+        
+        # If cached track is any other type except spotify
+        else:
+            track = AudioTrack({'track': result[7],
+                                'identifier': result[2],  
+                                'isSeekable': True,
+                                'author': result[5],
+                                'length': result[6],
+                                'isStream': False,
+                                'title': result[4],
+                                'uri': result[3],
+                                'artworkUrl': result[9],
+                                'sourceName': result[1]},
+                                requester = 0,
+                                metadata = {
+                                    "cacheID": int(result[0]),
+                                    "artists": [{"id": artist[2], "name": artist[1]} for artist in artists],
+                                    "colour": tuple(result[10]) if result[10] is not None else None
+                                })
+            
+        # Return resulting <AudioTrack> object
+        return track
     
     
     def saveServer(self, id: int, volume: dict, voice: list, channels: list, queue: bool, permissions: dict):

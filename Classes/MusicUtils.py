@@ -178,12 +178,12 @@ class Spotify(object):
             for Song in AlbumData['tracks']['items']:
                 
                 #** Get Formatted Data For Each Song **
-                Song['album'] = {'name': AlbumData['name'], 'id': AlbumData['id'], 'images': [{'url': AlbumData['images'][0]['url']}], 'album_type': AlbumData['album_type'], 'release_date': AlbumData['release_date']}
+                Song['album'] = {'name': AlbumData['name'], 'id': AlbumData['id'], 'images': [{'url': AlbumData['images'][0]['url']}], 'type': AlbumData['album_type'], 'release_date': AlbumData['release_date']}
                 Song['popularity'] = AlbumData['popularity']
                 Songs.append(self.FormatSongData(Song))
             
             #** Return Filled Dictionary Of Songs **
-            Songs = {'playlistInfo': {'name': AlbumData['name'], 'length': AlbumData['tracks']['total']}, 'tracks': Songs}
+            Songs = {'albumInfo': {'name': AlbumData['name'], 'length': AlbumData['tracks']['total'], 'id': AlbumData['id'], 'image': AlbumData['images'][0]['url'], 'type': AlbumData['album_type'], 'release_date': AlbumData['release_date']}, 'tracks': Songs}
             return Songs
         
         #** Return "AlbumNotFound" if Request Body Is Empty (Shouldn't Happen) **
@@ -293,68 +293,66 @@ class Spotify(object):
             raise Exception("FeaturesNotFound")
 
 
-    def FormatSongData(self, Song: dict):
+    def FormatSongData(self, data: dict):
         
-        #** Add All Artists To A List **
-        Artists = []
-        ArtistID = []
-        for Artist in Song['artists']:
-            if Artist['name'] != None:
-                Artists.append(Artist['name'])
-                ArtistID.append(Artist['id'])
+        # Create list of artist dict objects
+        artists = []
+        for artist in data['artists']:
+            if artist['name'] is not None:
+                artists.append({'id': artist['name'], 'name': artist['id']})
 
-        #** Format Album Name **
-        if Song['album']['album_type'] == "single":
-            if "feat" in Song['name']:
-                Song['album']['name'] = str(Song['name'].split("(feat.")[0])+"- Single"
+        # Format album name
+        if data['album']['album_type'] == "single":
+            if "feat" in data['name']:
+                data['album']['name'] = f'{data["name"].split("(feat.")[0]} - Single'
             else:
-                Song['album']['name'] = str(Song['name'])+" - Single"
+                data['album']['name'] = f"{data['name']} - Single"
 
-        #** Format Album Release Date **
-        Months = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
-        if Song['album'] != {}:
-            if Song['album']['release_date'] != None:
-                if "-" in Song['album']['release_date']:
-                    if len(Song['album']['release_date']) > 7:
-                        if Song['album']['release_date'][0] == 0:
-                            Song['album']['release_date'] = Song['album']['release_date'][8].replace("0", "")
-                        Date = Song['album']['release_date'].split("-")
-                        Date = Date[2]+"th "+Months[Date[1]]+" "+Date[0]
+        # Format album release date
+        months = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
+        if data['album'] != {}:
+            if data['album']['release_date'] is not None:
+                if "-" in data['album']['release_date']:
+                    
+                    # Has day, month & year
+                    if len(data['album']['release_date']) > 7:
+                        if data['album']['release_date'][0] == 0:
+                            data['album']['release_date'] = data['album']['release_date'][8].replace("0", "")
+                        date = data['album']['release_date'].split("-")
+                        release = date[2]+"th "+months[date[1]]+" "+date[0]
+                        
+                    # Has just month & year
                     else:
-                        Date = Song['album']['release_date'].split("-")
-                        Date = Months[Date[1]]+" "+Date[0]
+                        date = data['album']['release_date'].split("-")
+                        release = months[date[1]]+" "+date[0]
+                        
+                # Has only year
                 else:
-                    Date = Song['album']['release_date']
+                    release = data['album']['release_date']
             else:
-                Date = "N/A"
+                release = "N/A"
 
-        #** Fill in Empty Values if Album Information Missing **
+        # Fill in Empty Values if album information missing
         else:
-            Song['album']['name'] = "N/A"
-            Song['album']['id'] = None
-            Song['album']['images'][0]['url'] = None
-            Date = "N/A"
-            
-        #** Make Sure No Empty Values Are Left **
-        for key in ['popularity', 'explicit']:
-            if Song[key] == None or Song[key] == 0:
-                Song[key] = "N/A"
+            data['album']['name'] = "N/A"
+            data['album']['id'] = None
+            data['album']['images'][0]['url'] = None
+            release = "N/A"
 
-        #** Return Dictionary (Songs) With Key: <SongID> and Value: <dict containing song infomation> **
-        SongData = {'id': Song['id'],
-                    'name': Song['name'],
-                    'artists': Artists, 
-                    'artistID': ArtistID, 
-                    'album': Song['album']['name'], 
-                    'albumID': Song['album']['id'], 
-                    'art': Song['album']['images'][0]['url'], 
-                    'release': Date, 
-                    'duration': Song['duration_ms'],
-                    'popularity': Song['popularity'], 
-                    'explicit': Song['explicit'], 
-                    'preview': Song['preview_url'],
+        # Return formatted dict with necessary information
+        formatted = {'id': data['id'],
+                    'name': data['name'],
+                    'artists': artists, 
+                    'album': data['album']['name'], 
+                    'albumID': data['album']['id'], 
+                    'art': data['album']['images'][0]['url'], 
+                    'release': release, 
+                    'duration': data['duration_ms'],
+                    'popularity': data['popularity'], 
+                    'explicit': data['explicit'], 
+                    'preview': data['preview_url'],
                     'updated': datetime.now()}
-        return SongData
+        return formatted
 
 
     def SearchSpotify(self, Name: str, Artist: str = ""):

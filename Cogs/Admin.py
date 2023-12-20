@@ -3,6 +3,7 @@
 
 
 import os
+import git
 import tomlkit
 import discord
 import logging
@@ -27,11 +28,11 @@ class AdminCog(commands.Cog, name="Admin"):
 
     def __init__(self, client: discord.Client):
 
-        #** Assign Discord Bot Client As Class Object **
+        # Set class attributes
         self.client = client
         self.logger = logging.getLogger("discord.admin")
         
-        #** Instanciate Classes If One Or More Attributes Missing **
+        # Instantiate classes if not already loaded onto client
         if not hasattr(client, 'database'):
             client.database = Classes.Database.Database(client.config, pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
         if not hasattr(client, 'music'): 
@@ -41,10 +42,14 @@ class AdminCog(commands.Cog, name="Admin"):
         if not hasattr(client, 'userClass'):
             client.userClass = Classes.Users
             
+        # Get git repo object for project
+        self.repo = git.Repo(".")
+        print(self.repo.active_branch)
+            
     
     async def cog_load(self):
         
-        #** Get application team from Discord **
+        # Get application team from Discord
         application = await self.client.application_info()
         self.admins = []
         for member in application.team.members:
@@ -264,6 +269,15 @@ class AdminCog(commands.Cog, name="Admin"):
                 userDict = player.fetch('Users')
                 for user in userDict.values():
                     user.save()
+                    
+    
+    @commands.command(hidden=True)
+    @is_admin()
+    async def update(self, ctx):
+        info = self.repo.remotes.origin.fetch()[0]
+        print(info.commit.committed_datetime)
+        print(self.repo.head.commit.committed_datetime)
+        
     
 
 #!-------------------SETUP FUNCTION-------------------#
