@@ -26,7 +26,7 @@ CREATE TABLE `features` (
   `spotifyID` varchar(16) NOT NULL,
   `acousticness` float DEFAULT NULL,
   `danceability` float DEFAULT NULL,
-  `duration_ms` int DEFAULT NULL,
+  `duration` int DEFAULT NULL,
   `energy` float DEFAULT NULL,
   `instrumentalness` float DEFAULT NULL,
   `key` int DEFAULT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE `features` (
   `mode` int DEFAULT NULL,
   `speechiness` float DEFAULT NULL,
   `tempo` float DEFAULT NULL,
-  `time_signature` int DEFAULT NULL,
+  `timeSignature` int DEFAULT NULL,
   `valence` float DEFAULT NULL,
   PRIMARY KEY (`spotifyID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -50,4 +50,4 @@ CREATE TABLE `features` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-12-18  0:19:29
+-- Dump completed on 2023-12-24 21:34:21

@@ -59,8 +59,7 @@ class User():
                 self.logger.exception(e)
                 self.logger.error(f"Unknown exception encountered while loading song history for '{self.user.id}")
             raise RuntimeError(e.message)
-        else:
-            self.maxsize = 20
+        self.MAX_HISTORY = 20
             
         # Set flags to check if user data has been changed since initialization
         self.cached = {"user": True if data is not None else False,
@@ -80,7 +79,7 @@ class User():
     
     def addSongHistory(self, track: lavalink.AudioTrack):
         # If queue is full, clear song from history first
-        if len(self.history) == self.maxsize:
+        if len(self.history) == self.MAX_HISTORY:
             self.history.pop(-1)
         
         # Add track to history with current timestamp as time-listened

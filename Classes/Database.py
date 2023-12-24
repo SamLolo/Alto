@@ -240,7 +240,7 @@ class Database():
             spotify_values = (track.identifier, track.extra['metadata']['release'], track.extra['metadata']['popularity'], track.extra['metadata']['explicit'], track.extra['metadata']['preview'])
             cursor.execute(spotify, spotify_values)
             
-            features = "INSERT INTO features (spotifyID, acousticness, danceability, duration_ms, energy, instrumentalness, key, liveness, loudness, mode, speechiness, tempo, time_signature, valence) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+            features = "INSERT INTO features (spotifyID, acousticness, danceability, duration, energy, instrumentalness, key, liveness, loudness, mode, speechiness, tempo, timeSignature, valence) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
             features_values = (track.identifier, track.extra['features']['acousticness'], track.extra['features']['danceability'], track.extra['features']['duration_ms'], track.extra['features']['energy'], track.extra['features']['instrumentalness'], track.extra['features']['key'], 
                                track.extra['features']['liveness'], track.extra['features']['loudness'], track.extra['features']['mode'], track.extra['features']['speechiness'], track.extra['features']['tempo'], track.extra['features']['time_signature'], track.extra['features']['valence'])
             cursor.execute(features, features_values)
@@ -270,23 +270,24 @@ class Database():
             raise ConnectionError(f"Failed to search cache with query '{query}' due to missing database connection!")
 
         # Format sql query in cache table for track metadata
-        sql = f"""SELECT cache.*, spotify.release, spotify.popularity, spotify.explicit, spotify.preview, album.name, album.type, album.image, album.release, album.length
-                  features.acousticness, features.danceability, features.duration_ms, features.energy, features.instrumentalness, features.key, features.liveness,
-                  features.loudness, features.mode, features.speechiness, features.tempo, features.time_signature, features.valence
+        sql = f"""SELECT cache.*, spotify.release, spotify.popularity, spotify.explicit, spotify.preview, album.name, album.type, album.image, album.release, album.length,
+                  features.acousticness, features.danceability, features.duration, features.energy, features.instrumentalness, features.key, features.liveness,
+                  features.loudness, features.mode, features.speechiness, features.tempo, features.timeSignature, features.valence
                   FROM cache
                   INNER JOIN spotify ON spotify.spotifyID = cache.ID
                   INNER JOIN album ON album.id = cache.albumID
                   INNER JOIN features ON features.spotifyID = cache.ID"""
         if query is not None:    
-            sql += f"WHERE (cache.ID = '{query}') OR (cache.url = '{query}');"
+            sql += f" WHERE (cache.ID = '{query}') OR (cache.url = '{query}');"
         else:
-            sql += f"WHERE cache.uid = '{uid}';"
+            sql += f" WHERE cache.uid = '{uid}';"
 
         # Get results for database
         cursor.execute(sql)
         result = cursor.fetchone()
         if result is None or result == ():
-            self.logger.warning(f"Failed to find results for query '{query}' or with cacheID '{uid}'!")
+            if uid is not None:
+                self.logger.warning(f"Failed to find results with cacheID '{uid}'!")
             return None
         
         # Get all artists features on track seperately

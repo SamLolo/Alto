@@ -18,17 +18,17 @@ class Utility():
         self.client = client
 
         
-    def get_colour(self, URL):
+    def get_colour(self, url: str = None):
         
-        #** Return None if Null passed in **
-        if URL is None:
+        # Return none if no url passed in
+        if url is None:
             return None
         
-        #** Get Most Dominant Colour In Image **
-        img = skimage.io.imread(URL)        
+        # Get most dominant colour in image
+        img = skimage.io.imread(url)        
         colour = np.mean(img, axis=(0, 1), dtype=np.int32)
         
-        #** Return RGB Colour Tuple **
+        # Return RGB colour tuple
         return tuple(colour)
 
 

@@ -31,7 +31,7 @@ CREATE TABLE `cache` (
   `author` varchar(128) NOT NULL,
   `duration` varchar(64) DEFAULT NULL,
   `track` varchar(512) NOT NULL,
-  `abumID` varchar(32) DEFAULT NULL,
+  `albumID` varchar(32) DEFAULT NULL,
   `art` varchar(128) DEFAULT NULL,
   `colour` varchar(16) DEFAULT NULL,
   `LastRefresh` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -49,4 +49,4 @@ CREATE TABLE `cache` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-12-18  0:19:28
+-- Dump completed on 2023-12-24 21:34:21

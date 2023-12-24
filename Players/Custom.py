@@ -3,6 +3,7 @@
 
 
 import lavalink
+from datetime import datetime
 from Classes.Users import User
 
 
@@ -34,13 +35,11 @@ class CustomPlayer(lavalink.DefaultPlayer):
         pass
     
     
-    async def play(self, track: lavalink.AudioTrack, start_time: int = None, end_time: int = None, no_replace: bool = None, volume: int = None, pause: bool = None):
-        if len(self.history) < self.MAX_HISTORY:
-            self.history.insert(0, track)
-        else:
-            self.history.pop(-1)
-            self.history.insert(0, track)
-        await super().play(track, start_time, end_time, no_replace, volume, pause)
+    async def play(self, track: lavalink.AudioTrack = None, start_time: int = 0, pause: bool = False, **kwargs):
+        #if len(self.history) == self.MAX_HISTORY:
+        #    self.history.pop(-1)
+        #self.history.insert(0, {"track": track, "listenedAt": datetime.now()})
+        await super().play(track, start_time, pause=pause, **kwargs)
         
     
     async def stop(self):

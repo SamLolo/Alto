@@ -23,7 +23,7 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
 
     async def load(self, client: lavalink.Client):
         # Search youtube for spotify track
-        results = await client.get_tracks(f"ytsearch:{self.title} by {self.extra['metadata']['artists'][0]}")
+        results = await client.get_tracks(f"ytsearch:{self.title} by {self.extra['metadata']['artists'][0]['name']}")
 
         # If odd load result, or no tracks, raise a LoadError
         if (results.load_type != LoadType.SEARCH) or (results.tracks is None):
@@ -102,6 +102,7 @@ class SpotifySource(Source):
     
     def __init__(self, discord: commands.Bot, database: Database):
         super().__init__('spotify')
+        
         # Set discord client as attribute for access during loading songs
         self.discord = discord
         self.database = database
@@ -110,6 +111,7 @@ class SpotifySource(Source):
 
 
     async def load_item(self, client: lavalink.Client, query: str):
+        
         # Types of queries to be caught by SpotifySource
         if query.startswith('spsearch:') or query.startswith('https://open.spotify.com/'):
             cache = None
@@ -127,7 +129,10 @@ class SpotifySource(Source):
                             self.logger.exception(ex)
                     else:
                         if cache is None:
-                            features = self.discord.music.GetAudioFeatures(info['tracks'][0]['id'])
+                            try:
+                                features = self.discord.music.GetAudioFeatures([info['tracks'][0]['id']])
+                            except:
+                                features = None
                 
                 # If url entered, get spotifyID by splitting up url
                 elif query.startswith('https://open.spotify.com/'):
@@ -146,26 +151,35 @@ class SpotifySource(Source):
                         else:
                             if cache is None:
                                 info = self.discord.music.GetSongInfo(spotifyID)
-                                features = self.discord.music.GetAudioFeatures(spotifyID)
+                                try:
+                                    features = self.discord.music.GetAudioFeatures([spotifyID])
+                                except:
+                                    features = None
                     
                     # If playlist/album, load track metadata from Spotify
                     elif "playlist" in query:
                         info = self.discord.music.GetPlaylistSongs(spotifyID)
-                        features = self.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
+                        try:
+                            features = self.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
+                        except:
+                            features = None
                     elif "album" in query:
                         info = self.discord.music.GetAlbumInfo(spotifyID)
-                        features = self.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
+                        try:
+                            features = self.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
+                        except:
+                            features = None
                     else:
                         raise Exception(f"Unsupported Input: {query}")
             
             # Deal with errors raised whilst fetching track information
-            except LoadError as e:
-                self.logger.debug(f"LoadError for query: {query}")
-                raise e
-            except Exception as e:
-                self.logger.exception(e)
-                self.logger.warning(f"Unexpected error whilst loading track: {e.message}")
-                raise LoadError(e.message)
+            except LoadError as ex:
+                self.logger.error(f"LoadError for query: {query}")
+                raise ex
+            except Exception as ex:
+                self.logger.error(f"Unexpected error whilst loading track: {ex.message}")
+                self.logger.exception(ex)
+                raise LoadError(ex.message)
             
             # If cached (single) track found, load track as standard AudioTrack
             if cache is not None:             
@@ -195,7 +209,7 @@ class SpotifySource(Source):
                                                             'explicit': data['explicit'],
                                                             'preview': data['preview']
                                                         },
-                                                        features = features[index],
+                                                        features = features[index] if features is not None else None,
                                                         album = info['albumInfo'] if 'albumInfo' in data.keys() else None))
 
                 # Return LoadResult with playlist metadata if available

@@ -249,9 +249,10 @@ class Spotify(object):
     def GetAudioFeatures(self, SongIDs: list):
 
         #** Request Audio Features For a List of Spotify IDs **
-        SongIDs = ",".join(SongIDs)
-        self.logger.debug("New Request: https://api.spotify.com/v1/audio-features?ids="+str(SongIDs))
-        Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.botHead)
+        url = f'https://api.spotify.com/v1/audio-features?ids={",".join(SongIDs)}'
+        
+        self.logger.debug(url)
+        Features = requests.get(url, headers = self.botHead)
 
         #** Check If Request Was A Success **
         while Features.status_code != 200:
@@ -262,8 +263,8 @@ class Spotify(object):
                 self.RefreshBotToken()
                 
                 #** Retry Request **
-                self.logger.debug("New Request: https://api.spotify.com/v1/audio-features?ids="+str(SongIDs))
-                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.botHead)
+                self.logger.debug(url)
+                Features = requests.get(url, headers = self.botHead)
                 
             #** Check If Rate Limit Has Been Applied **
             elif 429 == Features.status_code:
@@ -272,13 +273,13 @@ class Spotify(object):
                 
                 #** Retry Request **
                 asyncio.sleep(time)
-                self.logger.debug("New Request: https://api.spotify.com/v1/audio-features?ids="+str(SongIDs))
-                Features = requests.get("https://api.spotify.com/v1/audio-features?ids="+str(SongIDs), headers = self.botHead)
+                self.logger.debug(url)
+                Features = requests.get(url, headers = self.botHead)
                 
             #** Check If Features Not Found, and Return "FeaturesNotFound" **
             elif 404 == Features.status_code:
                 self.logger.debug("[GetAudioFeatures] Error Code '404' For ID's '"+str(SongIDs)+"'")
-                raise Exception("FeaturesNotFound")
+                return None
             
             #** If Other Error Occurs, Raise Error **
             else:
@@ -287,10 +288,10 @@ class Spotify(object):
         
         #** Return Audio Features **
         Features = Features.json()
-        if Features is not None or Features['audio_features'] is not None:
+        if Features['audio_features'] != [] and Features['audio_features'][0] is not None:
             return Features['audio_features']
         else:
-            raise Exception("FeaturesNotFound")
+            return None
 
 
     def FormatSongData(self, data: dict):
@@ -299,7 +300,7 @@ class Spotify(object):
         artists = []
         for artist in data['artists']:
             if artist['name'] is not None:
-                artists.append({'id': artist['name'], 'name': artist['id']})
+                artists.append({'id': artist['id'], 'name': artist['name']})
 
         # Format album name
         if data['album']['album_type'] == "single":

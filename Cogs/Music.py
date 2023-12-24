@@ -9,6 +9,7 @@ import logging
 import discord
 import asyncio
 import lavalink
+from lavalink import LoadType
 from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
@@ -230,7 +231,7 @@ class MusicCog(commands.Cog, name="Music"):
                 await Player.set_volume(25)
                 
             #** If bot doesn't need to connect and isn't already connected, raise error
-            elif interaction.command.name in ['stop', 'pause', 'skip', 'queue', 'seek', 'nowplaying', 'loop']:
+            elif interaction.command.name in ['pause', 'skip', 'queue', 'seek', 'nowplaying', 'loop']:
                 raise app_commands.CheckFailure("BotVoice")
           
         #** Raise error is user in different vc to bot
@@ -334,71 +335,68 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(description="Allows you to play music through a Discord Voice Channel from a variety of sources.")
     async def play(self, interaction: discord.Interaction, input: str):
         
-        #** Ensure Voice To Make Sure Client Is Good To Run & Get Player In Process **
-        Player = await self.ensure_voice(interaction)
+        # Ensure Voice To Make Sure Client Is Good To Run & Get Player In Process
+        player = await self.ensure_voice(interaction)
         query = input.strip('<>')
         await interaction.response.defer()
         
-        #** If query is plain text, search spotify**
+        # If query is plain text, search spotify, otherwise get track(s) from lavalink
         if not(query.startswith("https://") or query.startswith("http://") or query.startswith("scsearch:") or query.startswith("spsearch:") or query.startswith("ytsearch:")):
-            Results = await Player.node.get_tracks(f"spsearch:{query}", check_local=True)
-    
-        #** If query is a URL, Get track(s) from lavalink
+            result = await self.client.lavalink.get_tracks(f"spsearch:{query}", check_local=True)
         else:
-            Results = await Player.node.get_tracks(query, check_local=True)
+            result = await self.client.lavalink.get_tracks(query, check_local=True)
 
-        #** Check if track loaded, and queue up each track
-        if Results["loadType"] in ['TRACK_LOADED', 'SEARCH_RESULT']:
-            Player.add(requester=interaction.user.id, track=Results['tracks'][0])
-            if not(Player.is_playing):
-                await Player.play()
+        # Check if track(s) loaded, and queue up (each) track
+        if result.load_type in [LoadType.TRACK, LoadType.SEARCH]:
+            track = result['tracks'][0]
+            player.add(requester=interaction.user.id, track=track)
+            if not(player.is_playing):
+                await player.play()
             
-            #** Create queued embed for single track
-            emoji = self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())
-            Queued = discord.Embed(title = f"{str(emoji)+' ' if emoji is not None else ''}Track Added To Queue!",
-                                   description = f"[{Results['tracks'][0]['title']}]({Results['tracks'][0]['uri']})")
-            
-            #** Format artists based on information avaiable
-            if Results['tracks'][0]['title'] != Results['tracks'][0]['author']:
-                if Results['tracks'][0]['source_name'] == "spotify":
-                    Queued.description += f"\nBy: {self.client.utils.format_artists(Results['tracks'][0]['extra']['metadata']['artists'])}"
-                else:
-                    Queued.description += f"\nBy: {Results['tracks'][0]['author']}"
+            # Create queued embed for single track
+            emoji = self.client.utils.get_emoji(track.source_name.title())
+            queued = discord.Embed(title = f"{str(emoji)+' ' if emoji is not None else ''}Track Added To Queue!",
+                                   description = f"[{track.title}]({track.uri})")
+            if track.source_name == "spotify":
+                queued.description += f"\nBy: {self.client.utils.format_artists(track.extra['metadata']['artists'])}"
+            else:
+                queued.description += f"\nBy: {track.author}"
         
-        elif Results["loadType"] == 'PLAYLIST_LOADED':
-            for i, track in enumerate(Results['tracks']):
-                Player.add(requester=interaction.user.id, track=track)
-                if i == 0 and not(Player.is_playing):
-                    await Player.play()
+        elif result.load_type == LoadType.PLAYLIST:
+            for i, track in enumerate(result['tracks']):
+                player.add(requester=interaction.user.id, track=track)
+                if i == 0 and not(player.is_playing):
+                    await player.play()
             
-            #** Format queued embed for playlists
-            emoji = self.client.utils.get_emoji(Results['tracks'][0]['source_name'].title())
-            Queued = discord.Embed(title = f"{str(emoji)+' ' if emoji is not None else ''}Playlist Added To Queue!",
-                                   description = f"{Results['playlist_info']['name']} - {len(Results['tracks'])} Tracks")
+            # Format queued embed for playlists
+            emoji = self.client.utils.get_emoji(result['tracks'][0]['source_name'].title())
+            queued = discord.Embed(title = f"{str(emoji)+' ' if emoji is not None else ''}Playlist Added To Queue!",
+                                   description = f"{result['playlist_info']['name']} - {len(result['tracks'])} Tracks")
         
-        #** If URL Can't Be Loaded, Raise Error
+        # If LoadType is empty or an error, return error message to user
         else:
             raise app_commands.CheckFailure("SongNotFound")
         
-        #** Output requester name & tag in footer
-        Queued.set_footer(text=f"Requested By {interaction.user.display_name}")
-        await interaction.followup.send(embed=Queued)
+        # Output requester name & tag in footer
+        queued.set_footer(text=f"Requested By {interaction.user.display_name}")
+        await interaction.followup.send(embed=queued)
         
 
     @app_commands.guild_only()
     @app_commands.command(description="Stops music, clears queue and disconnects the bot!")
     async def disconnect(self, interaction: discord.Interaction):
 
-        #** Ensure Voice To Make Sure Client Is Good To Run & Get Guild Player**
-        Player = await self.ensure_voice(interaction)
+        # Get player & check command is good to be run!
+        player = await self.ensure_voice(interaction)
+        if not(player.is_connected):
+            raise app_commands.CheckFailure("BotVoice")
 
-        #** Clear Queue & Stop Playing Music If Music Playing**
-        if Player.is_playing:
-            await Player.stop()
-            Player.queue.clear()
-        
-        #** Disconnect From VC & Send Message Accordingly **
-        await self._disconnect(Player, guild=interaction.guild)
+        # Clear queue and stop playback. Player will disconnect automatically
+        player.queue.clear()
+        if player.is_playing:
+            await player.stop()
+        else:
+            await self._disconnect(player, guild=interaction.guild)
         await interaction.response.send_message("Disconnected!")
 
 
