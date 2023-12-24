@@ -17,6 +17,8 @@ class CustomPlayer(lavalink.DefaultPlayer):
         self.MAX_HISTORY = 20
         self.recommendations = []
         self.auto = False
+        
+        # Set default volume based on the server
 
 
     def generate_recommendations(self):

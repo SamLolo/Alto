@@ -5,89 +5,15 @@
 import random
 import discord
 import logging
+import lavalink
 from datetime import datetime
 from discord.ext import commands
-
-
-#!------------------------SONG HISTORY QUEUE-----------------------!#
-
-
-class SongHistory(object):
-    
-    def __init__(self, discordID: int):
-        super(SongHistory, self).__init__()
-
-        # Fetch current song history from database
-        try:
-            self.history = self.client.database.getHistory(discordID)
-        except ConnectionError as e:
-            self.logger.info(f"Can't load song history for '{discordID}' due to connection error!")
-            raise RuntimeError(e.message)
-        except Exception as e:
-            self.logger.exception(e)
-            self.logger.error(f"Unknown exception encountered while loading song history for '{discordID}")
-            raise RuntimeError(e.message)
-        else:
-            self.maxsize = 20
-        
-
-    def addSongHistory(self, data: dict):
-        
-        # If queue is full, clear song from history first
-        if len(self.history) == self.maxsize:
-            self.clearSong()
-        
-        # If spotify track, average new song data into users recommendations figures
-        if data['source'] == "spotify":
-            try:
-                features = self.client.music.GetAudioFeatures([data['id']])
-            except Exception as e:
-                self.logger.warning("Unexpected error getting audio features whilst adding song history!")
-                self.logger.exception(e)
-            else:
-                features = features[0]
-                songCount = self.recommendations['songcount']
-                
-                # Create average using new track data with previous average
-                for key, value in self.recommendations.items():
-                    if key == "songcount":
-                        pass
-                    elif songCount == 0:
-                        newValue = features[key]
-                    else:
-                        newValue = ((value * songCount) + features[key]) / (songCount + 1)
-                    
-                    # Save new values & increment songCount for recommendations only
-                    self.recommendations[key] = newValue
-                self.recommendations['songcount'] += 1
-                self.cached['recommendations'] = False
-            
-        # Add new song data to history array
-        self.history.insert(0, data)
-        self.logger.debug(f"Song added to history for user '{self.user.id}'!")
-        self.songs += 1
-        self.cached['user'] = False
-        self.cached['history'] = False
-        
-
-    def clearSong(self):
-        
-        # Check if queue is empty and return none if true
-        if not(len(self.history) == 0):
-            
-            # Remove oldest song in queue and return data of song just removed
-            data = self.history.pop(-1)
-            self.logger.debug(f"Song removed from history for user '{self.user.id}'!")
-            return data
-        else:
-            self.logger.warning(f"Attempted to remove history from empty queue! (User: {self.user.id})")
-            return None
         
 
 #!-------------------------USER OBJECT------------------------!#
 
 
-class User(SongHistory):
+class User():
     
     def __init__(self, client: commands.Bot, id: int = None, user: discord.User = None):
         
@@ -107,54 +33,38 @@ class User(SongHistory):
         # Check to see if user has stored information, otherwise create new profile
         try:
             data = self.client.database.getUser(self.user.id)
-        except ConnectionError as e:
-            self.logger.info(f"Can't load user data for '{self.user.id}' due to connection error!")
-            raise RuntimeError(e.message)
         except Exception as e:
-            self.logger.exception(e)
-            self.logger.error(f"Unknown exception encountered while loading user data for '{self.user.id}")
+            if type(e) != ConnectionError:
+                self.logger.exception(e)
+                self.logger.error(f"Unknown exception encountered while loading user data for '{self.user.id}")
+            raise RuntimeError(e.message)
+            
+        # Add cached data as class attributes or fill in default data if new account
+        if data is None:
+            self.songs = 0
+            self.history_mode = 2
+            self.public = True
+            self.created = datetime.now()
+        else:
+            self.songs = data['songs']
+            self.history_mode = data['history']
+            self.public = data['public']
+            self.created = data['created']
+            
+        # Load song history for user
+        try:
+            self.history = self.client.database.getHistory(self.user.id)
+        except Exception as e:
+            if type(e) != ConnectionError:
+                self.logger.exception(e)
+                self.logger.error(f"Unknown exception encountered while loading song history for '{self.user.id}")
             raise RuntimeError(e.message)
         else:
+            self.maxsize = 20
             
-            # Add cached data as class attributes or fill in default data if new account
-            if data is None:
-                self.songs = 0
-                self.history_mode = 2
-                self.public = True
-                self.created = datetime.now()
-            else:
-                self.songs = data['songs']
-                self.history_mode = data['history']
-                self.public = data['public']
-                self.created = data['created']
-                
-                # Add recommendations data if present, else create default dictionary ready for use
-                if data['recommendations'] is not None:
-                    self.recommendations = data['recommendations']
-                else:
-                    self.recommendations = {"songcount": 0,
-                                            "acousticness": 0,
-                                            "danceability": 0,
-                                            "duration_ms": 0,
-                                            "energy": 0,
-                                            "instrumentalness": 0,
-                                            "key": 0,
-                                            "mode": 0,
-                                            "popularity": 0,
-                                            "liveness": 0,
-                                            "loudness": 0,
-                                            "speechiness": 0,
-                                            "tempo": 0,
-                                            "time_signature": 0,
-                                            "valence": 0}
-            
-            # Load song history for user
-            super(User, self).__init__(self.user.id)
-                
-            # Set flags to check if user data has been changed since initialization
-            self.cached = {"user": True if data is not None else False,
-                           "recommendations": True,
-                           "history": True}
+        # Set flags to check if user data has been changed since initialization
+        self.cached = {"user": True if data is not None else False,
+                       "history": True}
 
 
     def save(self): 
@@ -162,14 +72,27 @@ class User(SongHistory):
         try:
             if len(self.history) > 0 and not(self.cached['history']):
                 self.client.database.saveHistory(self.user.id, self.history)
-            
             if not(self.cached['user']):
                 self.client.database.saveUser(self.user.id, self.songs, self.history_mode, self.public, self.created)
-
-            if self.recommendations['songcount'] > 0 and not(self.cached['recommendations']):
-                self.client.database.saveRecommendations(self.user.id, self.recommendations)
         except:
             self.logger.warning(f"User data not saved for id: {self.user.id}!")
+            
+    
+    def addSongHistory(self, track: lavalink.AudioTrack):
+        # If queue is full, clear song from history first
+        if len(self.history) == self.maxsize:
+            self.history.pop(-1)
+        
+        # Add track to history with current timestamp as time-listened
+        entry = {"track": track,
+                 "listenedAt": datetime.now()}
+        self.history.insert(0, entry)
+        self.logger.debug(f"Song added to history for user '{self.user.id}'!")
+            
+        # Update flags so data is cached upon next save
+        self.songs += 1
+        self.cached['user'] = False
+        self.cached['history'] = False
 
     
     def getRecommendations(self):

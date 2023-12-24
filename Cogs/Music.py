@@ -20,7 +20,7 @@ from Classes.Database import Database
 
 
 from Sources.Spotify import SpotifySource
-from Players.Player import CustomPlayer
+from Players.Custom import CustomPlayer
 
 
 #!--------------------CUSTOM VOICE PROTOCOL------------------#
@@ -278,6 +278,7 @@ class MusicCog(commands.Cog, name="Music"):
             await old.delete()
 
         #**-------------Add Listening History-------------**#
+        '''
         
         #** Disable listening history system when database is unavailable as songs won't be cached **
         if self.client.database.connected:
@@ -325,6 +326,8 @@ class MusicCog(commands.Cog, name="Music"):
                 for user in userDict.values():
                     if user.history_mode == 2 or (user.history_mode == 1 and event.track.requester == user.user.id):
                         user.addSongHistory(data)
+                        
+                '''
 
 
     @app_commands.guild_only()

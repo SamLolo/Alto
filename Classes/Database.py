@@ -7,6 +7,7 @@ import json
 import logging
 from lavalink import AudioTrack
 from datetime import datetime
+from lavalink.errors import LoadError
 from mysql.connector import pooling, errors
 from Classes.Server import UserPermissions
 from Classes.Utils import Utility
@@ -96,8 +97,6 @@ class Database():
         # Fetch user data from database
         cursor.execute(f"SELECT * FROM users WHERE DiscordID = '{id}';")
         user = cursor.fetchone()
-        cursor.execute(f"SELECT * FROM recommendations WHERE DiscordID = '{id}';")
-        recommendations = cursor.fetchone()
         connection.close()
         self.logger.debug("Connection returned to pool!")
 
@@ -107,29 +106,9 @@ class Database():
                     "history": user[3],
                     "public": bool(user[4]),
                     "created": user[2]}
+            return data
         else:
             return None  
-        
-        # Add recommendations data if available and return found info
-        if recommendations is not None:
-            data["recommendations"] = {"songcount": recommendations[1],
-                                       "acousticness": recommendations[2],
-                                       "danceability": recommendations[3],
-                                       "duration_ms": recommendations[4],
-                                       "energy": recommendations[5],
-                                       "instrumentalness": recommendations[6],
-                                       "key": recommendations[7],
-                                       "mode": recommendations[8],
-                                       "popularity": recommendations[9],
-                                       "liveness": recommendations[10],
-                                       "loudness": recommendations[11],
-                                       "speechiness": recommendations[12],
-                                       "tempo": recommendations[13],
-                                       "time_signature": recommendations[14],
-                                       "valence": recommendations[15]}
-        else:
-            data['recommendations'] = None
-        return data
         
     
     def saveUser(self, id: int, songs: int, history: int, public: bool, created: datetime):
@@ -149,27 +128,6 @@ class Database():
         connection.close()
         self.logger.debug(f"Saved user data for user '{id}'")
         self.logger.debug("Connection returned to pool!")
-
-    
-    def saveRecommendations(self, id: int, recommendations: dict):
-        
-        # Get database connection from pool
-        connection, cursor = self.ensure_connection()
-        if connection is None:
-            self.logger.warning(f"Failed to save recommendations data for '{id}' due to missing database connection!")
-            raise ConnectionError(f"Failed to save recommendations data for '{id}' due to missing database connection!")
-    
-        # write user recommendation data to recommendations table (update if already exists)
-        data = (id, recommendations['songcount'], recommendations['acousticness'], recommendations['danceability'], recommendations['duration_ms'], recommendations['energy'], 
-                recommendations['instrumentalness'], recommendations['key'], recommendations['mode'], recommendations['popularity'], recommendations['liveness'],
-                recommendations['loudness'], recommendations['speechiness'], recommendations['tempo'], recommendations['time_signature'], recommendations['valence'])
-        cursor.execute("REPLACE INTO recommendations VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", data)
-        
-        # Commit changes and return connection to pool
-        connection.commit()
-        connection.close()
-        self.logger.debug(f"Saved recommendations data for user '{id}'!")
-        self.logger.debug("Connection returned to pool!")
             
 
     def getHistory(self, discordID: int):
@@ -181,31 +139,28 @@ class Database():
             raise ConnectionError(f"Failed to get history for user '{discordID}' due to missing database connection!")
 
         # Get listening history from database, ordered by most recent first
-        sql = ("SELECT history.SongID, history.ListenedAt, cache.Source, cache.ID, cache.URL, cache.Name, cache.Artists, cache.ArtistID, cache.Popularity "
-               "FROM history "
-               "INNER JOIN cache ON history.SongID = cache.uid "
-              f"WHERE DiscordID = '{discordID}' "
-               "ORDER BY ListenedAt DESC;")
+        sql = f"""SELECT SongID, ListenedAt
+                  FROM history 
+                  WHERE DiscordID = '{discordID}'
+                  ORDER BY ListenedAt DESC;"""
         cursor.execute(sql)
         result = cursor.fetchall()
-        connection.close()
-        self.logger.debug("Connection returned to pool!")
 
         # Create array of song objects with information just gained
         history = []
         for row in result:
-            data = {"cacheID": int(row[0]),
-                    "source": row[2],
-                    "id": row[3],
-                    "url": row[4],
-                    "name": row[5],
-                    "artists": row[6].replace("'", "").split(", "),
-                    "listenedAt": row[1]}
-            if data["source"] == "spotify":
-                data['artistID'] = row[7].replace("'", "").split(", ")
-                data['popularity'] = row[8]
-            history.append(data)
+            track = self.searchCache(int(row[0]))
+            if track is not None:
+                history.append({"track": track,
+                                "listenedAt": row[1]})
+            else:
+                self.logger.error(f"Unknown cache ID '{int(row[0])}' found when loading history for discordID '{discordID}'")
+                cursor.execute(f"DELETE FROM history WHERE SongID = '{row[0]}';")
+
+        # Return connection to pool once all history has been loaded and verified
         self.logger.debug(f"Successfully fetched song history for user '{discordID}'!")
+        connection.close()
+        self.logger.debug("Connection returned to pool!")
         return history
     
     
@@ -228,13 +183,13 @@ class Database():
             # Add new songs in history to database, based on number deleted above
             if deletedRows > 0:
                 for i in range(deletedRows):
-                    data = (discordID, history[i]['cacheID'], history[i]["listenedAt"])
+                    data = (discordID, history[i]['track']['extra']['metadata']['cacheID'], history[i]["listenedAt"])
                     cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
             
             # Add all songs if deletedRows is 0 incase user has no cached history 
             else:
-                for track in history:
-                    data = (discordID, track['cacheID'], track["listenedAt"])
+                for entry in history:
+                    data = (discordID, entry['track']['extra']['metadata']['cacheID'], entry["listenedAt"])
                     cursor.execute("REPLACE INTO history (DiscordID, SongID, ListenedAt) VALUES (%s, %s, %s);", data)
                 
         # Commit changes and return connection
@@ -306,7 +261,7 @@ class Database():
         return uid
 
 
-    def searchCache(self, query: str):
+    def searchCache(self, query: str = None, uid: int = None):
         
         # Get database connection from pool
         connection, cursor = self.ensure_connection()
@@ -314,30 +269,35 @@ class Database():
             self.logger.warning(f"Failed to search cache with query '{query}' due to missing database connection!")
             raise ConnectionError(f"Failed to search cache with query '{query}' due to missing database connection!")
 
-        # Query cache table for track metadata
-        cursor.execute(f"SELECT cache.*, spotify.release, spotify.popularity, spotify.explicit, spotify.preview, album.name, album.type, album.image, album.release, album.length
-                         features.acousticness, features.danceability, features.duration_ms, features.energy, features.instrumentalness, features.key, features.liveness,
-                         features.loudness, features.mode, features.speechiness, features.tempo, features.time_signature, features.valence
-                         FROM cache
-                         INNER JOIN spotify ON spotify.spotifyID = cache.ID
-                         INNER JOIN album ON album.id = cache.albumID
-                         INNER JOIN features ON features.spotifyID = cache.ID
-                         WHERE (cache.ID = '{query}') OR (cache.url = '{query}');")
+        # Format sql query in cache table for track metadata
+        sql = f"""SELECT cache.*, spotify.release, spotify.popularity, spotify.explicit, spotify.preview, album.name, album.type, album.image, album.release, album.length
+                  features.acousticness, features.danceability, features.duration_ms, features.energy, features.instrumentalness, features.key, features.liveness,
+                  features.loudness, features.mode, features.speechiness, features.tempo, features.time_signature, features.valence
+                  FROM cache
+                  INNER JOIN spotify ON spotify.spotifyID = cache.ID
+                  INNER JOIN album ON album.id = cache.albumID
+                  INNER JOIN features ON features.spotifyID = cache.ID"""
+        if query is not None:    
+            sql += f"WHERE (cache.ID = '{query}') OR (cache.url = '{query}');"
+        else:
+            sql += f"WHERE cache.uid = '{uid}';"
+
+        # Get results for database
+        cursor.execute(sql)
         result = cursor.fetchone()
+        if result is None or result == ():
+            self.logger.warning(f"Failed to find results for query '{query}' or with cacheID '{uid}'!")
+            return None
         
         # Get all artists features on track seperately
-        cursor.execute(f"SELECT *
-                         FROM artists
-                         WHERE trackID = {result[2]}")
+        cursor.execute(f"""SELECT *
+                           FROM artists
+                           WHERE trackID = {result[2]}""")
         artists = cursor.fetchall()
         
         # Return connection to available pool
         connection.close()
         self.logger.debug("Connection returned to pool!")
-
-        # Check if any results were found
-        if result is None or result == ():
-            return None
         
         # If track has spotify data, add appropiate metadata
         if result[1] == "spotify":
