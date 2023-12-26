@@ -88,8 +88,9 @@ class MusicCog(commands.Cog, name="Music"):
             
             #** Create Client Using New Database Pool **
             self.logger.info("No Previous Lavalink Client Found. Creating New Connection...")
-            client.lavalink = lavalink.Client(client.user.id)
-            client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
+            CustomPlayer.set_client(self.client)
+            self.client.lavalink = lavalink.Client(client.user.id, player=CustomPlayer)
+            self.client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
             self.logger.debug("Lavalink listener added")
             self.logger.info("New Client Registered")
         else:
@@ -108,11 +109,11 @@ class MusicCog(commands.Cog, name="Music"):
                 if port is None:
                     self.logger.error('"lavalink.port" is not set in config or environment variables!')
 
-            client.lavalink.add_node(host = host, 
-                                     port = port, 
-                                     password = os.environ[client.config['environment']['lavalink_password']], 
-                                     region = client.config['lavalink']['region'], 
-                                     name = client.config['lavalink']['name'])
+            self.client.lavalink.add_node(host = host, 
+                                          port = port, 
+                                          password = os.environ[client.config['environment']['lavalink_password']], 
+                                          region = client.config['lavalink']['region'], 
+                                          name = client.config['lavalink']['name'])
             self.logger.debug(f"Connecting to {client.config['lavalink']['name']}@{host}:{port}...")
             del host
             del port
@@ -182,13 +183,11 @@ class MusicCog(commands.Cog, name="Music"):
             await guild.voice_client.disconnect()
 
             #** Remove Old Now Playing Message & Delete Stored Value **
-            oldMessage = player.fetch('NowPlaying')
-            await oldMessage.delete()
-            player.delete('NowPlaying')
+            await player.nowPlaying.delete()
+            player.nowPlaying = None
 
             #** Save All Current Users Stored In Player To Database **
-            userDict = player.fetch('Users')
-            for user in userDict.values():
+            for user in player.users:
                 user.save()
         
         #** Raise error to user if bot isn't already in vc
@@ -208,7 +207,7 @@ class MusicCog(commands.Cog, name="Music"):
                 raise app_commands.CheckFailure("UserVoice")
         
         #** Returns a Player If One Exists, Otherwise Creates One
-        Player = self.client.lavalink.player_manager.create(interaction.guild_id, cls=CustomPlayer)
+        Player = self.client.lavalink.player_manager.create(interaction.guild_id)
 
         #** Join vc if not already connected & required by command
         if not(Player.is_connected):
@@ -223,12 +222,9 @@ class MusicCog(commands.Cog, name="Music"):
                 else:
                     await interaction.user.voice.channel.connect(cls=LavalinkVoiceClient)
 
-                #** Store Key, Value Pairs In Player & Set Default Volume To 25%
-                Player.store('Channel', interaction.channel_id)
-                Player.store('Voice', interaction.user.voice.channel)
-                Player.store('Users', {})
-                Player.store('Last_Volume', 25)
-                await Player.set_volume(25)
+                #** Store channel used for nowPlaying & voice channel player is in
+                Player.channel = interaction.channel
+                Player.voice = interaction.user.voice.channel
                 
             #** If bot doesn't need to connect and isn't already connected, raise error
             elif interaction.command.name in ['pause', 'skip', 'queue', 'seek', 'nowplaying', 'loop']:
@@ -238,7 +234,7 @@ class MusicCog(commands.Cog, name="Music"):
         else:
             if int(Player.channel_id) != interaction.user.voice.channel.id:
                 raise app_commands.CheckFailure("SameVoice")
-            
+  
         return Player
 
 
@@ -254,29 +250,23 @@ class MusicCog(commands.Cog, name="Music"):
     async def on_track_error(self, event: TrackExceptionEvent):
         
         #** Let user know that error has occured and which song isn't being played anymore **
-        channel = self.client.get_channel(int(event.player.fetch("Channel")))
-        await channel.send(f"**An error occured whilst trying to play {event.track.title} by {event.track.author}!**\nThe track has been skipped.")
+        await event.player.channel.send(f"**An error occured whilst trying to play {event.track.title} by {event.track.author}!**\nThe track has been skipped.")
         print(event.exception)
         print(event.severity)
     
 
     @lavalink.listener(TrackStartEvent)
     async def on_track_start(self, event: TrackStartEvent):
-            
-        #** Get Channel & Print Out Now Playing Information When New Track Starts
-        timestamp = datetime.now()
-        channel = self.client.get_channel(int(event.player.fetch("Channel")))
         
         #** Send Now Playing Embed To Channel Where First Play Cmd Was Ran
         nowPlaying = self._format_nowplaying(event.player, event.track)
-        message = await channel.send(embed=nowPlaying)
+        message = await event.player.channel.send(embed=nowPlaying)
 
         #** Clear previous now playing embed & output new one into previous channel
-        old = event.player.fetch('NowPlaying')
-        event.player.store('NowPlaying', message)
         await asyncio.sleep(0.5)
-        if old != None:
-            await old.delete()
+        if event.player.nowPlaying is not None:
+            await event.player.nowPlaying.delete()
+        event.player.nowPlaying = message
 
         #**-------------Add Listening History-------------**#
         '''
@@ -425,10 +415,6 @@ class MusicCog(commands.Cog, name="Music"):
                 await Player.set_pause(True)
                 message += "\n*Player has been paused!\nTo continue listening, set the volume level >0 or use the* `/pause` *command!*"
             await interaction.response.send_message(message)
-                
-            #** Update previously stored Last_Volume if volume has changed
-            if current != percentage:
-                Player.store('Last_Volume', current)
 
     
     @app_commands.guild_only()
@@ -450,8 +436,7 @@ class MusicCog(commands.Cog, name="Music"):
             else:
                 #** If volume is 0 whilst paused, restore volume to previous level before unpausing
                 if Player.volume == 0:
-                    volume = Player.fetch("Last_Volume")
-                    await Player.set_volume(volume)
+                    await Player.set_volume(Player.last_volume)
                 await interaction.response.send_message("Player Unpaused!")
 
     

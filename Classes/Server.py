@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES-----------------------!#
 
 
+import lavalink
 import discord
 from enum import Enum
 
@@ -22,11 +23,11 @@ class UserPermissions(Enum):
 
 class Server():
     
-    def __init__(self, client: discord.Client, guild: discord.Guild):
+    def __init__(self, client: discord.Client, guildID: int, player: lavalink.BasePlayer):
         
         #** Setup server with default settings **
         self.volume = {"default": 25,
-                       "previous": 25}
+                       "previous": None}
         self.allowed_voice = []
         self.allowed_channels = []
         self.save_queue = False
@@ -36,7 +37,8 @@ class Server():
         
         #** Get previously saved settings from database **
         self.client = client
-        self.server = guild
+        self.player = player
+        self.server = client.get_guild(guildID)
         self.load()
     
     
