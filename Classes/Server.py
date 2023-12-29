@@ -38,7 +38,7 @@ class Server():
         #** Get previously saved settings from database **
         self.client = client
         self.player = player
-        self.server = client.get_guild(guildID)
+        self.guild = client.get_guild(guildID)
         self.load()
     
     

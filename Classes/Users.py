@@ -5,7 +5,6 @@
 import random
 import discord
 import logging
-import lavalink
 from datetime import datetime
 from discord.ext import commands
         
@@ -40,6 +39,7 @@ class User():
             raise RuntimeError(e.message)
             
         # Add cached data as class attributes or fill in default data if new account
+        self.deafened = None
         if data is None:
             self.songs = 0
             self.history_mode = 2
@@ -77,14 +77,12 @@ class User():
             self.logger.warning(f"User data not saved for id: {self.user.id}!")
             
     
-    def addSongHistory(self, track: lavalink.AudioTrack):
+    def addSongHistory(self, entry: dict):
         # If queue is full, clear song from history first
         if len(self.history) == self.MAX_HISTORY:
             self.history.pop(-1)
         
         # Add track to history with current timestamp as time-listened
-        entry = {"track": track,
-                 "listenedAt": datetime.now()}
         self.history.insert(0, entry)
         self.logger.debug(f"Song added to history for user '{self.user.id}'!")
             

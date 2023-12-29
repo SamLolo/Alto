@@ -138,42 +138,6 @@ class MusicCog(commands.Cog, name="Music"):
         self.logger.debug("Cleared custom sources")
 
 
-    def _format_nowplaying(self, player: lavalink.DefaultPlayer, track: lavalink.AudioTrack):
-        
-        #** Create Now Playing Embed
-        nowPlaying = discord.Embed(title = "Now Playing:",
-                                   description = f"[{track['title']}]({track['uri']})")
-        
-        #** Add Up Next To Footer Of Embed
-        if player.queue == []:
-            nowPlaying.set_footer(text="Up Next: Nothing")
-        else:
-            nowPlaying.set_footer(text=f"Up Next: {player.queue[0]['title']}")
-        
-        #** Set source of audio, with emoji if available
-        emoji = self.client.utils.get_emoji(track.source_name.title())  
-        if emoji is not None:
-            nowPlaying.set_author(name=f"Playing From {track.source_name.title()}", icon_url=emoji.url)
-            
-        #** If Track Has Spotify Info, Format List of Artists & Add Thumbnail
-        if track.title != track.author:
-            if track.source_name == "spotify":
-                nowPlaying.set_thumbnail(url=track.artwork_url)
-                nowPlaying.add_field(name="By:", value=self.client.utils.format_artists(track.extra['metadata']['artists']))
-            else:
-                nowPlaying.add_field(name="By:", value=track.author)
-            
-        #** If Not A Stream, Add Duration Field
-        if not(track.stream):
-            nowPlaying.add_field(name="Duration:", value = self.client.utils.format_time(track.duration))
-        
-        #** Add requester to embed
-        user = self.client.get_user(track.requester)
-        if user is not None:
-            nowPlaying.add_field(name="Requested By: ", value=user.mention, inline=False)
-        return nowPlaying
-
-
     async def _disconnect(self, player: lavalink.DefaultPlayer, guild: discord.Guild = None):
 
         #** If Player Connected, Get Guild Object & Disconnect From VC **
@@ -253,72 +217,6 @@ class MusicCog(commands.Cog, name="Music"):
         await event.player.channel.send(f"**An error occured whilst trying to play {event.track.title} by {event.track.author}!**\nThe track has been skipped.")
         print(event.exception)
         print(event.severity)
-    
-
-    @lavalink.listener(TrackStartEvent)
-    async def on_track_start(self, event: TrackStartEvent):
-        
-        #** Send Now Playing Embed To Channel Where First Play Cmd Was Ran
-        nowPlaying = self._format_nowplaying(event.player, event.track)
-        message = await event.player.channel.send(embed=nowPlaying)
-
-        #** Clear previous now playing embed & output new one into previous channel
-        await asyncio.sleep(0.5)
-        if event.player.nowPlaying is not None:
-            await event.player.nowPlaying.delete()
-        event.player.nowPlaying = message
-
-        #**-------------Add Listening History-------------**#
-        '''
-        
-        #** Disable listening history system when database is unavailable as songs won't be cached **
-        if self.client.database.connected:
-
-            #** Check If Track Should Be Added To History & Fetch Voice Channel**
-            await asyncio.sleep(10)
-            voice = event.player.fetch("Voice")
-
-            #** Get List Of Members In Voice Channel **
-            users = []
-            for member in voice.members:
-                if not(member.id in [803939964092940308, 1008107176168013835]):
-                    users.append(member.id)
-
-            #** Check Old Users Stored In Players Are Still Listening, If Not Teardown User Object **
-            userDict = event.player.fetch('Users')
-            for discordID, user in userDict.items():
-                if not(int(discordID) in users):
-                    user.save()
-                    userDict.pop(discordID)
-                else:
-                    users.remove(int(discordID))
-            
-            #** Add New User Objects For Newly Joined Listeners & Store New User Dict Back In Player **
-            for discordID in users:
-                try:
-                    userDict[str(discordID)] = self.client.userClass.User(self.client, id=discordID)
-                except:
-                    self.logger.debug("Exception whilst loading new user!")
-            event.player.store('Users', userDict)
-
-            #** Format Current Track Data Into Dict To Be Added To History **
-            if event.track.source_name in ["spotify"] and event.track.extra['metadata']['cacheID'] is not None:
-                data = {"cacheID": event.track.extra['metadata']['cacheID'],
-                        "source": event.track.source_name,
-                        "id": event.track.identifier,
-                        "url": event.track.uri,
-                        "name": event.track.title,
-                        "artists": [artist['name'] for artist in event.track.extra['metadata']['artists']],
-                        "artistID": [artist['id'] for artist in event.track.extra['metadata']['artists']],
-                        "popularity": event.track.extra['metadata']['popularity'],
-                        "listenedAt": timestamp}
-                
-                #** For All Current Listeners, Add New Song To Their Song History **
-                for user in userDict.values():
-                    if user.history_mode == 2 or (user.history_mode == 1 and event.track.requester == user.user.id):
-                        user.addSongHistory(data)
-                        
-                '''
 
 
     @app_commands.guild_only()
@@ -610,7 +508,7 @@ class MusicCog(commands.Cog, name="Music"):
         Player = await self.ensure_voice(interaction)
         
         #** Create Now Playing Embed **
-        NowPlaying = self._format_nowplaying(Player, Player.current)
+        NowPlaying = self.client.utils.format_nowplaying(Player, Player.current)
         if not(Player.current.stream):
             NowPlaying.set_field_at(1, name="Position:", value = f"{self.client.utils.format_time(Player.position)} / {self.client.utils.format_time(Player.current.duration)}")
 
