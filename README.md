@@ -29,3 +29,6 @@ If you would like to self-host the bot, you will need to setup your own MySQL da
 - An application registered on the [Spotify Web API](https://developer.spotify.com/documentation/web-api). This provides the Spotify metadata used for multiple commands!
   - The secret will needed to be stored as "SPOTIFY_SECRET" in environment variables, and the client id should be copied into the config.toml file!
   - The bot will work without this, although Spotify playback and commands using the web api will be disabled!
+
+The code does support secondary, developments accounts for both Discord & Spotify, allowing you to use a seperate Discord bot, and Spotify application when developing, which is something I personally use but isn't required! You can toggle development mode inside the config file. The default keys used for the environment variables can also be adjusted using the config file is you would prefer!
+
