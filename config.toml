@@ -1,19 +1,21 @@
 
-prefix = "!" # Prefix used for admin text-based commands
-development_mode = true # Toggles development mode (recommended false for production)
+# Prefix used for admin text-based commands
+prefix = "!"
+# Toggles development mode (recommended 'false' for production)
+development_mode = true
 
 
 [extensions]
-# Define which cogs should be loaded upon startup. Setting the value to false means the cog is ignored.
+# Define which extensions should be loaded upon startup. 
+# 'true' to load extension, 'false' to ignore extension
 account = true
 admin = true
 background = true
-errors = true
-help = false
+errorHandler = true
 music = true
 pagination = true
-settings = false
-server = false
+serverSettings = false
+userSettings = false
 utility = true
 
 
@@ -28,7 +30,6 @@ dev_client = "6d32b18995b542c59183be193900f1d5"
 # Host & port can be left blank to use environment variables.
 host = "127.0.0.1"
 port = "2333"
-password = ""
 name = "default"
 region = "eu"
 

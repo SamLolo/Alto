@@ -15,10 +15,10 @@ from discord.ext import commands
 #!-------------------------------IMPORT CLASSES--------------------------------#
 
 
-import Classes.Users
-import Classes.Utils
-import Classes.MusicUtils
-import Classes.Database
+import Classes.user
+import Classes.utils
+import Classes.spotify
+import Classes.database
 
 
 #!------------------------ADMIN COG-----------------------#
@@ -34,17 +34,16 @@ class AdminCog(commands.Cog, name="Admin"):
         
         # Instantiate classes if not already loaded onto client
         if not hasattr(client, 'database'):
-            client.database = Classes.Database.Database(client.config, pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
+            client.database = Classes.database.Database(client.config, pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
         if not hasattr(client, 'music'): 
-            client.music = Classes.MusicUtils.SongData()
+            client.music = Classes.spotify.SongData()
         if not hasattr(client, 'utils'):
-            client.utils = Classes.Utils.Utility(client)
+            client.utils = Classes.utils.Utility(client)
         if not hasattr(client, 'userClass'):
-            client.userClass = Classes.Users
+            client.userClass = Classes.user
             
         # Get git repo object for project
         self.repo = git.Repo(".")
-        print(self.repo.active_branch)
             
     
     async def cog_load(self):
@@ -75,17 +74,17 @@ class AdminCog(commands.Cog, name="Admin"):
             try:   
                 #** Re-add Attribute To Client Class **
                 if input.lower() == "database":
-                    importlib.reload(Classes.Database)
-                    self.client.database = Classes.Database.Database(self.client.config, pool=self.client.config['database']['main']['poolname'], size=self.client.config['database']['main']['size'])
+                    importlib.reload(Classes.database)
+                    self.client.database = Classes.database.Database(self.client.config, pool=self.client.config['database']['main']['poolname'], size=self.client.config['database']['main']['size'])
                 elif input.lower() == "music":
-                    importlib.reload(Classes.MusicUtils)
-                    self.client.music = Classes.MusicUtils.SongData()
+                    importlib.reload(Classes.spotify)
+                    self.client.music = Classes.spotify.SongData()
                 elif input.lower() == "utils":
-                    importlib.reload(Classes.Utils)
-                    self.client.utils = Classes.Utils.Utility(self.client)
+                    importlib.reload(Classes.utils)
+                    self.client.utils = Classes.utils.Utility(self.client)
                 else:
-                    importlib.reload(Classes.Users)
-                    self.client.userClass = Classes.Users
+                    importlib.reload(Classes.user)
+                    self.client.userClass = Classes.user
 
             #** Log error & inform user **
             except Exception as e:

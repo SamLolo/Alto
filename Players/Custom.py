@@ -6,8 +6,8 @@ import logging
 import discord
 import lavalink
 from datetime import datetime
-from Classes.Users import User
-from Classes.Server import Server
+from Classes.user import User
+from Classes.server import Server
 from lavalink.events import TrackStartEvent, TrackEndEvent
 
 

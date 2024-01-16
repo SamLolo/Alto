@@ -9,8 +9,8 @@ from lavalink import AudioTrack
 from datetime import datetime
 from lavalink.errors import LoadError
 from mysql.connector import pooling, errors
-from Classes.Server import UserPermissions
-from Classes.Utils import Utility
+from Classes.server import UserPermissions
+from Classes.utils import Utility
 
 
 #!--------------------------------DATABASE OPERATIONS-----------------------------------#

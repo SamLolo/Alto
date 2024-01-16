@@ -7,21 +7,19 @@ import math
 import copy
 import logging
 import discord
-import asyncio
 import lavalink
 from lavalink import LoadType
-from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
-from lavalink.events import TrackEndEvent, TrackStartEvent, TrackExceptionEvent
-from Classes.Database import Database
+from lavalink.events import TrackEndEvent, TrackExceptionEvent
+from Classes.database import Database
 
 
 #!--------------IMPORT CUSTOM SOURCES & PLAYERS--------------#
 
 
-from Sources.Spotify import SpotifySource
-from Players.Custom import CustomPlayer
+from Sources.spotify import SpotifySource
+from Players.custom import CustomPlayer
 
 
 #!--------------------CUSTOM VOICE PROTOCOL------------------#

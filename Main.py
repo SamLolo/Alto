@@ -86,11 +86,15 @@ class MyClient(commands.Bot):
 
     #{ Setup Hook Called Before Bot Connects To Discord }
     async def setup_hook(self):
-        #** Work Through List Of Active Cog Names In Config File, Loading Each One As You Go **
-        for cog, enabled in self.config['extensions'].items():
-            if enabled:
-                await self.load_extension(f"Cogs.{cog.title()}")
-                self.logger.info(f"Extension Loaded: {cog.title()}.py")
+        # Load each extension listed in the config file if set to enabled!
+        for name, enabled in self.config['extensions'].items():
+            if not(f"{name}.py" in os.listdir("./Extensions")):
+                self.logger.error(f"Couldn't load extension '{name}' as it doesn't exist in the Extensions directory!")
+            elif enabled:
+                await self.load_extension(f"Extensions.{name}")
+                self.logger.info(f"Loading extension: {name}.py")
+            elif not enabled and name in ['errorHandler', 'pagination']:
+                self.logger.warning(f"Extension '{name}' is set to disabled in config.toml! This is likely to cause unexpected behaviour!")
             
         #** Record Startup Time As Client Object **
         self.startup = discord.utils.utcnow()
