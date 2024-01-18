@@ -59,16 +59,30 @@ directory = "Logs"
 backups = 10
 minimum_level = "DEBUG" # Used to set the minimum logging level of the individual handlers
 
-[logging.handlers]
-# Allows you to decide which additonal logging handlers are loaded and active (master cannot be disabled)
-console = true
-debug = true
+[logging.handlers.console]
+# Config for built-in console handler
+level = "INFO"
 
-[logging.levels]
-# Set the levels for the different logging handlers
-master = "INFO"
-debug = "DEBUG"
-console = "INFO"
+[logging.handlers.master]
+# Config for master handler
+level = "INFO"
+type = "RotatingFileHandler"
+filename = "master.log"
+encoding = "utf-8"
+maxBytes = 8388608  # 8MB
+backupCount = 10
+
+[logging.handlers.debug]
+# Recommended config for a debug handler. Custom handlers must be formatted like this to be loaded!
+# Custom handlers can include an "enabled" boolean flag to easily enable/disable each handler.
+level = "DEBUG"
+enabled = true
+type = "RotatingFileHandler"
+# Additonal parameters for the given handler type should be specified below as they appear in the docs (https://docs.python.org/3/library/logging.handlers.html)
+filename = "debug.log"
+encoding = "utf-8"
+maxBytes = 8388608  # 8MB
+backupCount = 10
 
 
 [status]

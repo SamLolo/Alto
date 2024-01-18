@@ -11,59 +11,7 @@ import asyncio
 import logging.handlers
 from zipfile import ZipFile
 from discord.ext import commands
-
-
-#!--------------------------------CUSTOM LOGGING FORMAT---------------------------------#
-
-
-#** Create Custom Coloured Formatter **
-class ColouredFormat(logging.Formatter):
-    
-    #** ANSI Escape Colours (https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit) + ANSI Reset String **
-    colours = {'yellow': "\x1b[38;5;220m",
-               'red': "\x1b[38;5;9m",
-               'orange': "\x1b[38;5;202m",
-               'blue': "\x1b[38;5;25m",
-               'light_purple': "\x1b[38;5;63m",
-               'green': "\x1b[38;5;2m",
-               'light_green': "\x1b[38;5;76m",
-               'light_blue': "\x1b[38;5;45m",
-               'grey': "\x1b[38;5;240m",
-               'light_orange': "\x1b[38;5;216m",
-               "dark_red": "\x1b[38;5;124m"}
-    reset = "\x1b[0m"
-
-    #** Set Colours For Logging Levels **
-    levelFormats = {logging.DEBUG:  colours['green'] + "[%(levelname)s]" + reset,
-                    logging.INFO: colours['blue'] + "[%(levelname)s]" + reset,
-                    logging.WARNING: colours['yellow'] + "[%(levelname)s]" + reset,
-                    logging.ERROR: colours['orange'] + "[%(levelname)s]" + reset,
-                    logging.CRITICAL: colours['red'] + "[%(levelname)s]" + reset}
-
-    #** Create Format Based On Inputted Record **
-    def format(self, record):
-        logFormat = "%(asctime)s " + self.levelFormats.get(record.levelno)
-        
-        if record.name.startswith("discord") and not(record.name == "discord.errors"):
-            logFormat += self.colours['light_purple'] + " %(name)s"
-        elif record.name.startswith("spotify"):
-            logFormat += self.colours['light_green'] + " %(name)s"
-        elif record.name.startswith("lavalink"):
-            logFormat += self.colours['light_blue'] + " %(name)s"
-        elif record.name.startswith("database"):
-            logFormat += self.colours['light_orange'] + " %(name)s"
-        elif "error" in record.name:
-            logFormat += self.colours['dark_red'] + " %(name)s"
-        else:
-            logFormat += self.colours['grey'] + " %(name)s"
-            
-        if record.levelno == logging.CRITICAL:
-            logFormat += self.reset +": "+ self.colours['red'] +"%(message)s"+ self.reset
-        else:
-            logFormat += self.reset +": %(message)s"
-        
-        formatter = logging.Formatter(logFormat, datefmt="%d-%m-%Y %H:%M:%S")
-        return formatter.format(record)
+from Classes.logs import LoggingController
 
 
 #!--------------------------------DISCORD CLIENT-----------------------------------# 
@@ -127,36 +75,6 @@ class MyClient(commands.Bot):
 
 
 #!-----------------------------SETUP FUNCTIONS-----------------------------!#
-
-
-def backup_logs(dir: str, backups: int):
-    #** Get Log Directory From Config File & Create New Folder If Missing **
-    if not(dir in os.listdir("./")):
-        os.mkdir(dir)
-        
-    #** Create Backups Folder In Log Directory If Missing **
-    if not("Backups" in os.listdir(f"{dir}/")):
-        os.mkdir(f"{dir}/Backups")
-
-    #** Loop Through Backups Folder In Reversed Order, incrementing each session record **
-    if "master.log" in os.listdir(f"{dir}/"):
-        sortedFiles = sorted(os.listdir(f"{dir}/Backups"), key = lambda x: int(x.split(".")[1]) if x.split(".")[1].isdecimal() else 0, reverse=True)
-        for file in sortedFiles:
-            if file != "Session.zip":
-                count = int(file.split(".")[1])
-                if count >= backups:
-                    os.remove(f"{dir}/Backups/{file}")
-                else:
-                    os.rename(f"{dir}/Backups/{file}", f"{dir}/Backups/Session.{count+1}.zip")
-        if "Session.zip" in f"{dir}/Backups/":
-            os.rename(f"{dir}/Backups/Session.zip", f"{dir}/Backups/Session.1.zip")
-        
-        #** Zip Log Files & Move Zip File Into Backups Folder & Delete Previous Log Files **
-        with ZipFile(f"{dir}/Backups/Session.zip", 'w') as zip:
-            for file in os.listdir(f"{dir}/"):
-                if file.endswith(".log"):
-                    zip.write(f"{dir}/{file}")
-                    os.remove(f"{dir}/{file}")
                     
 
 def check_config(config: dict, logger: logging.Logger):
@@ -190,49 +108,14 @@ async def main():
         print(f"Failed to load config file! Error: {e}\nExiting...")
         exit()
         
-    # Call helper function to backup last session's logs
-    logDir = config['logging']['directory']
-    backups = config['logging']['backups']
-    backup_logs(logDir, backups)
-
-    # Get root logger & set default level from config
-    logger = logging.getLogger()
-    logger.setLevel(config['logging']['minimum_level'])
-
-    # Setup master handler
-    masterHandle = logging.handlers.RotatingFileHandler(
-        filename=f'{logDir}/master.log',
-        encoding='utf-8',
-        maxBytes=8 * 1024 * 1024,
-        backupCount=10)
-    masterHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
-    masterHandle.setLevel(config['logging']['levels']['master'])
-    logger.addHandler(masterHandle)
-    
-    # Setup debug handler if enabled in config
-    if config['logging']['handlers']['debug']:
-        debugHandle = logging.handlers.RotatingFileHandler(
-            filename=f'{logDir}/debug.log',
-            encoding='utf-8',
-            maxBytes=8 * 1024 * 1024,
-            backupCount=10)
-        debugHandle.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%d-%m-%Y %H:%M:%S"))
-        debugHandle.setLevel(config['logging']['levels']['debug'])
-        logger.addHandler(debugHandle)
-        
-    # Setup console output if enabled in config
-    if config['logging']['handlers']['console']:
-        consoleHandle = logging.StreamHandler(sys.stdout)
-        consoleHandle.setFormatter(ColouredFormat())
-        consoleHandle.setLevel(config['logging']['levels']['console'])
-        logger.addHandler(consoleHandle)
+    # Call helper class to configure logging setup for project
+    try:
+        controller = LoggingController()
+        logger = controller.logger
+    except:
+        exit()
         
     # Check through config to see if anything is wrong before loading bot
-    logger.info("Loaded config.toml file")
-    logger.info("Created master logging handler")
-    for handler, enabled in config['logging']['handlers'].items():
-        if enabled:
-            logger.info(f"Added {handler} handler")
     check_config(config, logger)
     
     # Get required intents for bot to function (must be enabled in Discord developer portal first)
