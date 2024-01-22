@@ -98,8 +98,8 @@ class EmbedPaginator(commands.Cog):
         None
         """
         #** Add Reactions And Created PagedEmbed For Message
-        await message.add_reaction(self.client.utils.get_emoji('Back'))
-        await message.add_reaction(self.client.utils.get_emoji('Next'))
+        await message.add_reaction(self.client.get_emoji('Back'))
+        await message.add_reaction(self.client.get_emoji('Next'))
         self.openPages[str(message.id)] = PagedEmbed(pages, currentPage)
         
     
@@ -149,8 +149,8 @@ class EmbedPaginator(commands.Cog):
                     if pagedEmbed is not None:
 
                         #** Get new embed based on reaction emoji
-                        nextEmoji = self.client.utils.get_emoji('Next')
-                        backEmoji = self.client.utils.get_emoji('Back')
+                        nextEmoji = self.client.get_emoji('Next')
+                        backEmoji = self.client.get_emoji('Back')
                         if reaction.emoji.id == nextEmoji.id:
                             newEmbed = pagedEmbed.next()
                         elif reaction.emoji.id == backEmoji.id:

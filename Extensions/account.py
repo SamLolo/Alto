@@ -57,7 +57,7 @@ class AccountCog(commands.Cog, name="Account"):
             LastSongData = CurrentUser.history[0]
 
             #** Format Data For Song & Add Last Listened To Song To Embed As Field **
-            emoji = self.client.utils.get_emoji(LastSongData['source'].title())
+            emoji = self.client.get_emoji(LastSongData['source'].title())
             artists = self.client.utils.format_artists(LastSongData['artists'], LastSongData['artistID'] if 'artistID' in LastSongData.keys() else None)
             description = f"{str(emoji)+' ' if emoji is not None else ''}[{LastSongData['name']}]({LastSongData['url']})\nBy: {artists}\n"
             ProfileEmbed.add_field(name="Last Listened To:", value=description, inline=False)
@@ -139,7 +139,7 @@ class AccountCog(commands.Cog, name="Account"):
                     pages.append(dict)
                     description = f"\n**{song['listenedAt'].strftime('%d %B %Y')}**\n"
                     
-                emoji = self.client.utils.get_emoji(song['source'].title())
+                emoji = self.client.get_emoji(song['source'].title())
                 artists = self.client.utils.format_artists(song['artists'], song['artistID'] if 'artistID' in song.keys() else None)
                 description += f"{song['listenedAt'].strftime('%H:%M')}   {str(emoji)+' ' if emoji is not None else ''}[{song['name']}]({song['url']})"
                 description += f"\n        *By:* {artists}\n"
@@ -207,10 +207,10 @@ class AccountCog(commands.Cog, name="Account"):
 
                 #** Format Embed Sections **
                 song = data['name'] + "\nBy: " + self.client.utils.format_artists(data['artists'], data['artistID'])
-                links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify](https://open.spotify.com/track/{id})\n"
+                links = f"{self.client.get_emoji('Spotify')} Song: [Spotify](https://open.spotify.com/track/{id})\n"
                 if data['preview'] is not None:
-                    links += f'{self.client.utils.get_emoji("Preview")} Song: [Preview]({data["preview"]})\n'
-                links += f"{self.client.utils.get_emoji('Album')} Album: [{data['album']}](https://open.spotify.com/album/{data['albumID']})"
+                    links += f'{self.client.get_emoji("Preview")} Song: [Preview]({data["preview"]})\n'
+                links += f"{self.client.get_emoji('Album')} Album: [{data['album']}](https://open.spotify.com/album/{data['albumID']})"
 
                 #** Create New Embed **
                 page = discord.Embed(
@@ -259,7 +259,7 @@ class AccountCog(commands.Cog, name="Account"):
         #** Try To Send Embed To User & Add Reaction If Successful**
         try:
             SentWarning = await interaction.user.dm_channel.send(embed=WarningEmbed)
-            await SentWarning.add_reaction(self.client.utils.get_emoji('checkmark'))
+            await SentWarning.add_reaction(self.client.get_emoji('checkmark'))
 
         #** Raise Error If Can't Send Messages To DM Channel **
         except :
@@ -275,7 +275,7 @@ class AccountCog(commands.Cog, name="Account"):
         #** Wait For User To React To Tick & Remove Data When Done So **
         while True:
             Reaction = await self.client.wait_for("raw_reaction_add", check=ReactionAdd)
-            if str(Reaction.emoji) == self.client.utils.get_emoji('checkmark'):
+            if str(Reaction.emoji) == self.client.get_emoji('checkmark'):
                 self.client.database.RemoveData(interaction.user.id, Tables)
                 await interaction.user.dm_channel.send("All requested data successfully removed!")
 

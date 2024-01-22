@@ -19,53 +19,8 @@ from Classes.database import Database
 
 
 from Sources.spotify import SpotifySource
-from Players.custom import CustomPlayer
-
-
-#!--------------------CUSTOM VOICE PROTOCOL------------------#
-
-
-class LavalinkVoiceClient(discord.VoiceClient):
-
-    def __init__(self, client: discord.Client, channel: discord.abc.Connectable):
-        
-        #** Setup Class Attributes **
-        self.client = client
-        self.channel = channel
-        self.lavalink = self.client.lavalink
-
-
-    async def on_voice_server_update(self, data):
-
-        #** Transform Server Data & Hand It Down To Lavalink Voice Update Handler **
-        lavalink_data = {'t': 'VOICE_SERVER_UPDATE',
-                         'd': data}
-        await self.lavalink.voice_update_handler(lavalink_data)
-        
-    
-    async def on_voice_state_update(self, data):
-        
-        #** Transform Voice State Data & Hand It Down To Lavalink Voice Update Handler **
-        lavalink_data = {'t': 'VOICE_STATE_UPDATE',
-                         'd': data}
-        await self.lavalink.voice_update_handler(lavalink_data)
-
-
-    async def connect(self, *, timeout: float, reconnect: bool, self_deaf: bool = False, self_mute: bool = False):
-        
-        #** Change Voice State To Channel Passed Into Voice Protocol**
-        await self.channel.guild.change_voice_state(channel=self.channel)
-        
-
-    async def disconnect(self, *, force: bool = False):
-
-        #** Get Player & Change Voice Channel To None **
-        player = self.lavalink.player_manager.get(self.channel.guild.id)
-        await self.channel.guild.change_voice_state(channel=None)
-        
-        #** Cleanup VoiceState & Player Attributes **
-        player.channel_id = None
-        self.cleanup()
+from Clients.lavalink import CustomLavalinkClient
+from Clients.lavalinkVoice import LavalinkVoiceClient
 
 
 #!------------------------MUSIC COG-----------------------#
@@ -86,8 +41,7 @@ class MusicCog(commands.Cog, name="Music"):
             
             #** Create Client Using New Database Pool **
             self.logger.info("No Previous Lavalink Client Found. Creating New Connection...")
-            CustomPlayer.set_client(self.client)
-            self.client.lavalink = lavalink.Client(client.user.id, player=CustomPlayer)
+            self.client.lavalink = CustomLavalinkClient(client.user.id, self.client)
             self.client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
             self.logger.debug("Lavalink listener added")
             self.logger.info("New Client Registered")
@@ -240,7 +194,7 @@ class MusicCog(commands.Cog, name="Music"):
                 await player.play()
             
             # Create queued embed for single track
-            emoji = self.client.utils.get_emoji(track.source_name.title())
+            emoji = self.client.get_emoji(track.source_name.title())
             queued = discord.Embed(title = f"{str(emoji)+' ' if emoji is not None else ''}Track Added To Queue!",
                                    description = f"[{track.title}]({track.uri})")
             if track.source_name == "spotify":
@@ -255,7 +209,7 @@ class MusicCog(commands.Cog, name="Music"):
                     await player.play()
             
             # Format queued embed for playlists
-            emoji = self.client.utils.get_emoji(result['tracks'][0]['source_name'].title())
+            emoji = self.client.get_emoji(result['tracks'][0]['source_name'].title())
             queued = discord.Embed(title = f"{str(emoji)+' ' if emoji is not None else ''}Playlist Added To Queue!",
                                    description = f"{result['playlist_info']['name']} - {len(result['tracks'])} Tracks")
         
@@ -369,7 +323,7 @@ class MusicCog(commands.Cog, name="Music"):
                 queueEmbed.set_thumbnail(url=interaction.guild.icon.url)
             
             #** Format Footer Based On Whether Shuffle & Repeat Are Active **
-            footer = f"Shuffle: {self.client.utils.get_emoji(player.shuffle)}   Loop: {self.client.utils.get_emoji(True if player.loop in [1,2] else False)}"
+            footer = f"Shuffle: {self.client.get_emoji(player.shuffle)}   Loop: {self.client.get_emoji(True if player.loop in [1,2] else False)}"
             if player.loop == 2:
                 footer += " (Current Queue)"
             elif player.loop == 1:
@@ -384,7 +338,7 @@ class MusicCog(commands.Cog, name="Music"):
                 body = ""
                 if i == 0:
                     body = "__**NOW PLAYING:**__\n"
-                    emoji = self.client.utils.get_emoji(player.current.source_name.title())
+                    emoji = self.client.get_emoji(player.current.source_name.title())
                     if player.current.source_name == "spotify":
                         artists = self.client.utils.format_artists(player.current.extra['metadata']['artists'])
                         body += f"{emoji} [{player.current.title}]({player.current.uri})\nBy: {artists}\n"
@@ -395,7 +349,7 @@ class MusicCog(commands.Cog, name="Music"):
                 #** Add information about next 10 songs in queue that haven't already been displayed **
                 if player.queue != []:
                     for j in range(i*10, (i+1)*10 if len(player.queue) >= (i+1)*10 else len(player.queue)):
-                        emoji = self.client.utils.get_emoji(player.queue[j]['source_name'].title())
+                        emoji = self.client.get_emoji(player.queue[j]['source_name'].title())
                         if player.queue[j].source_name == "spotify":
                             artists = self.client.utils.format_artists(player.queue[j].extra['metadata']['artists'])
                             body += f"{emoji} **{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {artists}\n"
@@ -546,11 +500,11 @@ class MusicCog(commands.Cog, name="Music"):
                 else:
                     #** Format Returned Data Ready To Be Put Into The Embeds **
                     description = "**By: **" + self.client.utils.format_artists(songInfo['artists'], songInfo['artistID'])
-                    links = f"{self.client.utils.get_emoji('Spotify')} Song: [Spotify]({track.url})\n"
+                    links = f"{self.client.get_emoji('Spotify')} Song: [Spotify]({track.url})\n"
                     if songInfo['preview'] != None:
-                        links += f"{self.client.utils.get_emoji('Preview')} Song: [Preview]({songInfo['preview']})\n"
+                        links += f"{self.client.get_emoji('Preview')} Song: [Preview]({songInfo['preview']})\n"
                     if songInfo['albumID'] != None and songInfo['album'] != None:
-                        links += f"{self.client.utils.get_emoji('Album')} Album: [{songInfo['album']}](https://open.spotify.com/album/{songInfo['albumID']})"
+                        links += f"{self.client.get_emoji('Album')} Album: [{songInfo['album']}](https://open.spotify.com/album/{songInfo['albumID']})"
                     
                     #** Setup Embed With Advanced Song Information **
                     baseEmbed = discord.Embed(title=songInfo['name'], 

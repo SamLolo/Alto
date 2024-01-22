@@ -3,75 +3,13 @@
 
 
 import os
-import sys
 import tomlkit
 import logging
 import discord
 import asyncio
 import logging.handlers
-from zipfile import ZipFile
-from discord.ext import commands
 from Classes.logs import LoggingController
-
-
-#!--------------------------------DISCORD CLIENT-----------------------------------# 
-
-
-#** Creating Bot Client **
-class MyClient(commands.Bot):
-    def __init__(self, intents: discord.Intents, config: dict):
-        
-        #** Setup Client Logger & Config File **
-        self.logger = logging.getLogger('discord')
-        self.config = config
-
-        #** Initialise Discord Client Class **
-        super().__init__(intents=intents, 
-                         command_prefix=config['prefix'],
-                         case_insensitive = True,
-                         help_command = None)
-
-
-    #{ Setup Hook Called Before Bot Connects To Discord }
-    async def setup_hook(self):
-        # Load each extension listed in the config file if set to enabled!
-        for name, enabled in self.config['extensions'].items():
-            if not(f"{name}.py" in os.listdir("./Extensions")):
-                self.logger.error(f"Couldn't load extension '{name}' as it doesn't exist in the Extensions directory!")
-            elif enabled:
-                await self.load_extension(f"Extensions.{name}")
-                self.logger.info(f"Loading extension: {name}.py")
-            elif not enabled and name in ['errorHandler', 'pagination']:
-                self.logger.warning(f"Extension '{name}' is set to disabled in config.toml! This is likely to cause unexpected behaviour!")
-            
-        #** Record Startup Time As Client Object **
-        self.startup = discord.utils.utcnow()
-        self.logger.info("Setup Complete!")
-
-
-    #{ Event Called Upon Bot's Internal Cache Filled }
-    async def on_ready(self):
-        self.logger.info("Bot Is Now Ready!")
-        
-
-    #{ Event Called Upon Bot Connection To Discord Gateway }
-    async def on_connect(self):
-        self.logger.info("Connection established to Discord gateway!")
-        
-
-    #{ Event Called Upon Bot Disconnection From Discord Gateway }
-    async def on_disconnect(self):
-        self.logger.warning("Connection lost to Discord gateway!")
-
-
-    #{ Event Called When Bot Joins New Guild/Server }
-    async def on_guild_join(self, Guild):
-        #** Loop Through Channels Until You Find The First Text Channel
-        if self.config['welcome']['enabled']:
-            for Channel in Guild.channels:
-                if isinstance(Channel, discord.channel.TextChannel):
-                    await Channel.send(self.config['welcome']['message'])
-                    break
+from Clients.discord import CustomClient
 
 
 #!-----------------------------SETUP FUNCTIONS-----------------------------!#
@@ -124,7 +62,7 @@ async def main():
     intents.message_content = True
     
     # Instanciate MyClient class with requested intents and loaded config & establish bot connection to Discord
-    async with MyClient(intents=intents, config=config) as client:
+    async with CustomClient(intents=intents, config=config) as client:
         if not(config['development_mode']):
             await client.start(os.environ[config['environment']['bot_token']])
         else:
@@ -133,4 +71,5 @@ async def main():
         
 #!-----------------------------START ASYNCIO EVENT LOOP---------------------------!#
 
-asyncio.run(main())
+if __name__ == '__main__':
+    asyncio.run(main())
