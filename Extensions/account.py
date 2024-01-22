@@ -9,6 +9,7 @@ import discord
 from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
+from Classes.utils import format_artists
 from dateutil.relativedelta import relativedelta
 
 
@@ -58,7 +59,7 @@ class AccountCog(commands.Cog, name="Account"):
 
             #** Format Data For Song & Add Last Listened To Song To Embed As Field **
             emoji = self.client.get_emoji(LastSongData['source'].title())
-            artists = self.client.utils.format_artists(LastSongData['artists'], LastSongData['artistID'] if 'artistID' in LastSongData.keys() else None)
+            artists = format_artists(LastSongData['artists'], LastSongData['artistID'] if 'artistID' in LastSongData.keys() else None)
             description = f"{str(emoji)+' ' if emoji is not None else ''}[{LastSongData['name']}]({LastSongData['url']})\nBy: {artists}\n"
             ProfileEmbed.add_field(name="Last Listened To:", value=description, inline=False)
 
@@ -140,7 +141,7 @@ class AccountCog(commands.Cog, name="Account"):
                     description = f"\n**{song['listenedAt'].strftime('%d %B %Y')}**\n"
                     
                 emoji = self.client.get_emoji(song['source'].title())
-                artists = self.client.utils.format_artists(song['artists'], song['artistID'] if 'artistID' in song.keys() else None)
+                artists = format_artists(song['artists'], song['artistID'] if 'artistID' in song.keys() else None)
                 description += f"{song['listenedAt'].strftime('%H:%M')}   {str(emoji)+' ' if emoji is not None else ''}[{song['name']}]({song['url']})"
                 description += f"\n        *By:* {artists}\n"
 
@@ -206,7 +207,7 @@ class AccountCog(commands.Cog, name="Account"):
             for id, data in recommendations.items():
 
                 #** Format Embed Sections **
-                song = data['name'] + "\nBy: " + self.client.utils.format_artists(data['artists'], data['artistID'])
+                song = data['name'] + "\nBy: " + format_artists(data['artists'], data['artistID'])
                 links = f"{self.client.get_emoji('Spotify')} Song: [Spotify](https://open.spotify.com/track/{id})\n"
                 if data['preview'] is not None:
                     links += f'{self.client.get_emoji("Preview")} Song: [Preview]({data["preview"]})\n'

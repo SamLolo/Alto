@@ -59,7 +59,7 @@ class CustomPlayer(lavalink.DefaultPlayer):
         self.history.insert(0, {"track": event.track, "listenedAt": datetime.now()})
         
         # Send Now Playing Embed To Channel Where First Play Cmd Was Ran
-        nowPlaying = self.discordClient.utils.format_nowplaying(self, event.track)
+        nowPlaying = self.client.format_nowplaying(self)
         message = await self.channel.send(embed=nowPlaying)
 
         # Clear previous now playing embed

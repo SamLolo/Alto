@@ -69,6 +69,6 @@ class CustomClient(commands.Bot):
             return "❌"
         
         # Search through sequence of client emojis and return found emoji object
-        for emoji in self.client.emojis:
+        for emoji in self.emojis:
             if emoji.name == name:
                 return emoji

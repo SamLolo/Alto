@@ -9,10 +9,11 @@ import logging
 import discord
 import lavalink
 from lavalink import LoadType
-from discord.ext import commands
 from discord import app_commands
-from lavalink.events import TrackEndEvent, TrackExceptionEvent
+from discord.ext import commands
 from Classes.database import Database
+from Classes.utils import format_artists, format_time
+from lavalink.events import TrackEndEvent, TrackExceptionEvent
 
 
 #!--------------IMPORT CUSTOM SOURCES & PLAYERS--------------#
@@ -198,7 +199,7 @@ class MusicCog(commands.Cog, name="Music"):
             queued = discord.Embed(title = f"{str(emoji)+' ' if emoji is not None else ''}Track Added To Queue!",
                                    description = f"[{track.title}]({track.uri})")
             if track.source_name == "spotify":
-                queued.description += f"\nBy: {self.client.utils.format_artists(track.extra['metadata']['artists'])}"
+                queued.description += f"\nBy: {format_artists(track.extra['metadata']['artists'])}"
             else:
                 queued.description += f"\nBy: {track.author}"
         
@@ -340,7 +341,7 @@ class MusicCog(commands.Cog, name="Music"):
                     body = "__**NOW PLAYING:**__\n"
                     emoji = self.client.get_emoji(player.current.source_name.title())
                     if player.current.source_name == "spotify":
-                        artists = self.client.utils.format_artists(player.current.extra['metadata']['artists'])
+                        artists = format_artists(player.current.extra['metadata']['artists'])
                         body += f"{emoji} [{player.current.title}]({player.current.uri})\nBy: {artists}\n"
                     else:
                         body += f"{str(emoji)+' ' if emoji is not None else ''}[{player.current.title}]({player.current.uri})\nBy: {player.current.author}\n"
@@ -351,7 +352,7 @@ class MusicCog(commands.Cog, name="Music"):
                     for j in range(i*10, (i+1)*10 if len(player.queue) >= (i+1)*10 else len(player.queue)):
                         emoji = self.client.get_emoji(player.queue[j]['source_name'].title())
                         if player.queue[j].source_name == "spotify":
-                            artists = self.client.utils.format_artists(player.queue[j].extra['metadata']['artists'])
+                            artists = format_artists(player.queue[j].extra['metadata']['artists'])
                             body += f"{emoji} **{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {artists}\n"
                         else:
                             body += f"{str(emoji)+' ' if emoji is not None else ''}**{j+1}: **[{player.queue[j]['title']}]({player.queue[j]['uri']})\nBy: {player.queue[j]['author']}\n"
@@ -460,9 +461,9 @@ class MusicCog(commands.Cog, name="Music"):
         Player = await self.ensure_voice(interaction)
         
         #** Create Now Playing Embed **
-        NowPlaying = self.client.utils.format_nowplaying(Player, Player.current)
+        NowPlaying = self.client.lavalink.format_nowplaying(Player)
         if not(Player.current.stream):
-            NowPlaying.set_field_at(1, name="Position:", value = f"{self.client.utils.format_time(Player.position)} / {self.client.utils.format_time(Player.current.duration)}")
+            NowPlaying.set_field_at(1, name="Position:", value = f"{format_time(Player.position)} / {format_time(Player.current.duration)}")
 
         #** Add Requester To Embed & Send Embed To User **
         await interaction.response.send_message(embed=NowPlaying)
@@ -499,7 +500,7 @@ class MusicCog(commands.Cog, name="Music"):
                     raise app_commands.CheckFailure(e.message)
                 else:
                     #** Format Returned Data Ready To Be Put Into The Embeds **
-                    description = "**By: **" + self.client.utils.format_artists(songInfo['artists'], songInfo['artistID'])
+                    description = "**By: **" + format_artists(songInfo['artists'], songInfo['artistID'])
                     links = f"{self.client.get_emoji('Spotify')} Song: [Spotify]({track.url})\n"
                     if songInfo['preview'] != None:
                         links += f"{self.client.get_emoji('Preview')} Song: [Preview]({songInfo['preview']})\n"

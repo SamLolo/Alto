@@ -10,13 +10,13 @@ import logging
 import asyncio
 import importlib
 from discord.ext import commands
+from Classes.utils import format_time
 
 
 #!-------------------------------IMPORT CLASSES--------------------------------#
 
 
 import Classes.user
-import Classes.utils
 import Classes.spotify
 import Classes.database
 
@@ -37,8 +37,6 @@ class AdminCog(commands.Cog, name="Admin"):
             client.database = Classes.database.Database(client.config, pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
         if not hasattr(client, 'music'): 
             client.music = Classes.spotify.SongData()
-        if not hasattr(client, 'utils'):
-            client.utils = Classes.utils.Utility(client)
         if not hasattr(client, 'userClass'):
             client.userClass = Classes.user
             
@@ -70,18 +68,15 @@ class AdminCog(commands.Cog, name="Admin"):
     async def reload(self, ctx, input):
         
         #** If Passed Name Is A Class, Use Importlib To Reload File **
-        if input.lower() in ['musicutils', 'database', 'users', 'utils']:      
+        if input.lower() in ['spotify', 'database', 'users']:      
             try:   
                 #** Re-add Attribute To Client Class **
                 if input.lower() == "database":
                     importlib.reload(Classes.database)
                     self.client.database = Classes.database.Database(self.client.config, pool=self.client.config['database']['main']['poolname'], size=self.client.config['database']['main']['size'])
-                elif input.lower() == "music":
+                elif input.lower() == "spotify":
                     importlib.reload(Classes.spotify)
                     self.client.music = Classes.spotify.SongData()
-                elif input.lower() == "utils":
-                    importlib.reload(Classes.utils)
-                    self.client.utils = Classes.utils.Utility(self.client)
                 else:
                     importlib.reload(Classes.user)
                     self.client.userClass = Classes.user
@@ -202,7 +197,7 @@ class AdminCog(commands.Cog, name="Admin"):
                                 embed.add_field(name="CPU Usage:", value=f"{round(node.stats.lavalink_load * 100, 2)}%")
                                 embed.add_field(name="Memory Usage:", value=f"{round(node.stats.memory_used / 1000000000, 2)}GB")
                                 embed.add_field(name="Allocated Memory:", value=f"{round(node.stats.memory_allocated / 1000000000, 2)}GB")
-                                embed.add_field(name="Uptime:", value=self.client.utils.format_time(node.stats.uptime))
+                                embed.add_field(name="Uptime:", value=format_time(node.stats.uptime))
                                 embed.add_field(name="Missing Frames:", value=f"{node.stats.frames_deficit * -1}")
                                 embed.add_field(name="Lavalink Penalty:", value=f"{round(node.stats.penalty.total, 2)}")
                             else:

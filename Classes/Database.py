@@ -10,7 +10,7 @@ from datetime import datetime
 from lavalink.errors import LoadError
 from mysql.connector import pooling, errors
 from Classes.server import UserPermissions
-from Classes.utils import Utility
+from Classes.utils import get_colour
 
 
 #!--------------------------------DATABASE OPERATIONS-----------------------------------#
@@ -22,7 +22,6 @@ class Database():
         
         # Setup database logger
         self.logger = logging.getLogger("database")
-        self.utils = Utility()
             
         # Create connection pool for database
         host = config['database']['host']
@@ -226,7 +225,7 @@ class Database():
         
         # Insert into cache table the main track info
         cache = "INSERT INTO cache (source, ID, url, name, author, duration, track, albumID, art, colour) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
-        cache_values = (track.source_name, track.identifier, track.uri, track.title, track.author, track.duration, track.track, track.extra['album']['id'] if 'album' in track.extra.keys() else None, track.artwork_url, ", ".join(track.extra['metadata']['colour']) if 'metadata' in track.extra.keys() else self.utils.get_colour(track.artwork_url))
+        cache_values = (track.source_name, track.identifier, track.uri, track.title, track.author, track.duration, track.track, track.extra['album']['id'] if 'album' in track.extra.keys() else None, track.artwork_url, ", ".join(track.extra['metadata']['colour']) if 'metadata' in track.extra.keys() else get_colour(track.artwork_url))
         cursor.execute(cache, cache_values)
         
         # Insert artists if more than one available (author is cached in main table)
