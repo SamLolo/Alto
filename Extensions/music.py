@@ -21,7 +21,7 @@ from lavalink.events import TrackEndEvent, TrackExceptionEvent
 
 from Sources.spotify import SpotifySource
 from Clients.lavalink import CustomLavalinkClient
-from Clients.lavalinkVoice import LavalinkVoiceClient
+from Clients.voice import LavalinkVoiceClient
 
 
 #!------------------------MUSIC COG-----------------------#
