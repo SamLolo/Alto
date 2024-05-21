@@ -14,11 +14,7 @@ from discord.ext import tasks, commands
 class BackgroundTasks(commands.Cog):
 
     def __init__(self, client: discord.Client):
-
-        #** Assign Class Objects **
         self.client = client
-        
-        #** Setup Logging **
         self.logger = logging.getLogger("discord.background")
         
     

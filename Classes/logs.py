@@ -48,8 +48,8 @@ class ColouredFormat(logging.Formatter):
             logFormat += self.colours['light_green'] + " %(name)s"
         elif record.name.startswith("lavalink"):
             logFormat += self.colours['light_blue'] + " %(name)s"
-        elif record.name.startswith("database"):
-            logFormat += self.colours['light_orange'] + " %(name)s"
+        elif record.name.startswith("mysql"):
+            logFormat += self.colours['blue'] + " %(name)s"
         elif "error" in record.name:
             logFormat += self.colours['dark_red'] + " %(name)s"
         else:
@@ -161,7 +161,7 @@ class LoggingController():
             self.logger.critical(f"Failed to backup log files as the given backups count '{backups}' is invalid!")
             raise ex
 
-        # Loop through backups folder in reverse order, incrementing each session record **
+        # Loop through backups folder in reverse order, incrementing each session record
         if "master.log" in os.listdir(f"{self.dir}/"):
             sortedFiles = sorted(os.listdir(f"{self.dir}/Backups"), key = lambda x: int(x.split(".")[1]) if x.split(".")[1].isdecimal() else 0, reverse=True)
             for file in sortedFiles:
@@ -174,7 +174,7 @@ class LoggingController():
             if "Session.zip" in f"{self.dir}/Backups/":
                 os.rename(f"{self.dir}/Backups/Session.zip", f"{self.dir}/Backups/Session.1.zip")
             
-            # Zip log files & move zip file into backups folder & delete previous log files **
+            # Zip log files & move zip file into backups folder & delete previous log files
             with ZipFile(f"{self.dir}/Backups/Session.zip", 'w') as zip:
                 for file in os.listdir(f"{self.dir}/"):
                     if file.endswith(".log"):
