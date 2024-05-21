@@ -1,5 +1,5 @@
 # Alto | Discord Music Bot
-[![](https://dcbadge.vercel.app/api/shield/803939964092940308?bot=true&style=flat)](https://discord.com/api/oauth2/authorize?client_id=803939964092940308&permissions=414836976704&scope=bot)
+[![](https://dcbadge.limes.pink/api/shield/803939964092940308?bot=true&style=flat)](https://discord.com/api/oauth2/authorize?client_id=803939964092940308&permissions=414836976704&scope=bot)
 ![Static Badge](https://img.shields.io/badge/Version-1.1-blue?style=flat)
 [![wakatime](https://wakatime.com/badge/user/aa966dfd-2ee1-42d6-8b74-530c65d62ac0/project/5377707e-5dac-4307-aef2-e8dcb24ec022.svg)](https://wakatime.com/@aa966dfd-2ee1-42d6-8b74-530c65d62ac0/projects/tqfoalvzth)
 
