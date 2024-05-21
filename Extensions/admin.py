@@ -8,7 +8,6 @@ import tomlkit
 import discord
 import logging
 import asyncio
-import importlib
 from discord.ext import commands
 from Classes.utils import format_time
 
@@ -55,7 +54,7 @@ class AdminCog(commands.Cog, name="Admin"):
 
     def is_admin():
     
-        #** When Called, Check If User Id In List & If So Return True **
+        # Check if user is a developer, and hence is allowed to run admin commands
         async def predicate(ctx):
             if ctx.author.id in ctx.cog.admins:
                 return True
@@ -67,57 +66,39 @@ class AdminCog(commands.Cog, name="Admin"):
     @is_admin()
     async def reload(self, ctx, input):
         
-        #** If Passed Name Is A Class, Use Importlib To Reload File **
-        if input.lower() in ['spotify', 'database', 'users']:      
-            try:   
-                #** Re-add Attribute To Client Class **
-                if input.lower() == "database":
-                    importlib.reload(Classes.database)
-                    self.client.database = Classes.database.Database(self.client.config, pool=self.client.config['database']['main']['poolname'], size=self.client.config['database']['main']['size'])
-                elif input.lower() == "spotify":
-                    importlib.reload(Classes.spotify)
-                    self.client.music = Classes.spotify.SongData()
-                else:
-                    importlib.reload(Classes.user)
-                    self.client.userClass = Classes.user
-
-            #** Log error & inform user **
-            except Exception as e:
-                self.logger.warning(f"An error occured when reloading class: {input.title()}!")
-                self.logger.exception(e)
-                await ctx.send(f"**An Error Occured Whilst Trying To Reload The {input.title()} Class!**\n```{e}```")
-                return
-        
-        #** If Input Is 'Config', reload Config File **
-        elif input.lower() == "config":  
+        # If Input Is 'config', reload config file
+        if input.lower() == "config":  
             try:
                 with open("config.toml", "rb")  as configFile:
                     self.client.config = tomlkit.load(configFile)
 
-            #** Log error & inform user **
+            # Log error & inform user
             except Exception as e:
                 self.logger.warning("An error occured when reloading config file!")
                 self.logger.exception(e)
                 await ctx.send(f"**An Error Occured Whilst Trying To Reload The Config File!**\n```{e}```")
                 return
             
-        #** If Input Not Config Or Class, Try To Reload Cog Under Name **
-        else:
+        # Otherwise, reload specified cog if it exists
+        elif input+".py" in os.listdir("Extensions/"):
             try:
-                #** ReLoad Specified Cog **
-                await self.client.reload_extension("Cogs."+input.title())
-                self.client.logger.info(f"Extension Loaded: Cogs.{input.title()}")
+                await self.client.reload_extension(f"Extensions.{input}")
+                self.client.logger.info(f"Extension Loaded: {input.title()}")
 
-            #** Log error & inform user **
+            # If an error occurs, inform user
             except Exception as e:
-                self.logger.warning(f"An error occured when reloading cog: {input.title()}!")
+                self.logger.warning(f"An error occured when reloading extension: {input}!")
                 self.logger.exception(e)
-                await ctx.send(f"**An Error Occured Whilst Trying To Reload {input.title()} Cog!**\n```{e}```")
+                await ctx.send(f"**An error occured when reloading extension: {input}!**\n```{e}```")
                 return
+        
+        # If it doesn't exist, inform user
+        else:
+            await ctx.send(f"Couldn't find an extension with the name '{input}.py' to reload!")
+            return
             
-        #** Send Confirmation Message **
-        self.logger.debug(f"Sucessfully reloaded {input.title()}!")
-        await ctx.send(f"**Sucessfully Reloaded:** `{input.title()}`!")
+        # Send confirmation message
+        await ctx.send(f"**Sucessfully reloaded:** `{input}`!")
     
 
     @commands.command(hidden=True)
