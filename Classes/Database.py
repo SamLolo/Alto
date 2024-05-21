@@ -4,10 +4,10 @@
 
 import os
 import json
+import tomlkit
 import logging
 from lavalink import AudioTrack
 from datetime import datetime
-from lavalink.errors import LoadError
 from mysql.connector import pooling, errors
 from Classes.server import UserPermissions
 from Classes.utils import get_colour
@@ -18,20 +18,35 @@ from Classes.utils import get_colour
 
 class Database():
     
-    def __init__(self, config: dict, pool: str = "main", size: int = 5):
+    @classmethod()
+    def load_config(cls):
+        with open("./config.toml", "rb")  as configFile:
+            cls.config = tomlkit.load(configFile)
+    
+    @classmethod
+    def check_config(cls):
+        pass
+    
+    @classmethod
+    def check_connection():
+        Database.check_config()
+    
+    def __init__(self, pool: str = "main", size: int = 5):
         
         # Setup database logger
-        self.logger = logging.getLogger("database")
+        self.logger = logging.getLogger("mysql.connector")
+        if not(hasattr(Database, "config")):
+            Database.load_config()
             
         # Create connection pool for database
-        host = config['database']['host']
+        host = self.config['database']['host']
         if host == "":
-            host = os.getenv(config['environment']['database_host'], default=None)
+            host = os.getenv(self.config['environment']['database_host'], default=None)
             if host is None:
                 self.logger.warning('"database.host" is not set in config or environment variables!')
-        user = config['database']['username']
+        user = self.config['database']['username']
         if user == "":
-            user = os.getenv(config['environment']['database_user'], default=None)
+            user = os.getenv(self.config['environment']['database_user'], default=None)
             if user is None:
                 self.logger.warning('"database.user" is not set in config or environment variables!')
         try:
@@ -39,9 +54,9 @@ class Database():
             self.pool = pooling.MySQLConnectionPool(pool_name = pool,
                                                     pool_size = size,
                                                     host = host,
-                                                    database = config['database']['schema'],
+                                                    database = self.config['database']['schema'],
                                                     user = user,
-                                                    password = os.environ[config['environment']['database_password']])
+                                                    password = os.environ[self.config['environment']['database_password']])
         except errors.DatabaseError as failure:
             self.logger.error(f"Database connection failed with error: {failure}")
             self.connected = False
@@ -58,7 +73,7 @@ class Database():
         del user
         del host
         self.failures = 0
-        self.max_attempts = config['database']['max_retries']
+        self.max_attempts = self.config['database']['max_retries']
         
 
     def ensure_connection(self):

@@ -34,7 +34,7 @@ class AdminCog(commands.Cog, name="Admin"):
         
         # Instantiate classes if not already loaded onto client
         if not hasattr(client, 'database'):
-            client.database = Classes.database.Database(client.config, pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
+            client.database = Classes.database.Database(pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
         if not hasattr(client, 'music'): 
             client.music = Classes.spotify.SongData()
         if not hasattr(client, 'userClass'):
