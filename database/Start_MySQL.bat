@@ -1,0 +1,2 @@
+NET START MySQL80
+pause
