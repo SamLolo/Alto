@@ -5,8 +5,8 @@
 import discord
 import logging
 import lavalink
-from Players.custom import CustomPlayer
-from Classes.utils import format_artists, format_time
+from players.custom import CustomPlayer
+from common.utils import format_artists, format_time
 
 
 #!--------------------------------LAVALINK CLIENT-----------------------------------# 

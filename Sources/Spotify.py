@@ -5,8 +5,8 @@
 import logging
 import lavalink
 from discord.ext import commands
-from Classes.utils import get_colour
-from Classes.database import Database
+from common.utils import get_colour
+from common.database import Database
 from lavalink.errors import LoadError
 from lavalink import Source, LoadResult, LoadType, PlaylistInfo, DeferredAudioTrack
 

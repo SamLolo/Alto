@@ -8,8 +8,8 @@ import logging
 import discord
 import asyncio
 import logging.handlers
-from Classes.logs import LoggingController
-from Clients.discord import CustomClient
+from common.logs import LoggingController
+from clients.discord import CustomClient
 
 
 #!-----------------------------SETUP FUNCTIONS-----------------------------!#

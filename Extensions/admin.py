@@ -9,15 +9,15 @@ import discord
 import logging
 import asyncio
 from discord.ext import commands
-from Classes.utils import format_time
+from common.utils import format_time
 
 
 #!-------------------------------IMPORT CLASSES--------------------------------#
 
 
-import Classes.user
-import Classes.spotify
-import Classes.database
+import common.user
+import common.spotify
+import common.database
 
 
 #!------------------------ADMIN COG-----------------------#
@@ -33,11 +33,11 @@ class AdminCog(commands.Cog, name="Admin"):
         
         # Instantiate classes if not already loaded onto client
         if not hasattr(client, 'database'):
-            client.database = Classes.database.Database(pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
+            client.database = common.database.Database(pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
         if not hasattr(client, 'music'): 
-            client.music = Classes.spotify.SongData()
+            client.music = common.spotify.SongData()
         if not hasattr(client, 'userClass'):
-            client.userClass = Classes.user
+            client.userClass = common.user
             
         # Get git repo object for project
         self.repo = git.Repo(".")

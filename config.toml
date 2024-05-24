@@ -55,7 +55,7 @@ size = 3
 
 [logging]
 # Overall settings for the logging module
-directory = "Logs"
+directory = "logs"
 backups = 10
 minimum_level = "DEBUG" # Used to set the minimum logging level of the individual handlers
 

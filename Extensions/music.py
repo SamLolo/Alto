@@ -11,17 +11,17 @@ import lavalink
 from lavalink import LoadType
 from discord import app_commands
 from discord.ext import commands
-from Classes.database import Database
-from Classes.utils import format_artists, format_time
+from common.database import Database
+from common.utils import format_artists, format_time
 from lavalink.events import TrackEndEvent, TrackExceptionEvent
 
 
 #!--------------IMPORT CUSTOM SOURCES & PLAYERS--------------#
 
 
-from Sources.spotify import SpotifySource
-from Clients.lavalink import CustomLavalinkClient
-from Clients.voice import LavalinkVoiceClient
+from sources.spotify import SpotifySource
+from clients.lavalink import CustomLavalinkClient
+from clients.voice import LavalinkVoiceClient
 
 
 #!------------------------MUSIC COG-----------------------#

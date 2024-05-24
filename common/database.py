@@ -9,8 +9,8 @@ import logging
 from lavalink import AudioTrack
 from datetime import datetime
 from mysql.connector import pooling, errors
-from Classes.server import UserPermissions
-from Classes.utils import get_colour
+from common.server import UserPermissions
+from common.utils import get_colour
 
 
 #!--------------------------------DATABASE OPERATIONS-----------------------------------#

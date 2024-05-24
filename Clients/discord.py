@@ -27,10 +27,10 @@ class CustomClient(commands.Bot):
     async def setup_hook(self):
         # Load each extension listed in the config file if set to enabled!
         for name, enabled in self.config['extensions'].items():
-            if not(f"{name}.py" in os.listdir("./Extensions")):
+            if not(f"{name}.py" in os.listdir("./extensions")):
                 self.logger.error(f"Couldn't load extension '{name}' as it doesn't exist in the Extensions directory!")
             elif enabled:
-                await self.load_extension(f"Extensions.{name}")
+                await self.load_extension(f"extensions.{name}")
                 self.logger.info(f"Loading extension: {name}.py")
             elif not enabled and name in ['errorHandler', 'pagination']:
                 self.logger.warning(f"Extension '{name}' is set to disabled in config.toml! This is likely to cause unexpected behaviour!")

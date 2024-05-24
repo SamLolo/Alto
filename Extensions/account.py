@@ -9,7 +9,7 @@ import discord
 from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
-from Classes.utils import format_artists
+from common.utils import format_artists
 from dateutil.relativedelta import relativedelta
 
 
