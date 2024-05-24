@@ -18,7 +18,7 @@ from Classes.utils import get_colour
 
 class Database():
     
-    @classmethod()
+    @classmethod
     def load_config(cls):
         with open("./config.toml", "rb")  as configFile:
             cls.config = tomlkit.load(configFile)

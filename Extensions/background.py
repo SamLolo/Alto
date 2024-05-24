@@ -63,6 +63,7 @@ class BackgroundTasks(commands.Cog):
             await self.client.change_presence(activity=discord.Activity(type=self.convert_activity(self.config["status"]["default"][0]), 
                                                                             name=self.config["status"]["default"][1]))
             self.logger.debug(f'Status Set To: "{self.config["status"]["default"][0]} {self.config["status"]["default"][1]}"')
+            self.logger.info("Status rotation started")
 
 
     @tasks.loop()

@@ -38,7 +38,7 @@ class MusicCog(commands.Cog, name="Music"):
 
         #** If missing Lavalink client, create Datbase Connection for Lavalink
         if not hasattr(client, 'lavalink'):
-            self.database = Database(client.config, pool=client.config['database']['lavalink']['poolname'], size=client.config['database']['lavalink']['size'])
+            self.database = Database(pool=client.config['database']['lavalink']['poolname'], size=client.config['database']['lavalink']['size'])
             
             #** Create Client Using New Database Pool **
             self.logger.info("No Previous Lavalink Client Found. Creating New Connection...")
