@@ -105,9 +105,10 @@ class LoggingController():
         # Create log directory and backup folder if it's missing
         if not(self.dir in os.listdir("./")):
             os.mkdir(self.dir)
-            self.logger.info(f"Creating new logging directory '{self.dir}'.")
-        if not("Backups" in os.listdir(f"{self.dir}/")):
-            os.mkdir(f"{self.dir}/Backups")
+            self.logger.info(f"Creating new logging directory './{self.dir}'.")
+        if not("backups" in os.listdir(f"{self.dir}/")):
+            os.mkdir(f"{self.dir}/backups")
+            self.logger.info(f"Creating new backup directory './{self.dir}/backups")
             
         # Backup previous log files
         try:
@@ -163,19 +164,19 @@ class LoggingController():
 
         # Loop through backups folder in reverse order, incrementing each session record
         if "master.log" in os.listdir(f"{self.dir}/"):
-            sortedFiles = sorted(os.listdir(f"{self.dir}/Backups"), key = lambda x: int(x.split(".")[1]) if x.split(".")[1].isdecimal() else 0, reverse=True)
+            sortedFiles = sorted(os.listdir(f"{self.dir}/backups"), key = lambda x: int(x.split(".")[1]) if x.split(".")[1].isdecimal() else 0, reverse=True)
             for file in sortedFiles:
-                if file != "Session.zip":
+                if file != "session.zip":
                     count = int(file.split(".")[1])
                     if count >= backups:
-                        os.remove(f"{self.dir}/Backups/{file}")
+                        os.remove(f"{self.dir}/backups/{file}")
                     else:
-                        os.rename(f"{self.dir}/Backups/{file}", f"{self.dir}/Backups/Session.{count+1}.zip")
-            if "Session.zip" in f"{self.dir}/Backups/":
-                os.rename(f"{self.dir}/Backups/Session.zip", f"{self.dir}/Backups/Session.1.zip")
+                        os.rename(f"{self.dir}/backups/{file}", f"{self.dir}/backups/session.{count+1}.zip")
+            if "session.zip" in f"{self.dir}/backups/":
+                os.rename(f"{self.dir}/backups/session.zip", f"{self.dir}/backups/session.1.zip")
             
             # Zip log files & move zip file into backups folder & delete previous log files
-            with ZipFile(f"{self.dir}/Backups/Session.zip", 'w') as zip:
+            with ZipFile(f"{self.dir}/backups/session.zip", 'w') as zip:
                 for file in os.listdir(f"{self.dir}/"):
                     if file.endswith(".log"):
                         zip.write(f"{self.dir}/{file}")

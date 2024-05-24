@@ -15,7 +15,7 @@ from common.utils import format_time
 #!-------------------------------IMPORT CLASSES--------------------------------#
 
 
-import common.user
+import base.user
 import common.spotify
 import common.database
 
@@ -37,7 +37,7 @@ class AdminCog(commands.Cog, name="Admin"):
         if not hasattr(client, 'music'): 
             client.music = common.spotify.SongData()
         if not hasattr(client, 'userClass'):
-            client.userClass = common.user
+            client.userClass = base.user
             
         # Get git repo object for project
         self.repo = git.Repo(".")
@@ -80,9 +80,9 @@ class AdminCog(commands.Cog, name="Admin"):
                 return
             
         # Otherwise, reload specified cog if it exists
-        elif input+".py" in os.listdir("Extensions/"):
+        elif input+".py" in os.listdir("extensions/"):
             try:
-                await self.client.reload_extension(f"Extensions.{input}")
+                await self.client.reload_extension(f"extensions.{input}")
                 self.client.logger.info(f"Extension Loaded: {input.title()}")
 
             # If an error occurs, inform user

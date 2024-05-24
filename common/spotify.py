@@ -25,7 +25,7 @@ class Spotify(object):
 
         #** Setup Logger **
         self.logger = logging.getLogger("spotify")
-        with open("./config.toml", "rb")  as configFile:
+        with open("config.toml", "rb")  as configFile:
             self.config = tomlkit.load(configFile)
 
         #** Get Spotify Tokens From Environment Variables **
