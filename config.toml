@@ -22,7 +22,7 @@ utility = true
 [spotify]
 # Settings for spotify. If a development account isn't specified, the same spotify account will be used in both normal and development operations!
 client_id = "710b5d6211ee479bb370e289ed1cda3d"
-dev_client = "6d32b18995b542c59183be193900f1d5"
+development_id = "6d32b18995b542c59183be193900f1d5"
 
 
 [lavalink]

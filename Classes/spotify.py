@@ -7,6 +7,7 @@ import math
 import json
 import base64
 import random
+import tomlkit
 import logging
 import asyncio
 import requests
@@ -24,10 +25,16 @@ class Spotify(object):
 
         #** Setup Logger **
         self.logger = logging.getLogger("spotify")
+        with open("./config.toml", "rb")  as configFile:
+            self.config = tomlkit.load(configFile)
 
         #** Get Spotify Tokens From Environment Variables **
-        self.CLIENT = "710b5d6211ee479bb370e289ed1cda3d"
-        self.SECRET = os.environ["SPOTIFY_SECRET"]
+        if self.config['development_mode'] and ('development_id' in self.config['spotify'] and self.config['spotify']['development_id'] != ""):
+            self.CLIENT = self.config['spotify']['development_id']
+            self.SECRET = os.environ[self.config['environment']['spotify_dev_secret']]
+        else:
+            self.CLIENT = self.config['spotify']['client_id']
+            self.SECRET = os.environ[self.config['environment']['spotify_secret']]
 
         #** Setup Header For Authentication **
         clientStr = self.CLIENT+":"+self.SECRET
@@ -44,7 +51,7 @@ class Spotify(object):
 
         #** Request a Token From Spotify Using Client Credentials **
         self.logger.info("Refreshing Bot Token")
-        data = {'grant_type': 'client_credentials', 'redirect_uri': 'http://82.22.157.214:5000/', 'client_id': self.CLIENT, 'client_secret': self.SECRET}
+        data = {'grant_type': 'client_credentials', 'redirect_uri': 'http://localhost:5000/', 'client_id': self.CLIENT, 'client_secret': self.SECRET}
    
         self.logger.debug("New Request: https://accounts.spotify.com/api/token")
         response = requests.post("https://accounts.spotify.com/api/token", data, headers=self.authHead)
