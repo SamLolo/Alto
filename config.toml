@@ -1,0 +1,115 @@
+
+# Prefix used for admin text-based commands
+prefix = "!"
+# Toggles development mode (recommended 'false' for production)
+development_mode = true
+
+
+[extensions]
+# Define which extensions should be loaded upon startup. 
+# 'true' to load extension, 'false' to ignore extension
+account = true
+admin = true
+background = true
+errorHandler = true
+music = true
+pagination = true
+serverSettings = false
+userSettings = false
+utility = true
+
+
+[spotify]
+# Settings for spotify. If a development account isn't specified, the same spotify account will be used in both normal and development operations!
+client_id = "710b5d6211ee479bb370e289ed1cda3d"
+development_id = "6d32b18995b542c59183be193900f1d5"
+
+
+[lavalink]
+# Settings for the Lavalink connection established in Cogs/Music.py. Should point to the lavalink.jar.
+# Host & port can be left blank to use environment variables.
+host = "127.0.0.1"
+port = "2333"
+name = "default"
+region = "eu"
+
+
+[database]
+# Settings for database connection.
+# Host & username can be left blank to use environment variables
+host = "localhost"
+schema = "alto"
+username = "root"
+max_retries = 3
+
+[database.main]
+# Settings for the main database pool used inside Classes/Database.py when no paramaters are specified.
+poolname = "main"
+size = 5
+
+[database.lavalink]
+# Settings for the secondary database pool used by lavalink
+poolname = "lavalink"
+size = 3
+
+
+[logging]
+# Overall settings for the logging module
+directory = "logs"
+backups = 10
+minimum_level = "DEBUG" # Used to set the minimum logging level of the individual handlers
+
+[logging.handlers.console]
+# Config for built-in console handler
+level = "INFO"
+
+[logging.handlers.master]
+# Config for master handler
+level = "INFO"
+type = "RotatingFileHandler"
+filename = "master.log"
+encoding = "utf-8"
+maxBytes = 8388608  # 8MB
+backupCount = 10
+
+[logging.handlers.debug]
+# Recommended config for a debug handler. Custom handlers must be formatted like this to be loaded!
+# Custom handlers can include an "enabled" boolean flag to easily enable/disable each handler.
+level = "DEBUG"
+enabled = true
+type = "RotatingFileHandler"
+# Additonal parameters for the given handler type should be specified below as they appear in the docs (https://docs.python.org/3/library/logging.handlers.html)
+filename = "debug.log"
+encoding = "utf-8"
+maxBytes = 8388608  # 8MB
+backupCount = 10
+
+
+[status]
+# Settings for the status rotation carried out in the background
+enabled = true
+interval = 60   # Measured in Seconds
+messages = [["Playing", "V 1.2"],
+            ["Watching", "/play"],
+            ["Listening", "Music"]]
+default = ["Listening", "Music"] # Used as the status when rotation is disabled
+
+
+[welcome]
+# Settings for the welcome message sent when 
+enabled = false
+message = "Thanks for choosing my music bot! Get started by joining a vc and typing `/play`!"
+
+
+[environment]
+# Points to the different keys used in the systems environment variables. If these don't match, parts of the bot will fail to load.
+spotify_secret = "SPOTIFY_SECRET"
+spotify_dev_secret = "DEV_SPOTIFY_SECRET"
+bot_token = "BOT_TOKEN"
+dev_token = "DEV_TOKEN"
+database_host = "DATABASE_IP"
+database_user = "DATABASE_USER"
+database_password = "DATABASE_PASS"
+lavalink_host = "LAVALINK_HOST"
+lavalink_port = "LAVALINK_PORT"
+lavalink_password = "LAVALINK_PASS"

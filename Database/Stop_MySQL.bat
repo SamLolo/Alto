@@ -1,2 +1,0 @@
-NET STOP MySQL80
-pause
