@@ -20,7 +20,7 @@ class Database():
     
     @classmethod
     def load_config(cls):
-        with open("./config.toml", "rb")  as configFile:
+        with open("config.toml", "rb")  as configFile:
             cls.config = tomlkit.load(configFile)
     
     @classmethod

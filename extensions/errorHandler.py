@@ -24,7 +24,7 @@ class ErrorHandler(commands.Cog):
         client.tree.on_error = self.on_app_command_error
         
         #** Load Error Messages **
-        with open('errors.json') as errorFile:
+        with open('data/errors.json') as errorFile:
             self.errors = json.load(errorFile)
         errorFile.close()
         self.logger.info("Loaded error messages from server!")

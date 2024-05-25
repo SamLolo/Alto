@@ -509,7 +509,7 @@ class SongData(Spotify):
         self.Volumes = {'Very Quiet': [-100, -55], 'Quite Quiet': [-55, -45], 'Quiet': [-45, -35], 'Normal': [-35, -25], 'Loud': [-25, -15], 'Quite Loud': [-15, -5], 'Very Loud': [-5, 100]}
 
         #** Load Test Data **
-        with open('SongData.json') as TestFile:
+        with open('data/songdata.json') as TestFile:
             TestData = json.load(TestFile)
             TestFile.close()
         
