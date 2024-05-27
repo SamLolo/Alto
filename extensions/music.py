@@ -2,16 +2,13 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
-import os
 import math
 import copy
 import logging
 import discord
 import lavalink
-from lavalink import LoadType
 from discord import app_commands
 from discord.ext import commands
-from common.database import Database
 from common.utils import format_artists, format_time
 from lavalink.events import TrackEndEvent, TrackExceptionEvent
 
@@ -19,7 +16,6 @@ from lavalink.events import TrackEndEvent, TrackExceptionEvent
 #!--------------IMPORT CUSTOM SOURCES & PLAYERS--------------#
 
 
-from sources.spotify import SpotifySource
 from clients.lavalink import CustomLavalinkClient
 from clients.voice import LavalinkVoiceClient
 
@@ -34,50 +30,21 @@ class MusicCog(commands.Cog, name="Music"):
         #** Assign Discord Bot Client As Class Object & Setup Logging **
         self.client = client 
         self.pagination = self.client.get_cog("EmbedPaginator")
-        self.logger = logging.getLogger('lavalink')
+        self.logger = logging.getLogger('extensions.music')
 
-        #** If missing Lavalink client, create Datbase Connection for Lavalink
+        #** If missing Lavalink client, create new lavalink client
         if not hasattr(client, 'lavalink'):
-            self.database = Database(pool=client.config['database']['lavalink']['poolname'], size=client.config['database']['lavalink']['size'])
-            
-            #** Create Client Using New Database Pool **
-            self.logger.info("No Previous Lavalink Client Found. Creating New Connection...")
+            self.logger.info("No previous Lavalink client found. Creating new instance...")
             self.client.lavalink = CustomLavalinkClient(client.user.id, self.client)
             self.client.add_listener(client.lavalink.voice_update_handler, 'on_socket_response')
             self.logger.debug("Lavalink listener added")
-            self.logger.info("New Client Registered")
+            self.logger.info("New client registered")
         else:
-            self.logger.info("Found Previous Lavalink Connection")
-            
-        #** Connect To Lavalink If Not Already Connected **
-        if len(client.lavalink.node_manager.available_nodes) == 0:
-            host = client.config['lavalink']['host']
-            if host == "":
-                host = os.getenv(client.config['environment']['lavalink_host'], default=None)
-                if host is None:
-                    self.logger.error('"lavalink.host" is not set in config or environment variables!')
-            port = client.config['lavalink']['port']
-            if port == "":
-                port = os.getenv(client.config['environment']['lavalink_port'], default=None)
-                if port is None:
-                    self.logger.error('"lavalink.port" is not set in config or environment variables!')
+            self.logger.info("Found previous Lavalink client")
 
-            self.client.lavalink.add_node(host = host, 
-                                          port = port, 
-                                          password = os.environ[client.config['environment']['lavalink_password']], 
-                                          region = client.config['lavalink']['region'], 
-                                          name = client.config['lavalink']['name'])
-            self.logger.debug(f"Connecting to {client.config['lavalink']['name']}@{host}:{port}...")
-            del host
-            del port
-
-        #** Add Event Hook **
+        #** Add Event Hooks **
         self.client.lavalink.add_event_hooks(self)
         self.logger.debug("Event hooks added")
-        
-        #** Register Custom Sources
-        self.client.lavalink.register_source(SpotifySource(client, self.database))
-        self.logger.debug("Registered custom sources")
 
 
     def cog_unload(self):
@@ -188,7 +155,7 @@ class MusicCog(commands.Cog, name="Music"):
             result = await self.client.lavalink.get_tracks(query, check_local=True)
 
         # Check if track(s) loaded, and queue up (each) track
-        if result.load_type in [LoadType.TRACK, LoadType.SEARCH]:
+        if result.load_type in [lavalink.LoadType.TRACK, lavalink.LoadType.SEARCH]:
             track = result['tracks'][0]
             player.add(requester=interaction.user.id, track=track)
             if not(player.is_playing):
@@ -203,7 +170,7 @@ class MusicCog(commands.Cog, name="Music"):
             else:
                 queued.description += f"\nBy: {track.author}"
         
-        elif result.load_type == LoadType.PLAYLIST:
+        elif result.load_type == lavalink.LoadType.PLAYLIST:
             for i, track in enumerate(result['tracks']):
                 player.add(requester=interaction.user.id, track=track)
                 if i == 0 and not(player.is_playing):

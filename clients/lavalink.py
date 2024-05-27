@@ -2,11 +2,18 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
+import os
 import discord
 import logging
+import tomlkit
 import lavalink
-from base.player import CustomPlayer
+
+from base.players import CustomPlayer
+
+from common.database import Database
 from common.utils import format_artists, format_time
+
+from sources.spotify import SpotifySource
 
 
 #!--------------------------------LAVALINK CLIENT-----------------------------------# 
@@ -15,11 +22,50 @@ from common.utils import format_artists, format_time
 class CustomLavalinkClient(lavalink.Client):
     
     def __init__(self, user_id: int|str, discord: discord.Client, player: lavalink.player.DefaultPlayer = CustomPlayer, **kwargs):
-        CustomPlayer.set_client(discord)
-        super().__init__(user_id, player, **kwargs)
-        
+        # Create reference to Discord Client
         self.discord = discord
+        CustomPlayer.set_client(discord)
+        
+        # Initialise client & setup logging
+        super().__init__(user_id, player, **kwargs)
         self.logger = logging.getLogger("lavalink.client")
+        
+        # Load config
+        with open("config.toml", "rb")  as configFile:
+            self.config = tomlkit.load(configFile)
+        
+        # Create database connection
+        self.database = Database(pool=self.config['database']['lavalink']['poolname'], size=self.config['database']['lavalink']['size'])
+        
+        # Connect to Lavalink if no previous connection has been established
+        if len(self.node_manager.available_nodes) == 0:
+            self.__connect()
+        
+        # Register Custom Sources
+        super().register_source(SpotifySource(self))
+        self.logger.debug("Registered custom sources")
+        
+    
+    def __connect(self):
+        host = self.config['lavalink']['host']
+        if host == "":
+            host = os.getenv(self.config['environment']['lavalink_host'], default=None)
+            if host is None:
+                self.logger.error('"lavalink.host" is not set in config or environment variables!')
+        port = self.config['lavalink']['port']
+        if port == "":
+            port = os.getenv(self.config['environment']['lavalink_port'], default=None)
+            if port is None:
+                self.logger.error('"lavalink.port" is not set in config or environment variables!')
+
+        self.client.lavalink.add_node(host = host, 
+                                        port = port, 
+                                        password = os.environ[self.config['environment']['lavalink_password']], 
+                                        region = self.config['lavalink']['region'], 
+                                        name = self.config['lavalink']['name'])
+        self.logger.debug(f"Connecting to {self.config['lavalink']['name']}@{host}:{port}...")
+        del host
+        del port
         
     
     def format_nowplaying(self, player: lavalink.DefaultPlayer):
