@@ -9,7 +9,7 @@ import logging
 from lavalink import AudioTrack
 from datetime import datetime
 from mysql.connector import pooling, errors
-from base.server import UserPermissions
+from common.server import UserPermissions
 from common.utils import get_colour
 
 

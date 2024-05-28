@@ -61,7 +61,7 @@ async def main():
     intents.members = True
     intents.message_content = True
     
-    # Instanciate MyClient class with requested intents and loaded config & establish bot connection to Discord
+    # Instanciate CustomClient class with requested intents and loaded config & establish bot connection to Discord
     async with CustomClient(intents=intents, config=config) as client:
         if not(config['development_mode']):
             await client.start(os.environ[config['environment']['bot_token']])

@@ -15,7 +15,7 @@ from common.utils import format_time
 #!-------------------------------IMPORT CLASSES--------------------------------#
 
 
-import base.user
+import common.user
 import common.spotify
 import common.database
 
@@ -29,7 +29,7 @@ class AdminCog(commands.Cog, name="Admin"):
 
         # Set class attributes
         self.client = client
-        self.logger = logging.getLogger("discord.admin")
+        self.logger = logging.getLogger("extensions.admin")
         
         # Instantiate classes if not already loaded onto client
         if not hasattr(client, 'database'):
@@ -37,7 +37,7 @@ class AdminCog(commands.Cog, name="Admin"):
         if not hasattr(client, 'music'): 
             client.music = common.spotify.SongData()
         if not hasattr(client, 'userClass'):
-            client.userClass = base.user
+            client.userClass = common.user
             
         # Get git repo object for project
         self.repo = git.Repo(".")

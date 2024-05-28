@@ -15,7 +15,7 @@ class LavalinkVoiceClient(discord.VoiceClient):
         self.client = client
         self.channel = channel
         self.lavalink = client.lavalink
-        self.logger = logging.getLogger("lavalink.voice")
+        self.logger = logging.getLogger("discord.voice")
 
 
     async def on_voice_server_update(self, data):

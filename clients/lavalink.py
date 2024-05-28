@@ -8,7 +8,7 @@ import logging
 import tomlkit
 import lavalink
 
-from base.players import CustomPlayer
+from common.players import CustomPlayer
 
 from common.database import Database
 from common.utils import format_artists, format_time

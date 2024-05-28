@@ -15,7 +15,7 @@ class BackgroundTasks(commands.Cog):
 
     def __init__(self, client: discord.Client):
         self.client = client
-        self.logger = logging.getLogger("discord.background")
+        self.logger = logging.getLogger("extensions.background")
         
     
     def convert_activity(self, activity):

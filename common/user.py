@@ -18,7 +18,7 @@ class User():
         
         # Setup user attributes and initialise user listening history
         self.client = client
-        self.logger = logging.getLogger("discord.user")
+        self.logger = logging.getLogger("user")
         self.logger.debug(f"New user object created for ID: {id}")
         
         # Get Discord user object if one isn't passed through

@@ -3,6 +3,7 @@
 
 
 import discord
+import logging
 from discord.ext import commands
 from discord import app_commands
 from dateutil.relativedelta import relativedelta
@@ -24,6 +25,7 @@ class UtilityCog(commands.Cog, name="Utility"):
         None
         """
         self.client = client
+        self.logger = logging.getLogger("extensions.utility")
         
     
     @app_commands.command()

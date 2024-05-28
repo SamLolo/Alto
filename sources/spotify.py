@@ -106,7 +106,7 @@ class SpotifySource(Source):
         # Set discord client as attribute for access during loading songs
         self.discord = discord
         self.database = database
-        self.logger = logging.getLogger('lavalink.spotify')
+        self.logger = logging.getLogger('sources.spotify')
 
 
     async def load_item(self, client: lavalink.Client, query: str):

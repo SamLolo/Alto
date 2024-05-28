@@ -6,6 +6,7 @@ import copy
 import math
 import random
 import discord
+import logging
 from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
@@ -23,6 +24,7 @@ class AccountCog(commands.Cog, name="Account"):
         #** Assign Discord Bot Client As Class Object & Get Pagination Cog**
         self.client = client
         self.pagination = self.client.get_cog("EmbedPaginator")
+        self.logger = logging.getLogger("extensions.account")
 
  
     @app_commands.command(description="Displays information about your alto profile.")

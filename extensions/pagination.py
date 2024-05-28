@@ -82,7 +82,7 @@ class EmbedPaginator(commands.Cog):
         """
         self.client = client
         self.openPages = {}
-        self.logger = logging.getLogger("discord.pagination")
+        self.logger = logging.getLogger("extensions.pagination")
 
     
     async def setup(self, message: discord.Message, pages: list, currentPage: int = 0):
