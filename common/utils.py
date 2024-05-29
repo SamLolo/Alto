@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES-----------------------!#
 
 
+# External packages
 import skimage
 import lavalink
 import numpy as np

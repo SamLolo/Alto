@@ -2,13 +2,16 @@
 #!--------------------IMPORT MODULES-----------------------#
 
 
+# External packages
 import logging
 import lavalink
 from discord.ext import commands
-from common.utils import get_colour
-from common.database import Database
 from lavalink.errors import LoadError
 from lavalink import Source, LoadResult, LoadType, PlaylistInfo, DeferredAudioTrack
+
+# Internal classes/functions
+from common.utils import get_colour
+from common.database import DatabasePool
 
 
 #!-------------------DEFERED AUDIO TRACK---------------------#
@@ -16,7 +19,7 @@ from lavalink import Source, LoadResult, LoadType, PlaylistInfo, DeferredAudioTr
 
 class SpotifyDeferredTrack(DeferredAudioTrack):
     
-    def __init__(self, database: Database, data: dict, requester: int = 0, **extra):
+    def __init__(self, database: DatabasePool, data: dict, requester: int = 0, **extra):
         self.database = database
         super().__init__(data, requester, **extra)
 

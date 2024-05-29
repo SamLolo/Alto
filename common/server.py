@@ -2,8 +2,9 @@
 #!-------------------------IMPORT MODULES-----------------------!#
 
 
-import lavalink
+# External packages
 import discord
+import lavalink
 from enum import Enum
 
 

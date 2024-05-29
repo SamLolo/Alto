@@ -2,10 +2,15 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
+# External packages
 import os
 import logging
 import discord
 from discord.ext import commands
+
+# Internal classes/functions
+from common.spotify import SongData
+from common.database import DatabasePool
 
 
 #!--------------------------------DISCORD CLIENT-----------------------------------# 
@@ -14,8 +19,16 @@ from discord.ext import commands
 class CustomClient(commands.Bot):
     
     def __init__(self, intents: discord.Intents, config: dict):
+        # Setup client logger and save config as accessible class attribute
         self.logger = logging.getLogger('discord.client')
         self.config = config
+        
+        # Create a new database pool for Discord
+        self.database = DatabasePool(name=self.config['database']['main']['poolname'], 
+                                     size=self.config['database']['main']['size'])
+        
+        # Connect to the Spotify Web API
+        self.music = SongData()
 
         # Instanciate Discord bot client
         super().__init__(intents=intents, 

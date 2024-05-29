@@ -2,22 +2,16 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
+# External packages
 import os
 import git
-import tomlkit
 import discord
 import logging
 import asyncio
 from discord.ext import commands
+
+# Internal classes/functions
 from common.utils import format_time
-
-
-#!-------------------------------IMPORT CLASSES--------------------------------#
-
-
-import common.user
-import common.spotify
-import common.database
 
 
 #!------------------------ADMIN COG-----------------------#
@@ -30,14 +24,6 @@ class AdminCog(commands.Cog, name="Admin"):
         # Set class attributes
         self.client = client
         self.logger = logging.getLogger("extensions.admin")
-        
-        # Instantiate classes if not already loaded onto client
-        if not hasattr(client, 'database'):
-            client.database = common.database.Database(pool=client.config['database']['main']['poolname'], size=client.config['database']['main']['size'])
-        if not hasattr(client, 'music'): 
-            client.music = common.spotify.SongData()
-        if not hasattr(client, 'userClass'):
-            client.userClass = common.user
             
         # Get git repo object for project
         self.repo = git.Repo(".")
@@ -66,21 +52,8 @@ class AdminCog(commands.Cog, name="Admin"):
     @is_admin()
     async def reload(self, ctx, input):
         
-        # If Input Is 'config', reload config file
-        if input.lower() == "config":  
-            try:
-                with open("config.toml", "rb")  as configFile:
-                    self.client.config = tomlkit.load(configFile)
-
-            # Log error & inform user
-            except Exception as e:
-                self.logger.warning("An error occured when reloading config file!")
-                self.logger.exception(e)
-                await ctx.send(f"**An Error Occured Whilst Trying To Reload The Config File!**\n```{e}```")
-                return
-            
-        # Otherwise, reload specified cog if it exists
-        elif input+".py" in os.listdir("extensions/"):
+        # Reload specified cog if it exists
+        if input+".py" in os.listdir("extensions/"):
             try:
                 await self.client.reload_extension(f"extensions.{input}")
                 self.client.logger.info(f"Extension Loaded: {input.title()}")

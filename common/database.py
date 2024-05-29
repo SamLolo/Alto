@@ -2,13 +2,16 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
+# External packages
 import os
 import json
 import tomlkit
 import logging
-from lavalink import AudioTrack
 from datetime import datetime
+from lavalink import AudioTrack
 from mysql.connector import pooling, errors
+
+# Internal classes/functions
 from common.server import UserPermissions
 from common.utils import get_colour
 
@@ -16,7 +19,7 @@ from common.utils import get_colour
 #!--------------------------------DATABASE OPERATIONS-----------------------------------#
 
 
-class Database():
+class DatabasePool():
     
     @classmethod
     def load_config(cls):
@@ -27,16 +30,12 @@ class Database():
     def check_config(cls):
         pass
     
-    @classmethod
-    def check_connection():
-        Database.check_config()
-    
-    def __init__(self, pool: str = "main", size: int = 5):
+    def __init__(self, name: str = "main", size: int = 5):
         
         # Setup database logger
         self.logger = logging.getLogger("mysql.connector")
-        if not(hasattr(Database, "config")):
-            Database.load_config()
+        if not(hasattr(DatabasePool, "config")):
+            self.load_config()
             
         # Create connection pool for database
         host = self.config['database']['host']
@@ -50,8 +49,8 @@ class Database():
             if user is None:
                 self.logger.warning('"database.user" is not set in config or environment variables!')
         try:
-            self.logger.info(f"Attempting to create new database pool '{pool}' of size {size}")
-            self.pool = pooling.MySQLConnectionPool(pool_name = pool,
+            self.logger.info(f"Attempting to create new database pool '{name}' of size {size}")
+            self.pool = pooling.MySQLConnectionPool(pool_name = name,
                                                     pool_size = size,
                                                     host = host,
                                                     database = self.config['database']['schema'],

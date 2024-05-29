@@ -2,6 +2,7 @@
 #!---------------------------IMPORT MODULES-----------------------#
 
 
+# External packages
 import logging
 import discord
 from itertools import cycle

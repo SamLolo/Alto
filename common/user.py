@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES-----------------------!#
 
 
+# External packages
 import random
 import discord
 import logging

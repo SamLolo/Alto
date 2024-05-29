@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
+# External packages
 import copy
 import math
 import random
@@ -10,8 +11,11 @@ import logging
 from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
-from common.utils import format_artists
 from dateutil.relativedelta import relativedelta
+
+# Internal classes/functions
+from common.utils import format_artists
+from common.user import User
 
 
 #!------------------------UTILITY COG-----------------------#
@@ -49,7 +53,7 @@ class AccountCog(commands.Cog, name="Account"):
         if CurrentUser is None:
             if self.client.database.connected:
                 try:
-                    CurrentUser = self.client.userClass.User(self.client, user=interaction.user)
+                    CurrentUser = User(self.client, user=interaction.user)
                 except:
                     pass
             else:
@@ -112,7 +116,7 @@ class AccountCog(commands.Cog, name="Account"):
         if currentUser is None:
             if self.client.database.connected:
                 try:
-                    currentUser = self.client.userClass.User(self.client, user=interaction.user)
+                    currentUser = User(self.client, user=interaction.user)
                 except:
                     pass
             else:
@@ -179,7 +183,7 @@ class AccountCog(commands.Cog, name="Account"):
         if user is None:
             if self.client.database.connected:
                 try:
-                    user = self.client.userClass.User(self.client, user=interaction.user)
+                    user = User(self.client, user=interaction.user)
                 except:
                     pass
             else:

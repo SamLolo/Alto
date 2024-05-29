@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
+# External packages
 import math
 import copy
 import logging
@@ -9,15 +10,12 @@ import discord
 import lavalink
 from discord import app_commands
 from discord.ext import commands
-from common.utils import format_artists, format_time
 from lavalink.events import TrackEndEvent, TrackExceptionEvent
 
-
-#!--------------IMPORT CUSTOM SOURCES & PLAYERS--------------#
-
-
-from clients.lavalink import CustomLavalinkClient
+# Internal classes/functions
 from clients.voice import LavalinkVoiceClient
+from clients.lavalink import CustomLavalinkClient
+from common.utils import format_artists, format_time
 
 
 #!------------------------MUSIC COG-----------------------#

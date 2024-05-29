@@ -2,17 +2,17 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
+# External packages
 import os
 import discord
 import logging
 import tomlkit
 import lavalink
 
+# Internal classes/functions
 from common.players import CustomPlayer
-
-from common.database import Database
+from common.database import DatabasePool
 from common.utils import format_artists, format_time
-
 from sources.spotify import SpotifySource
 
 
@@ -35,7 +35,7 @@ class CustomLavalinkClient(lavalink.Client):
             self.config = tomlkit.load(configFile)
         
         # Create database connection
-        self.database = Database(pool=self.config['database']['lavalink']['poolname'], size=self.config['database']['lavalink']['size'])
+        self.database = DatabasePool(name=self.config['database']['lavalink']['poolname'], size=self.config['database']['lavalink']['size'])
         
         # Connect to Lavalink if no previous connection has been established
         if len(self.node_manager.available_nodes) == 0:

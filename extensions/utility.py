@@ -2,6 +2,7 @@
 #!-------------------------IMPORT MODULES--------------------#
 
 
+# External packages
 import discord
 import logging
 from discord.ext import commands

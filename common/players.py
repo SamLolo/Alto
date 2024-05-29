@@ -2,14 +2,16 @@
 #!--------------------IMPORT MODULES-----------------------#
 
 
+# External packages
 import logging
 import discord
 import lavalink
 from datetime import datetime
-from common.user import User
-from common.server import Server
 from lavalink.events import TrackStartEvent, TrackEndEvent
 
+# Internal classes/functions
+from common.user import User
+from common.server import Server
 
 #!-------------------AUTOMATIC PLAYER---------------------#
 
@@ -84,7 +86,7 @@ class CustomPlayer(lavalink.DefaultPlayer):
             # Add any new users to the internal storage, creating new user class instance for that id
             for discordID in current:
                 try:
-                    self.users[str(discordID)] = self.client.userClass.User(self.client, id=discordID)
+                    self.users[str(discordID)] = User(self.client, id=discordID)
                 except:
                     self.logger.debug("Exception whilst loading new user!")
 

@@ -2,6 +2,7 @@
 #!---------------------------IMPORT MODULES-----------------------#
 
 
+# External packages
 import json
 import discord
 import logging
