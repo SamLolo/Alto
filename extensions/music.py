@@ -140,8 +140,14 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @app_commands.guild_only()
-    @app_commands.command(description="Allows you to play music through a Discord Voice Channel from a variety of sources.")
+    @app_commands.command()
     async def play(self, interaction: discord.Interaction, input: str):
+        """Allows you to play music through a Discord Voice Channel from a variety of sources.
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+            input (str): The requested song to play.
+        """
         
         # Ensure Voice To Make Sure Client Is Good To Run & Get Player In Process
         player = await self.ensure_voice(interaction)
@@ -191,8 +197,13 @@ class MusicCog(commands.Cog, name="Music"):
         
 
     @app_commands.guild_only()
-    @app_commands.command(description="Stops music, clears queue and disconnects the bot!")
+    @app_commands.command()
     async def disconnect(self, interaction: discord.Interaction):
+        """Stops music, clears queue and disconnects the bot!
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+        """
 
         # Get player & check command is good to be run!
         player = await self.ensure_voice(interaction)
@@ -209,8 +220,15 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @app_commands.guild_only()
-    @app_commands.command(description="Adjusts the volume of the audio player between 0% and 100%.")
+    @app_commands.command()
     async def volume(self, interaction: discord.Interaction, percentage: app_commands.Range[int, 0, 100] = None):
+        """Adjusts the volume of the audio player between 0% and 100%.
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+            percentage (app_commands.Range[int, 0, 100], optional): The new percentage to set the volume level to. Defaults to None, 
+                                                                    in which case the current volume level is displayed.
+        """
 
         #** Ensure Voice To Make Sure Client Is Good To Run & Get Player
         Player = await self.ensure_voice(interaction)
@@ -236,8 +254,13 @@ class MusicCog(commands.Cog, name="Music"):
 
     
     @app_commands.guild_only()
-    @app_commands.command(description="Pauses or unpauses the audio player.")
+    @app_commands.command()
     async def pause(self, interaction: discord.Interaction):
+        """Pauses or unpauses the audio player.
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+        """
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
         Player = await self.ensure_voice(interaction)
@@ -259,8 +282,13 @@ class MusicCog(commands.Cog, name="Music"):
 
     
     @app_commands.guild_only()
-    @app_commands.command(description="Skips the currently playing song and plays the next song in the queue.")
+    @app_commands.command()
     async def skip(self, interaction: discord.Interaction):
+        """Skips the currently playing song and plays the next song in the queue.
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+        """
 
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
         Player = await self.ensure_voice(interaction)
@@ -276,9 +304,14 @@ class MusicCog(commands.Cog, name="Music"):
     
     
     @app_commands.guild_only()
-    @app_commands.command(description="Displays the server's current queue of songs.")
+    @app_commands.command()
     async def queue(self, interaction: discord.Interaction):
+        """Displays the server's current queue of songs.
         
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+        """
+                
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
         player = await self.ensure_voice(interaction)
         
@@ -343,8 +376,13 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @app_commands.guild_only()
-    @app_commands.command(description="Shuffles & un-shuffles the playback of songs in the queue.")
+    @app_commands.command()
     async def shuffle(self, interaction: discord.Interaction):
+        """Shuffles & un-shuffles the playback of songs in the queue.
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+        """
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
         Player = await self.ensure_voice(interaction)
@@ -358,11 +396,17 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @app_commands.guild_only()
-    @app_commands.command(description="Loops the current song or queue until the command is ran again.")
+    @app_commands.command()
     @app_commands.choices(state=[app_commands.Choice(name="Off", value=0),
                                  app_commands.Choice(name="Current Track", value=1),
                                  app_commands.Choice(name="Current Queue", value=2)])
     async def loop(self, interaction: discord.Interaction, state: app_commands.Choice[int]):
+        """Loops the current song or queue until the command is ran again.
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+            state (app_commands.Choice[int]): The new choice for how the player should loop.
+        """
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
         Player = await self.ensure_voice(interaction)
@@ -378,8 +422,15 @@ class MusicCog(commands.Cog, name="Music"):
 
 
     @app_commands.guild_only()
-    @app_commands.command(description="Skips seconds forward or backwards in time in the currently playing song.")
+    @app_commands.command()
     async def seek(self, interaction: discord.Interaction, forward: int = None, backward: int = None):
+        """Skips seconds forward or backwards in time in the currently playing song.
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+            forward (int, optional): The number of seconds to skip forwards through the current song. Defaults to None.
+            backward (int, optional): The number of seconds to skip backwards through the current song. Defaults to None.
+        """
         
         #** Ensure Voice Before Allowing Command To Run & Get Guild Player **
         Player = await self.ensure_voice(interaction)
@@ -421,8 +472,13 @@ class MusicCog(commands.Cog, name="Music"):
     
 
     @app_commands.guild_only()
-    @app_commands.command(description="Displays information about the currently playing song.")
+    @app_commands.command()
     async def nowplaying(self, interaction: discord.Interaction):
+        """Displays information about the currently playing song.
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+        """
         
         #** Ensure Cmd Is Good To Run & Get Player **
         Player = await self.ensure_voice(interaction)
@@ -436,8 +492,14 @@ class MusicCog(commands.Cog, name="Music"):
         await interaction.response.send_message(embed=NowPlaying)
 
 
-    @app_commands.command(description="Displays both basic and more in-depth information about a specified song.")
+    @app_commands.command()
     async def info(self, interaction: discord.Interaction, song: str = ""):
+        """Displays both basic and more in-depth information about a specified song.
+
+        Args:
+            interaction (discord.Interaction): The discord interaction object that triggered the command.
+            song (str, optional): The track query to fetch information for. Defaults to "".
+        """
         
         #** Get player & ensure command is ok to be run
         player = await self.ensure_voice(interaction)
@@ -511,4 +573,13 @@ class MusicCog(commands.Cog, name="Music"):
 
 
 async def setup(client: discord.Client):
+    """
+    Adds the Music extension to the clients list of cogs.
+    
+    Parameters:
+    client (discord.Client): The discord client that has loaded the extension.
+    
+    Returns:
+    None
+    """
     await client.add_cog(MusicCog(client))

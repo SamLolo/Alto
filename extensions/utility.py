@@ -16,10 +16,10 @@ class UtilityCog(commands.Cog, name="Utility"):
 
     def __init__(self, client: discord.Client):
         """
-        Instanciates the Utility extension, creating required attributes for functions within the class
+        Instanciates the Utility extension, creating required attributes for functions within the class.
         
         Parameters:
-        client (discord.Client): the discord client the extension has been loaded with
+        client (discord.Client): The discord client that loaded the extension.
         
         Returns:
         None
@@ -34,7 +34,7 @@ class UtilityCog(commands.Cog, name="Utility"):
         Displays the bot's latency to Discord in milliseconds.
         
         Parameters:
-        interaction (discord.Interaction): the discord interaction that triggered the command
+        interaction (discord.Interaction): The discord interaction object that triggered the command.
         
         Returns:
         None
@@ -48,7 +48,7 @@ class UtilityCog(commands.Cog, name="Utility"):
         Displays the time since the bot last went offline.
         
         Parameters:
-        interaction (discord.Interaction): the discord interaction that triggered the command
+        interaction (discord.Interaction): The discord interaction object that triggered the command.
         
         Returns:
         None
@@ -69,7 +69,7 @@ class UtilityCog(commands.Cog, name="Utility"):
         Displays the bot's Discord invite link.
         
         Parameters:
-        interaction (discord.Interaction): the discord interaction that triggered the command
+        interaction (discord.Interaction): The discord interaction object that triggered the command.
         
         Returns:
         None
@@ -87,10 +87,10 @@ class UtilityCog(commands.Cog, name="Utility"):
 
 async def setup(client: discord.Client):
     """
-    Adds the Utility extension to the clients list of cogs
+    Adds the Utility extension to the clients list of cogs.
     
     Parameters:
-    client (discord.Client): the discord client to use
+    client (discord.Client): The discord client that has loaded the extension.
     
     Returns:
     None
