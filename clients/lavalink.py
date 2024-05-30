@@ -47,25 +47,28 @@ class CustomLavalinkClient(lavalink.Client):
         
     
     def __connect(self):
+        
+        # Get node IP address from config/environment
         host = self.config['lavalink']['host']
         if host == "":
             host = os.getenv(self.config['environment']['lavalink_host'], default=None)
             if host is None:
                 self.logger.error('"lavalink.host" is not set in config or environment variables!')
+                
+        # Get node port from config/environment
         port = self.config['lavalink']['port']
         if port == "":
             port = os.getenv(self.config['environment']['lavalink_port'], default=None)
             if port is None:
                 self.logger.error('"lavalink.port" is not set in config or environment variables!')
 
-        self.client.lavalink.add_node(host = host, 
-                                        port = port, 
-                                        password = os.environ[self.config['environment']['lavalink_password']], 
-                                        region = self.config['lavalink']['region'], 
-                                        name = self.config['lavalink']['name'])
+        # Connect to node
+        self.add_node(host = host, 
+                      port = port, 
+                      password = os.environ[self.config['environment']['lavalink_password']], 
+                      region = self.config['lavalink']['region'], 
+                      name = self.config['lavalink']['name'])
         self.logger.debug(f"Connecting to {self.config['lavalink']['name']}@{host}:{port}...")
-        del host
-        del port
         
     
     def format_nowplaying(self, player: lavalink.DefaultPlayer):

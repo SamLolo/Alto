@@ -2,12 +2,15 @@
 #!--------------------------------IMPORT MODULES-----------------------------------# 
 
 
+# External packages
 import os
 import tomlkit
 import logging
 import discord
 import asyncio
 import logging.handlers
+
+# Internal classes/functions
 from common.logs import LoggingController
 from clients.discord import CustomClient
 

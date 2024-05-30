@@ -17,28 +17,30 @@ from common.server import Server
 
 
 class CustomPlayer(lavalink.DefaultPlayer):
-    discordClient = None
-    
-    @classmethod
-    def set_client(cls, client: discord.client):
-        cls.discordClient = client
 
-
-    def __init__(self, guildID: int, node: lavalink.Node):
+    def __init__(self, guildID: int, node: lavalink.Node, discord: discord.Client):
+        # Create a new player instance
+        self.discord = discord
+        self.logger = logging.getLogger("lavalink.player")
         super().__init__(guildID, node)
+        self.database = self.client.database
+        
+        # Setup management for player based history storage
         self.history = []
         self.MAX_HISTORY = 20
+        
+        # Setup attributes for auto-play
         self.auto = False
-        self.users = {}
-        self.logger = logging.getLogger("lavalink.player")
+        self.recommendations = []
         
         # Set blank attributes to be used once the player has been initialised
         self.channel = None
         self.voice = None
         self.nowPlaying = None
+        self.users = {}
         
         # Set default volume based on the server
-        self.server = Server(self.discordClient, guildID, self)
+        self.server = Server(self.discord, guildID, self)
         if self.server.volume["previous"] is not None:
             self.volume = self.server.volume["previous"]
         else:
@@ -72,7 +74,7 @@ class CustomPlayer(lavalink.DefaultPlayer):
     
     async def onTrackEnd(self, event: lavalink.Event):
         # Disable listening history system when database is unavailable as user's can't be loaded
-        if self.client.database.connected:
+        if self.database.connected:
 
             # Check current users are still listening, if not, save any changes to the database
             current = [member.id for member in self.voice.members if not(member.bot)]

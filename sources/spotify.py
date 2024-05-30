@@ -103,12 +103,11 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
 
 class SpotifySource(Source):
     
-    def __init__(self, discord: commands.Bot, database: Database):
+    def __init__(self, discord: commands.Bot):
         super().__init__('spotify')
         
         # Set discord client as attribute for access during loading songs
         self.discord = discord
-        self.database = database
         self.logger = logging.getLogger('sources.spotify')
 
 
@@ -124,7 +123,7 @@ class SpotifySource(Source):
                     
                     # Query cache for returned spotifyID
                     try:
-                        cache = self.database.searchCache(info['tracks'][0]['id'])
+                        cache = client.database.searchCache(info['tracks'][0]['id'])
                     except Exception as ex:
                         if type(ex) != ConnectionError:
                             self.logger.debug(f"Failed to search cache for spotify ID: {info['tracks'][0]['id']}")
@@ -145,7 +144,7 @@ class SpotifySource(Source):
                     # If just track, query cache for spotifyID
                     if "track" in query:
                         try:
-                            cache = self.database.searchCache(spotifyID)
+                            cache = client.database.searchCache(spotifyID)
                         except Exception as ex:
                             if type(ex) != ConnectionError:
                                 self.logger.debug(f"Failed to search cache for spotify ID: {spotifyID}")
@@ -191,7 +190,7 @@ class SpotifySource(Source):
             else:
                 tracks = []
                 for index, data in enumerate(info["tracks"]):
-                    tracks.append(SpotifyDeferredTrack(self.database,
+                    tracks.append(SpotifyDeferredTrack(client.database,
                                                       {'identifier': data['id'],  
                                                        'isSeekable': True,
                                                        'author': data['artists'][0]['name'],
