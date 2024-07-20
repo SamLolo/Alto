@@ -42,7 +42,7 @@ class CustomLavalinkClient(lavalink.Client):
             self.__connect()
         
         # Register Custom Sources
-        super().register_source(SpotifySource(self))
+        super().register_source(SpotifySource(discord))
         self.logger.debug("Registered custom sources")
         
     

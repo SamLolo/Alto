@@ -65,8 +65,9 @@ class MusicCog(commands.Cog, name="Music"):
             await guild.voice_client.disconnect()
 
             #** Remove Old Now Playing Message & Delete Stored Value **
-            await player.nowPlaying.delete()
-            player.nowPlaying = None
+            if player.nowPlaying is not None:
+                await player.nowPlaying.delete()
+                player.nowPlaying = None
 
             #** Save All Current Users Stored In Player To Database **
             for user in player.users:
@@ -133,7 +134,7 @@ class MusicCog(commands.Cog, name="Music"):
         
         #** Let user know that error has occured and which song isn't being played anymore **
         await event.player.channel.send(f"**An error occured whilst trying to play {event.track.title} by {event.track.author}!**\nThe track has been skipped.")
-        print(event.exception)
+        print(event.cause)
         print(event.severity)
 
 

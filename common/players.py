@@ -17,10 +17,14 @@ from common.server import Server
 
 
 class CustomPlayer(lavalink.DefaultPlayer):
-
-    def __init__(self, guildID: int, node: lavalink.Node, discord: discord.Client):
+    
+    @classmethod
+    def set_client(cls, client: discord.Client):
+        cls.discord = client
+    
+    
+    def __init__(self, guildID: int, node: lavalink.Node):
         # Create a new player instance
-        self.discord = discord
         self.logger = logging.getLogger("lavalink.player")
         super().__init__(guildID, node)
         self.database = self.client.database

@@ -46,7 +46,7 @@ class Server():
     def load(self):
         
         # Get results from database
-        data = self.client.database.loadServer(self.server.id)
+        data = self.client.database.loadServer(self.guild.id)
         if data is not None:
             
             # Save data as class attributes for easy access
