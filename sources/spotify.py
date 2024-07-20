@@ -5,7 +5,6 @@
 # External packages
 import logging
 import lavalink
-from discord.ext import commands
 from lavalink.errors import LoadError
 from lavalink import Source, LoadResult, LoadType, PlaylistInfo, DeferredAudioTrack
 
@@ -103,11 +102,10 @@ class SpotifyDeferredTrack(DeferredAudioTrack):
 
 class SpotifySource(Source):
     
-    def __init__(self, discord: commands.Bot):
+    def __init__(self):
         super().__init__('spotify')
         
         # Set discord client as attribute for access during loading songs
-        self.discord = discord
         self.logger = logging.getLogger('sources.spotify')
 
 
@@ -119,7 +117,7 @@ class SpotifySource(Source):
             try:
                 # If request to search spotify, call Spotify search for query
                 if query.startswith('spsearch:'):
-                    info = self.discord.music.SearchSpotify(query.strip("spsearch:"))
+                    info = client.discord.music.SearchSpotify(query.strip("spsearch:"))
                     
                     # Query cache for returned spotifyID
                     try:
@@ -131,7 +129,7 @@ class SpotifySource(Source):
                     else:
                         if cache is None:
                             try:
-                                features = self.discord.music.GetAudioFeatures([info['tracks'][0]['id']])
+                                features = client.discord.music.GetAudioFeatures([info['tracks'][0]['id']])
                             except:
                                 features = None
                 
@@ -151,23 +149,23 @@ class SpotifySource(Source):
                                 self.logger.exception(ex)
                         else:
                             if cache is None:
-                                info = self.discord.music.GetSongInfo(spotifyID)
+                                info = client.discord.music.GetSongInfo(spotifyID)
                                 try:
-                                    features = self.discord.music.GetAudioFeatures([spotifyID])
+                                    features = client.discord.music.GetAudioFeatures([spotifyID])
                                 except:
                                     features = None
                     
                     # If playlist/album, load track metadata from Spotify
                     elif "playlist" in query:
-                        info = self.discord.music.GetPlaylistSongs(spotifyID)
+                        info = client.discord.music.GetPlaylistSongs(spotifyID)
                         try:
-                            features = self.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
+                            features = client.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
                         except:
                             features = None
                     elif "album" in query:
-                        info = self.discord.music.GetAlbumInfo(spotifyID)
+                        info = client.discord.music.GetAlbumInfo(spotifyID)
                         try:
-                            features = self.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
+                            features = client.discord.music.GetAudioFeatures([track['id'] for track in info['tracks']])
                         except:
                             features = None
                     else:
