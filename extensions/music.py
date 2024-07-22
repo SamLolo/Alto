@@ -56,28 +56,6 @@ class MusicCog(commands.Cog, name="Music"):
         self.logger.debug("Cleared custom sources")
 
 
-    async def _disconnect(self, player: lavalink.DefaultPlayer, guild: discord.Guild = None):
-
-        #** If Player Connected, Get Guild Object & Disconnect From VC **
-        if player.is_connected:
-            if guild is None:
-                guild = self.client.get_guild(int(player.guild_id))
-            await guild.voice_client.disconnect()
-
-            #** Remove Old Now Playing Message & Delete Stored Value **
-            if player.nowPlaying is not None:
-                await player.nowPlaying.delete()
-                player.nowPlaying = None
-
-            #** Save All Current Users Stored In Player To Database **
-            for user in player.users:
-                user.save()
-        
-        #** Raise error to user if bot isn't already in vc
-        else:
-            raise app_commands.CheckFailure("BotVoice")
-
-
     async def ensure_voice(self, interaction: discord.Interaction):
         
         #** Check if there are any availbale nodes **
@@ -119,14 +97,6 @@ class MusicCog(commands.Cog, name="Music"):
                 raise app_commands.CheckFailure("SameVoice")
   
         return Player
-
-
-    @lavalink.listener(TrackEndEvent)
-    async def on_track_end(self, event: TrackEndEvent):
-            
-        #** If Queue Empty, Save User Data & Disconnect From VC
-        if event.player.queue == [] and event.player.is_connected:
-            await self._disconnect(event.player)
     
     
     @lavalink.listener(TrackExceptionEvent)
@@ -214,7 +184,7 @@ class MusicCog(commands.Cog, name="Music"):
         if player.is_playing:
             await player.stop()
         else:
-            await self._disconnect(player, guild=interaction.guild)
+            await player.disconnect()
         await interaction.response.send_message("Disconnected!")
 
 

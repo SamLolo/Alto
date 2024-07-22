@@ -77,6 +77,11 @@ class CustomPlayer(lavalink.DefaultPlayer):
     
     
     async def onTrackEnd(self, event: lavalink.Event):
+        
+        # If queue empty, disconnect from vc
+        if self.queue == [] and self.is_connected:
+            await self.disconnect()
+        
         # Disable listening history system when database is unavailable as user's can't be loaded
         if self.database.connected:
 
@@ -138,3 +143,19 @@ class CustomPlayer(lavalink.DefaultPlayer):
             self.auto = False
             self.recommendations.clear()
         await super().stop()
+        
+
+    async def disconnect(self):
+
+        # Check player is connected first
+        if self.is_connected:
+            await self.server.guild.voice_client.disconnect()
+
+            # Remove Old Now Playing Message
+            if self.nowPlaying is not None:
+                await self.nowPlaying.delete()
+                self.nowPlaying = None
+
+            # Save All Current Users Stored In Player To Database
+            for user in self.users:
+                user.save()
