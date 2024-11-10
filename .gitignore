@@ -3,4 +3,40 @@
 **env
 **venv
 hosting
+
+# Node modules
+app/node_modules/
+
+# npm logs
+app/npm-debug.log*
+app/yarn-debug.log*
+app/yarn-error.log*
+
+# Build output
+app/build/
+app/dist/
+
+# dotenv environment variable files
+app/.env
+app/.env.local
+app/.env.development.local
+app/.env.test.local
+app/.env.production.local
+
+# Logs
 **/logs
+*.log
+
+# Package-lock and yarn.lock (Optional but often included in projects)
+app/package-lock.json
+app/yarn.lock
+
+# Temporary files
+*.tmp
+*.swp
+
+# Optional npm package directory for global installs
+**/.npm/
+
+# Jest coverage directory
+app/coverage/
