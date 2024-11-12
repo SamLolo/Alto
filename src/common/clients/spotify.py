@@ -26,7 +26,7 @@ class Spotify(object):
 
         #** Setup Logger **
         self.logger = logging.getLogger("spotify")
-        with open("config.toml", "rb")  as configFile:
+        with open("src/bot/config.toml", "rb")  as configFile:
             self.config = tomlkit.load(configFile)
 
         #** Get Spotify Tokens From Environment Variables **
@@ -510,7 +510,7 @@ class SongData(Spotify):
         self.Volumes = {'Very Quiet': [-100, -55], 'Quite Quiet': [-55, -45], 'Quiet': [-45, -35], 'Normal': [-35, -25], 'Loud': [-25, -15], 'Quite Loud': [-15, -5], 'Very Loud': [-5, 100]}
 
         #** Load Test Data **
-        with open('data/songdata.json') as TestFile:
+        with open('src/bot/data/songdata.json') as TestFile:
             TestData = json.load(TestFile)
             TestFile.close()
         

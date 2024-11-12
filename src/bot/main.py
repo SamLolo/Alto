@@ -10,9 +10,13 @@ import discord
 import asyncio
 import logging.handlers
 
+# Add common packages to path
+import sys
+sys.path.append(os.path.realpath("src/"))
+
 # Internal classes/functions
-from common.logs import LoggingController
-from clients.discord import CustomClient
+from common.utility.logs import LoggingController
+from client import CustomClient
 
 
 #!-----------------------------SETUP FUNCTIONS-----------------------------!#
@@ -43,7 +47,7 @@ async def main():
     
     # Load config.toml file
     try:
-        with open("config.toml", "rb")  as configFile:
+        with open("src/bot/config.toml", "rb")  as configFile:
             config = tomlkit.load(configFile)
     except Exception as e:
         print(f"Failed to load config file! Error: {e}\nExiting...")
@@ -51,9 +55,10 @@ async def main():
         
     # Call helper class to configure logging setup for project
     try:
-        controller = LoggingController()
+        controller = LoggingController("src/bot/config.toml")
         logger = controller.logger
-    except:
+    except Exception as e: 
+        print(f"Failed to start logging! Error {e}\nExiting...")
         exit()
         
     # Check through config to see if anything is wrong before loading bot

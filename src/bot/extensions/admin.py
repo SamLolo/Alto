@@ -4,14 +4,13 @@
 
 # External packages
 import os
-import git
 import discord
 import logging
 import asyncio
 from discord.ext import commands
 
 # Internal classes/functions
-from common.utils import format_time
+from common.utility.bot_utils import format_time
 
 
 #!------------------------ADMIN COG-----------------------#
@@ -24,9 +23,6 @@ class AdminCog(commands.Cog, name="Admin"):
         # Set class attributes
         self.client = client
         self.logger = logging.getLogger("extensions.admin")
-            
-        # Get git repo object for project
-        self.repo = git.Repo(".")
             
     
     async def cog_load(self):
@@ -217,16 +213,7 @@ class AdminCog(commands.Cog, name="Admin"):
                 userDict = player.fetch('Users')
                 for user in userDict.values():
                     user.save()
-                    
-    
-    @commands.command(hidden=True)
-    @is_admin()
-    async def update(self, ctx):
-        info = self.repo.remotes.origin.fetch()[0]
-        print(info.commit.committed_datetime)
-        print(self.repo.head.commit.committed_datetime)
-        
-    
+
 
 #!-------------------SETUP FUNCTION-------------------#
 

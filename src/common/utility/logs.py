@@ -70,12 +70,12 @@ class ColouredFormat(logging.Formatter):
 
 class LoggingController():
     
-    def __init__(self):
+    def __init__(self, config_file: str):
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
         
         # Load config file
-        with open("config.toml", "rb")  as configFile:
+        with open(config_file, "rb")  as configFile:
             self.config = tomlkit.load(configFile)['logging']
         
         # Setup console handler so initial setup can be logged

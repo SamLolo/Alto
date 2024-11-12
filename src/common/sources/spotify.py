@@ -9,8 +9,8 @@ from lavalink.errors import LoadError
 from lavalink import Source, LoadResult, LoadType, PlaylistInfo, DeferredAudioTrack
 
 # Internal classes/functions
-from common.utils import get_colour
-from common.database import DatabasePool
+from ..utility.bot_utils import get_colour
+from ..clients.database import DatabasePool
 
 
 #!-------------------DEFERED AUDIO TRACK---------------------#

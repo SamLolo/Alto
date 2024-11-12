@@ -13,9 +13,9 @@ from discord.ext import commands
 from lavalink.events import TrackEndEvent, TrackExceptionEvent
 
 # Internal classes/functions
-from clients.voice import LavalinkVoiceClient
-from clients.lavalink import CustomLavalinkClient
-from common.utils import format_artists, format_time
+from bot.voice import LavalinkVoiceClient
+from common.clients.lavalink import CustomLavalinkClient
+from common.utility.bot_utils import format_artists, format_time
 
 
 #!------------------------MUSIC COG-----------------------#

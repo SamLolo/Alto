@@ -14,8 +14,8 @@ from discord import app_commands
 from dateutil.relativedelta import relativedelta
 
 # Internal classes/functions
-from common.utils import format_artists
-from common.user import User
+from common.utility.bot_utils import format_artists
+from common.models.user import User
 
 
 #!------------------------UTILITY COG-----------------------#

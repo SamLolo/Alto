@@ -10,10 +10,10 @@ import tomlkit
 import lavalink
 
 # Internal classes/functions
-from common.players import CustomPlayer
-from common.database import DatabasePool
-from common.utils import format_artists, format_time
-from sources.spotify import SpotifySource
+from ..models.player import CustomPlayer
+from ..clients.database import DatabasePool
+from ..utility.bot_utils import format_artists, format_time
+from ..sources.spotify import SpotifySource
 
 
 #!--------------------------------LAVALINK CLIENT-----------------------------------# 
@@ -31,7 +31,7 @@ class CustomLavalinkClient(lavalink.Client):
         self.logger = logging.getLogger("lavalink.client")
         
         # Load config
-        with open("config.toml", "rb")  as configFile:
+        with open("src/bot/config.toml", "rb")  as configFile:
             self.config = tomlkit.load(configFile)
         
         # Create database connection

@@ -12,8 +12,8 @@ from lavalink import AudioTrack
 from mysql.connector import pooling, errors
 
 # Internal classes/functions
-from common.server import UserPermissions
-from common.utils import get_colour
+from ..models.server import UserPermissions
+from ..utility.bot_utils import get_colour
 
 
 #!--------------------------------DATABASE OPERATIONS-----------------------------------#
@@ -23,7 +23,7 @@ class DatabasePool():
     
     @classmethod
     def load_config(cls):
-        with open("config.toml", "rb")  as configFile:
+        with open("src/bot/config.toml", "rb")  as configFile:
             cls.config = tomlkit.load(configFile)
     
     @classmethod
@@ -35,7 +35,7 @@ class DatabasePool():
         # Setup database logger
         self.logger = logging.getLogger("mysql.connector")
         if not(hasattr(DatabasePool, "config")):
-            self.load_config()
+            DatabasePool.load_config()
             
         # Create connection pool for database
         host = self.config['database']['host']

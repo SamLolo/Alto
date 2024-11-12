@@ -10,8 +10,8 @@ from datetime import datetime
 from lavalink.events import TrackStartEvent, TrackEndEvent
 
 # Internal classes/functions
-from common.user import User
-from common.server import Server
+from ..models.user import User
+from ..models.server import Server
 
 #!-------------------AUTOMATIC PLAYER---------------------#
 

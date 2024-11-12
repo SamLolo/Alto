@@ -9,8 +9,8 @@ import discord
 from discord.ext import commands
 
 # Internal classes/functions
-from common.spotify import SongData
-from common.database import DatabasePool
+from common.clients.spotify import SongData
+from common.clients.database import DatabasePool
 
 
 #!--------------------------------DISCORD CLIENT-----------------------------------# 
@@ -40,7 +40,7 @@ class CustomClient(commands.Bot):
     async def setup_hook(self):
         # Load each extension listed in the config file if set to enabled!
         for name, enabled in self.config['extensions'].items():
-            if not(f"{name}.py" in os.listdir("./extensions")):
+            if not(f"{name}.py" in os.listdir("src/bot/extensions")):
                 self.logger.error(f"Couldn't load extension '{name}' as it doesn't exist in the Extensions directory!")
             elif enabled:
                 await self.load_extension(f"extensions.{name}")
